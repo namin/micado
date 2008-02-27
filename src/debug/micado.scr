@@ -1,2 +1,3 @@
 (command "Netload" "C:/Documents and Settings/Nada AMIN/Mes documents/meng/micado/src/debug/BioStreamMg.dll")
 (command "Netload" "C:/Documents and Settings/Nada AMIN/Mes documents/meng/micado/src/debug/biostreamfs.dll")
+(command "Netload" "C:/Documents and Settings/Nada AMIN/Mes documents/meng/micado/src/debug/BioStreamCS.dll")
