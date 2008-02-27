@@ -15,6 +15,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{F1E95641-913
 		ReadMe.txt = ReadMe.txt
 	EndProjectSection
 EndProject
+Project("{94D665CA-D915-4DE1-AA53-913450A1AE2D}") = "BioStreamFS", "BioStreamFS\BioStreamFS.fsharpp", "{AA78FA7E-8AD6-45C6-A864-80831A418942}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +57,16 @@ Global
 		{55803607-5880-4CA7-923C-B89B7D21EC4B}.Release|Mixed Platforms.Build.0 = Release|Win32
 		{55803607-5880-4CA7-923C-B89B7D21EC4B}.Release|Win32.ActiveCfg = Release|Win32
 		{55803607-5880-4CA7-923C-B89B7D21EC4B}.Release|Win32.Build.0 = Release|Win32
+		{AA78FA7E-8AD6-45C6-A864-80831A418942}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{AA78FA7E-8AD6-45C6-A864-80831A418942}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{AA78FA7E-8AD6-45C6-A864-80831A418942}.Debug|Mixed Platforms.Build.0 = Debug|Win32
+		{AA78FA7E-8AD6-45C6-A864-80831A418942}.Debug|Win32.ActiveCfg = Debug|Win32
+		{AA78FA7E-8AD6-45C6-A864-80831A418942}.Debug|Win32.Build.0 = Debug|Win32
+		{AA78FA7E-8AD6-45C6-A864-80831A418942}.Release|Any CPU.ActiveCfg = Release|Win32
+		{AA78FA7E-8AD6-45C6-A864-80831A418942}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{AA78FA7E-8AD6-45C6-A864-80831A418942}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{AA78FA7E-8AD6-45C6-A864-80831A418942}.Release|Win32.ActiveCfg = Release|Win32
+		{AA78FA7E-8AD6-45C6-A864-80831A418942}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
