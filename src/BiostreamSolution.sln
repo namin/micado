@@ -19,6 +19,8 @@ Project("{94D665CA-D915-4DE1-AA53-913450A1AE2D}") = "BioStreamFS", "BioStreamFS\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BioStreamCS", "BioStreamCS\BioStreamCS.csproj", "{E04A8367-B9CB-49BE-BEC4-E691FB686CDB}"
 EndProject
+Project("{94D665CA-D915-4DE1-AA53-913450A1AE2D}") = "Testing", "Testing\Testing.fsharpp", "{A8C91FF6-1EA2-4065-8990-83347CF1E8F1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -79,6 +81,16 @@ Global
 		{E04A8367-B9CB-49BE-BEC4-E691FB686CDB}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{E04A8367-B9CB-49BE-BEC4-E691FB686CDB}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{E04A8367-B9CB-49BE-BEC4-E691FB686CDB}.Release|Win32.ActiveCfg = Release|Any CPU
+		{A8C91FF6-1EA2-4065-8990-83347CF1E8F1}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{A8C91FF6-1EA2-4065-8990-83347CF1E8F1}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{A8C91FF6-1EA2-4065-8990-83347CF1E8F1}.Debug|Mixed Platforms.Build.0 = Debug|Win32
+		{A8C91FF6-1EA2-4065-8990-83347CF1E8F1}.Debug|Win32.ActiveCfg = Debug|Win32
+		{A8C91FF6-1EA2-4065-8990-83347CF1E8F1}.Debug|Win32.Build.0 = Debug|Win32
+		{A8C91FF6-1EA2-4065-8990-83347CF1E8F1}.Release|Any CPU.ActiveCfg = Release|Win32
+		{A8C91FF6-1EA2-4065-8990-83347CF1E8F1}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{A8C91FF6-1EA2-4065-8990-83347CF1E8F1}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{A8C91FF6-1EA2-4065-8990-83347CF1E8F1}.Release|Win32.ActiveCfg = Release|Win32
+		{A8C91FF6-1EA2-4065-8990-83347CF1E8F1}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

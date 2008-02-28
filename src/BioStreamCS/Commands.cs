@@ -6,6 +6,8 @@ using Autodesk.AutoCAD.Runtime;
 using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.EditorInput;
 
+using Autodesk.AutoCAD.Geometry;
+
 namespace BioStreamCS
 {
     public class Commands

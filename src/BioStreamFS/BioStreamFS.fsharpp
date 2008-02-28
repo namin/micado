@@ -10,7 +10,7 @@
     "OptLevel" = "Off"
     "StrongNamingLevel" = "None"
     "OutputPath" = "C:\\Documents and Settings\\Nada AMIN\\Mes documents\\meng\\micado\\src\\debug"
-    "SearchPath" = ""
+    "SearchPath" = "-I \"C:\\Program Files\\Autodesk\\Acade 2008\" -r acdbmgd.dll -r \"acmgd.dll\""
     "StrongNameFile" = ""
     "OutputBase" = ""
     "CustomCommandLine" = ""
@@ -24,11 +24,11 @@
     }
     "Release|Win32"
     {
-    "ProjectType" = "EXE"
+    "ProjectType" = "DLL"
     "OptLevel" = "3"
     "StrongNamingLevel" = "None"
     "OutputPath" = "C:\\Documents and Settings\\Nada AMIN\\Mes documents\\meng\\micado\\src\\release"
-    "SearchPath" = ""
+    "SearchPath" = "-I \"C:\\Program Files\\Autodesk\\Acade 2008\" -r acdbmgd.dll -r \"acmgd.dll\""
     "StrongNameFile" = ""
     "OutputBase" = ""
     "CustomCommandLine" = ""
@@ -43,7 +43,23 @@
 }
 "Files"
 {
+    "geometry.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+    "database.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+    "editor.fs"
+    {
+    "ProjRelPath" = "T"
+    }
     "commands.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+    "prototype.fs"
     {
     "ProjRelPath" = "T"
     }
