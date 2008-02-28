@@ -18,9 +18,9 @@
     "DebugCheck" = "TRUE"
     "CustomCompilationCheck" = "FALSE"
     "DebugStartMode" = "0"
-    "StartApp" = "C:\\Program Files\\Autodesk\\Acade 2008\\acad.exe"
-    "StartAppPath" = "C:\\Program Files\\Autodesk\\Acade 2008\\UserDataCache\\"
-    "CustomStartupArguments" = "/ld \"C:\\Documents and Settings\\Nada AMIN\\Mes documents\\projects\\micado\\src\\debug\\BioStreamDB.dbx\" /b \"C:\\Documents and Settings\\Nada AMIN\\Mes documents\\projects\\micado\\src\\debug\\micado.scr\""
+    "StartApp" = ""
+    "StartAppPath" = ""
+    "CustomStartupArguments" = ""
     }
     "Release|Win32"
     {
