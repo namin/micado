@@ -1,5 +1,7 @@
 #light 
 
+/// Access to drawing objects
+/// Add-on to Autodesk.AutoCAD.DatabaseServices
 module BioStream.Micado.Plugin.Database
 
 open Autodesk.AutoCAD.DatabaseServices

@@ -9,7 +9,7 @@
     "ProjectType" = "DLL"
     "OptLevel" = "Off"
     "StrongNamingLevel" = "None"
-    "OutputPath" = "C:\\Documents and Settings\\Nada AMIN\\Mes documents\\meng\\micado\\src\\debug"
+    "OutputPath" = "..\\debug"
     "SearchPath" = "-I \"C:\\Program Files\\Autodesk\\Acade 2008\" -r acdbmgd.dll -r \"acmgd.dll\""
     "StrongNameFile" = ""
     "OutputBase" = ""
@@ -20,14 +20,14 @@
     "DebugStartMode" = "0"
     "StartApp" = "C:\\Program Files\\Autodesk\\Acade 2008\\acad.exe"
     "StartAppPath" = "C:\\Program Files\\Autodesk\\Acade 2008\\UserDataCache\\"
-    "CustomStartupArguments" = "/ld \"C:\\Documents and Settings\\Nada AMIN\\Mes documents\\meng\\micado\\src\\debug\\BioStreamDB.dbx\" /b \"C:\\Documents and Settings\\Nada AMIN\\Mes documents\\meng\\micado\\src\\debug\\micado.scr\""
+    "CustomStartupArguments" = "/ld \"C:\\Documents and Settings\\Nada AMIN\\Mes documents\\projects\\micado\\src\\debug\\BioStreamDB.dbx\" /b \"C:\\Documents and Settings\\Nada AMIN\\Mes documents\\projects\\micado\\src\\debug\\micado.scr\""
     }
     "Release|Win32"
     {
     "ProjectType" = "DLL"
     "OptLevel" = "3"
     "StrongNamingLevel" = "None"
-    "OutputPath" = "C:\\Documents and Settings\\Nada AMIN\\Mes documents\\meng\\micado\\src\\release"
+    "OutputPath" = "..\\release"
     "SearchPath" = "-I \"C:\\Program Files\\Autodesk\\Acade 2008\" -r acdbmgd.dll -r \"acmgd.dll\""
     "StrongNameFile" = ""
     "OutputBase" = ""
@@ -60,6 +60,14 @@
     "ProjRelPath" = "T"
     }
     "prototype.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+    "bridge.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+    "flow.fs"
     {
     "ProjRelPath" = "T"
     }

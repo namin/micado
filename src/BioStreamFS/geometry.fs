@@ -1,5 +1,6 @@
 #light
 
+/// convenient add-ons on top of Autodesk.AutoCAD.Geometry
 module BioStream.Micado.Core.Geometry
 
 open Autodesk.AutoCAD.Geometry

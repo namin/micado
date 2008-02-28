@@ -1,5 +1,7 @@
 #light 
 
+/// Access to drawing editor (user input + output)
+/// Add-on to Autodesk.AutoCAD.EditorInput
 module BioStream.Micado.Plugin.Editor
 
 open BioStream.Micado.Plugin
@@ -7,13 +9,24 @@ open Autodesk.AutoCAD.ApplicationServices
 open Autodesk.AutoCAD.DatabaseServices
 open Autodesk.AutoCAD.EditorInput
 
+open Autodesk.AutoCAD.Geometry
+open BioStream.Micado.Core
+
 /// returns the active editor
 let editor() =
     Application.DocumentManager.MdiActiveDocument.Editor
 
+/// draw the given points in white, without highlighting
+let drawVector (pointA : Point3d) (pointB : Point3d) =
+    editor().DrawVector( pointA, 
+                         pointB, 
+                         7, // white
+                         false ) // no highlighting
+                          
 /// writes the given message to the active command line
 let writeLine message =
     editor().WriteMessage(message ^ "\n")
+    |> ignore
         
 /// prompts the user to select an entity
 /// returns the selected entity if user complies
