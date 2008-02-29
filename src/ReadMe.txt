@@ -30,7 +30,24 @@ The solutions contain the following projects:
 
 *** RUNNING ***
 
-You can run micado directly from the Visual Studio debugger by attaching AutoCAD as an external program:
+You can run micado directly from the Visual Studio debugger by attaching AutoCAD as an external program.
+
+First, generate micado-debug.scr with the python script bin\GenerateScrLoader.py.
+* From a command prompt, cd to the bin directory, and type:
+  python GenerateScrLoader.py --help
+  to get help on running the script.
+* If you just type
+  python GenerateScrLoader.py
+  micado-debug.scr will be generated in C:\Program Files\Autodesk\Acade 2008\UserDataCache\
+
+If you generated micado-debug.scr in the default location, you're all set.
+Just make sure that BioStreamFS is the default startup project.
+
+To configure a project as the default startup project, 
+Right-click on it in the Solution Explorer and then click on Set as StartUp Project.
+
+If you generated micado-debug.scr in a custom location, 
+configure BioStreamCS as the default startup project and set the debugging options as follows:
 
 - Right-Click on the BioStreamCS project & select Properties. Click the Debug tab.
 
@@ -38,9 +55,7 @@ You can run micado directly from the Visual Studio debugger by attaching AutoCAD
   (e.g. C:\Program Files\Autodesk\Acade 2008\acad.exe)
   
 - In Start Options, add the following command line arguments
-  (replacing MICADO-DIR with the actual full path to your minicad source directory).
-  /ld MICADO-DIR\src\debug\BioStreamDB.dbx" /b  MICADO-DIR\src\debug\micado"
-  You'll also need to change all the full paths in the file ..\src\debug\micado.scr.
-  This will load all the necessary minicad extensions. 
+  /b  "GENERATE_DIRECTORY\micado-debug"
+  where GENERATE_DIRECTORY is the directory in which you generated micado-debug.scr
   
-- For Working Directory, I have C:\Program Files\Autodesk\Acade 2008\UserDataCache\
+- For Working Directory, typically use GENERATE_DIRECTORY as well.

@@ -1,4 +1,0 @@
-(command "Netload" "C:/Documents and Settings/Nada AMIN/Mes documents/projects/micado/src/debug/BioStreamMg.dll")
-(command "Netload" "C:/Documents and Settings/Nada AMIN/Mes documents/projects/micado/src/debug/biostreamfs.dll")
-(command "Netload" "C:/Documents and Settings/Nada AMIN/Mes documents/projects/micado/src/debug/BioStreamCS.dll")
-(command "Netload" "C:/Documents and Settings/Nada AMIN/Mes documents/projects/micado/src/debug/plugintest.dll")

@@ -18,9 +18,9 @@
     "DebugCheck" = "TRUE"
     "CustomCompilationCheck" = "FALSE"
     "DebugStartMode" = "0"
-    "StartApp" = ""
-    "StartAppPath" = ""
-    "CustomStartupArguments" = ""
+    "StartApp" = "C:\\Program Files\\Autodesk\\Acade 2008\\acad.exe"
+    "StartAppPath" = "C:\\Program Files\\Autodesk\\Acade 2008\\UserDataCache\\"
+    "CustomStartupArguments" = "/b \"C:\\Program Files\\Autodesk\\Acade 2008\\UserDataCache\\micado-debug\""
     }
     "Release|Win32"
     {
