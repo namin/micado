@@ -27,7 +27,8 @@ srcFilenameDebug = "micado-debug.scr"
 srcFilenameRelease = "micado.scr"
 
 arxloadFilenames = ["BioStreamDB.dbx"]
-netloadFilenames = ["BioStreamMg.dll", "BioStreamCS.dll", "biostreamfs.dll", "plugintest.dll"]
+netloadFilenames = ["BioStreamMg.dll", "BioStreamCS.dll", "biostreamfs.dll"]
+debugExtraNetloadFilenames = ["plugintest.dll"]
 
 arxloadCommand = "(arxload \"%s%s\")"
 netloadCommand = "(command \"Netload\" \"%s%s\")"
@@ -93,7 +94,9 @@ def main():
     else:
         srcFilename = "micado-debug.scr"
         generateDirectory = generateDirectoryDebug
-        pluginDirectory = pluginDirectoryDebug 
+        pluginDirectory = pluginDirectoryDebug
+        netloadFilenames.extend([debugExtraNetloadFilenames])
+        
     if len(args) >= 2:
         pluginDirectory = args[1]
     if len(args) >= 1:
