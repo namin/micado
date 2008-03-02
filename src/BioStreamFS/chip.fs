@@ -46,6 +46,32 @@ let createControl =
                    acc valves punches others entities 
     acc [] [] []
 
+let deconstructExtents (e : Extents3d) =
+    let min2d = Geometry.to2d e.MinPoint
+    let max2d = Geometry.to2d e.MaxPoint
+    (min2d.X, min2d.Y, max2d.X, max2d.Y)
+
+let findBoundingBox (entities : Entity list) =
+    List.map (fun (entity : Entity) -> entity.GeometricExtents |> deconstructExtents) entities
+ |> fun (lst) ->
+    if lst=[]
+    then (0.0, 0.0, 0.0, 0.0)
+    else List.fold_left (fun (minX',minY',maxX',maxY') (minX,minY,maxX,maxY) ->
+                             (min minX minX', min minY minY', max maxX maxX', max maxY maxY'))
+                             (List.hd lst)
+                             lst
+ |> fun (minX, minY, maxX, maxY) -> (new Point2d(minX, minY), new Point2d(maxX, maxY))
+ 
+/// representation of a multi-layer soft litography chip in terms of a flow layer and a control layer
+type Chip (chipEntities : ChipEntities) =
+    let flowLayer = createFlow chipEntities.FlowEntities
+    let controlLayer = createControl chipEntities.ControlEntities
+    let boundingBox = ref None : (Point2d * Point2d) option ref
+    let computeBoundingBox() = 
+        findBoundingBox (List.append chipEntities.FlowEntities chipEntities.ControlEntities)
+    member v.FlowLayer = flowLayer
+    member v.ControlLayer = controlLayer
+    member v.BoundingBox with get() = lazyGet computeBoundingBox boundingBox
+    
 /// creates a chip representation from the given chip entities
-let create(chipEntities : ChipEntities) =
-    { FlowLayer = createFlow chipEntities.FlowEntities ; ControlLayer = createControl chipEntities.ControlEntities }
+let create(chipEntities : ChipEntities) = Chip chipEntities

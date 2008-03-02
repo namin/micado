@@ -19,7 +19,14 @@ let test_polyline2flow() =
     Editor.promptSelectFlowSegment "select a flow segment (try a polyline): "
  |> Option.map Debug.drawFlowSegment 
  |> ignore
- 
+
+[<CommandMethod("micado_test_drawArrow")>]
+/// tests drawing an arrow
+let test_drawArrow() =
+    Editor.promptSelectFlowSegment "select a flow segment (try a polyline): "
+ |> Option.map (fun flow -> Debug.drawArrow flow.Segment.StartPoint flow.Segment.EndPoint)
+ |> ignore
+
 [<CommandMethod("micado_test_collectChipEntities")>]
 /// tests collecting the chip entities
 let test_collectChipEntities() =
@@ -40,4 +47,14 @@ let test_chip() =
                                (chip.ControlLayer.UnconnectedLines.Length)
                                (chip.ControlLayer.UnconnectedPunches.Length)
                                (chip.ControlLayer.Obstacles.Length) )
+                               
+[<CommandMethod("micado_test_grid")>]
+/// test the routing grid
+let test_grid() =
+    Chip.create (Database.collectChipEntities())
+ |> Routing.ChipGrid
+ |> Debug.drawGrid
+ |> ignore
+ 
+  
     

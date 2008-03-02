@@ -83,6 +83,10 @@
     {
     "ProjRelPath" = "T"
     }
+    "routing.fs"
+    {
+    "ProjRelPath" = "T"
+    }
     "commands.fs"
     {
     "ProjRelPath" = "T"

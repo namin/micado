@@ -129,8 +129,3 @@ type Control ( valves : Valve list, punches : Punch list, others : RestrictedEnt
     member v.UnconnectedPunches with get() = lazyGet v.computeUnconnectedPunches unconnectedPunches //v.unconnectedPunches.Force()
     /// obstacles are others that do not belong to any control line
     member v.Obstacles with get() = lazyGet v.computeObstacles obstacles //v.obstacles.Force()
-
-/// representation of a multi-layer soft litography chip in terms of a flow layer and a control layer
-type Chip =
-    { FlowLayer : Flow
-      ControlLayer : Control }
