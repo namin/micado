@@ -71,6 +71,7 @@ let promptSelectPolylineAndPoint message =
 let promptSelectPolyline message =
     promptSelectEntity message |> Option.bind justPolyline
 
+/// converts the polyline to a flow segment if possible
 let justFlowSegment (polyline : Polyline) =
     Flow.from_polyline polyline
     |> function

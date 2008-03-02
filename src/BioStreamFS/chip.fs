@@ -11,6 +11,9 @@ open BioStream.Micado.Bridge
 open Autodesk.AutoCAD.DatabaseServices
 open Autodesk.AutoCAD.Geometry
 
+/// creates a flow representation from the given entities
+/// only considers an entity if it's either a punch or a polyline convertible to a flow segment
+/// prints a warning for each ignored entity
 let createFlow =
     let rec acc segments punches (entities : Entity list)  =
         match entities with
@@ -27,6 +30,9 @@ let createFlow =
                    acc segments punches entities 
     acc [] []
 
+/// creates a control representation from the given entities
+/// only considers an entity if it's either a valve, a punch, or a restricted entity
+/// prints a warning for each ignored entity
 let createControl =
     let rec acc valves punches others ( entities : Entity list ) =
         match entities with
@@ -39,6 +45,7 @@ let createControl =
             | _ -> Editor.writeLine "warning: unrecognized control entity"
                    acc valves punches others entities 
     acc [] [] []
-    
+
+/// creates a chip representation from the given chip entities
 let create(chipEntities : ChipEntities) =
     { FlowLayer = createFlow chipEntities.FlowEntities ; ControlLayer = createControl chipEntities.ControlEntities }

@@ -8,7 +8,9 @@ open BioStream.Micado.Core
 
 open Autodesk.AutoCAD.DatabaseServices
 open Autodesk.AutoCAD.Geometry
-    
+
+/// converts a polyline to a flow segment
+/// which is only possible if the polyline has four sides and is closed
 let from_polyline (polyline : Polyline) =
     let convertible (polyline : Polyline) =
         polyline.IsOnlyLines && polyline.Closed && (polyline.NumberOfVertices = 4)

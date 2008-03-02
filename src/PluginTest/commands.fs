@@ -14,19 +14,22 @@ open BioStream.Micado.Core
 open BioStream.Micado.Plugin
 
 [<CommandMethod("micado_test_polyline2flow")>]
+/// tests converting a polyline to a flow line
 let test_polyline2flow() =
     Editor.promptSelectFlowSegment "select a flow segment (try a polyline): "
  |> Option.map Debug.drawFlowSegment 
  |> ignore
  
 [<CommandMethod("micado_test_collectChipEntities")>]
+/// tests collecting the chip entities
 let test_collectChipEntities() =
     let chipEntities = Database.collectChipEntities()
     Editor.writeLine (sprintf "Collected %d flow entities and %d control entities" 
                               chipEntities.FlowEntities.Length
                               chipEntities.ControlEntities.Length)
 
-[<CommandMethod("micado_test_chip")>]                            
+[<CommandMethod("micado_test_chip")>]
+/// tests the chip representation                   
 let test_chip() =
     let chip = Chip.create (Database.collectChipEntities())
     Editor.writeLine ( sprintf "Flow: %d segments, %d punches" 

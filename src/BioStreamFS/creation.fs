@@ -8,6 +8,8 @@ open BioStream.Micado.Core
 open BioStream.Micado.Common.Datatypes
 open Autodesk.AutoCAD.Geometry
 
+/// creates a hollow valve on the given flow segment as close to the given point as possible
+/// using the user settings for its relative width and height
 let valve (flowSegment : FlowSegment) (clickedPoint : Point2d) =
     let relativeWidth = Settings.ValveRelativeWidth
     let relativeHeight = Settings.ValveRelativeHeight
@@ -26,7 +28,9 @@ let valve (flowSegment : FlowSegment) (clickedPoint : Point2d) =
     Array.iter addVertex points
     valve.Closed <- true
     valve
-     
+
+/// creates a punch centered on the given point
+/// using the user settings for its number of bars, bar width and radius
 let punch (centerPoint : Point2d) =
     let barNumber = Settings.PunchBarNumber
     let barWidth = Settings.PunchBarWidth
