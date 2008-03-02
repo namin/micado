@@ -11,34 +11,34 @@ open BioStream.Micado.Bridge
 open Autodesk.AutoCAD.DatabaseServices
 open Autodesk.AutoCAD.Geometry
 
-let createFlow ( entities : Entity list ) =
-    let rec acc (entities : Entity list) segments punches =
+let createFlow =
+    let rec acc segments punches (entities : Entity list)  =
         match entities with
         | [] -> Flow (segments, punches)
         | entity::entities ->
             match entity with
-            | :? Punch as punch -> acc entities segments (punch::punches)
+            | :? Punch as punch -> acc segments (punch::punches) entities
             | :? Polyline as polyline ->
                 match Flow.from_polyline polyline with
                 | None -> Editor.writeLine "warning: a flow polyline could not be converted to a flow segment"
-                          acc entities segments punches
-                | Some segment -> acc entities (segment::segments) punches
+                          acc segments punches entities 
+                | Some segment -> acc (segment::segments) punches entities 
             | _ -> Editor.writeLine "warning: unrecognized flow entity"
-                   acc entities segments punches
-    acc entities [] []
+                   acc segments punches entities 
+    acc [] []
 
-let createControl ( entities : Entity list ) =
-    let rec acc ( entities : Entity list ) valves punches others =
+let createControl =
+    let rec acc valves punches others ( entities : Entity list ) =
         match entities with
         | [] -> Control (valves, punches, others)
         | entity::entities ->
             match entity with
-            | :? Valve as valve -> acc entities (valve::valves) punches others
-            | :? Punch as punch -> acc entities valves (punch::punches) others
-            | :? RestrictedEntity as other -> acc entities valves punches (other::others)
+            | :? Valve as valve -> acc (valve::valves) punches others entities 
+            | :? Punch as punch -> acc valves (punch::punches) others entities 
+            | :? RestrictedEntity as other -> acc valves punches (other::others) entities 
             | _ -> Editor.writeLine "warning: unrecognized control entity"
-                   acc entities valves punches others
-    acc entities [] [] []
+                   acc valves punches others entities 
+    acc [] [] []
     
 let create(chipEntities : ChipEntities) =
     { FlowLayer = createFlow chipEntities.FlowEntities ; ControlLayer = createControl chipEntities.ControlEntities }

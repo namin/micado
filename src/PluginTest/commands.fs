@@ -30,7 +30,11 @@ let test_collectChipEntities() =
 let test_chip() =
     let chip = Chip.create (Database.collectChipEntities())
     Editor.writeLine ( sprintf "Flow: %d segments, %d punches" 
-                               (chip.FlowLayer.Segments.Length) (chip.FlowLayer.Punches.Length) )
-    Editor.writeLine ( sprintf "Control: %d control lines, %d unconnected control lines, %d unconnected punches"
-                               (chip.ControlLayer.Lines.Length) (chip.ControlLayer.UnconnectedLines.Length) (chip.ControlLayer.UnconnectedPunches.Length))
+                               (chip.FlowLayer.Segments.Length)
+                               (chip.FlowLayer.Punches.Length) )
+    Editor.writeLine ( sprintf "Control: %d control lines, %d unconnected control lines, %d unconnected punches, %d obstacles"
+                               (chip.ControlLayer.Lines.Length)
+                               (chip.ControlLayer.UnconnectedLines.Length)
+                               (chip.ControlLayer.UnconnectedPunches.Length)
+                               (chip.ControlLayer.Obstacles.Length) )
     

@@ -65,23 +65,24 @@ type Control ( valves : Valve list, punches : Punch list, others : RestrictedEnt
     let lines = ref None : ControlLine array option ref
     let unconnectedLines = ref None : ControlLine array option ref
     let unconnectedPunches = ref None : Punch array option ref
+    let obstacles = ref None : RestrictedEntity array option ref
     member private v.computeLines() =
         let entities = Array.concat [(to_entities v.Valves);(to_entities v.Punches);(to_entities v.Others)]
         let graph = entityIntersectionGraph entities
         let components = Graph.ConnectedComponents graph
-        let component2line els =
-            let rec acc els valves punches others =
+        let component2line =
+            let rec acc valves punches others els  =
                 match els with
                 | [] -> { Valves=valves; Punches=punches; Others=others }
                 | el::els -> match el with 
                                 | el when el<v.Valves.Length -> 
-                                    acc els (v.Valves.[el]::valves) punches others
+                                    acc (v.Valves.[el]::valves) punches others els 
                                 | el when el<v.Valves.Length+v.Punches.Length ->
-                                    acc els valves (v.Punches.[el-v.Valves.Length]::punches) others
+                                    acc valves (v.Punches.[el-v.Valves.Length]::punches) others els 
                                 | el ->
-                                    acc els valves punches (v.Others.[el-v.Valves.Length-v.Punches.Length]::others)
+                                    acc valves punches (v.Others.[el-v.Valves.Length-v.Punches.Length]::others) els 
             
-            acc els [] [] []
+            acc [] [] []
         Seq.to_array (seq { for c in components do
                                 let line = component2line (Set.elements c)
                                 if line.Valves <> []
@@ -93,13 +94,17 @@ type Control ( valves : Valve list, punches : Punch list, others : RestrictedEnt
         Array.filter (fun (punch : Punch) -> 
                           not (Array.exists (fun (line : ControlLine) -> List.mem punch line.Punches) v.Lines))
                      v.Punches
+    member private v.computeObstacles() =
+        Array.filter (fun (other : RestrictedEntity) ->
+                          not (Array.exists (fun (line : ControlLine) -> List.mem other line.Others) v.Lines))
+                     v.Others
     member v.Valves = Array.of_list valves
     member v.Punches = Array.of_list punches
     member v.Others = Array.of_list others
     member v.Lines with get() = lazyGet v.computeLines lines
     member v.UnconnectedLines with get() = lazyGet v.computeUnconnectedLines unconnectedLines
     member v.UnconnectedPunches with get() = lazyGet v.computeUnconnectedPunches unconnectedPunches
-
+    member v.Obstacles with get() = lazyGet v.computeObstacles obstacles
 type Chip =
     { FlowLayer : Flow
       ControlLayer : Control }
