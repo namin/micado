@@ -3,15 +3,12 @@
 /// flow representation
 module BioStream.Micado.Core.Flow
 
+open BioStream.Micado.Common.Datatypes
 open BioStream.Micado.Core
 open BioStream.Micado.Bridge
 
 open Autodesk.AutoCAD.DatabaseServices
 open Autodesk.AutoCAD.Geometry
-
-type FlowSegment = 
-    { segment : LineSegment2d
-      width : double }
 
 let drawSegmentEnds (startPoint, endPoint) =
     Editor.drawVector (Geometry.to3d startPoint) (Geometry.to3d endPoint)
@@ -45,6 +42,5 @@ let from_polyline (polyline : Polyline) =
         then makeFlow 0 2 
         else makeFlow 1 3
     if not (convertible polyline)
-    then Editor.writeLine "The polyline could not be converted to a flow segment."
-         None
+    then None
     else Some (convert polyline)
