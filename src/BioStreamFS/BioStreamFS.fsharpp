@@ -59,15 +59,15 @@
     {
     "ProjRelPath" = "T"
     }
+    "creation.fs"
+    {
+    "ProjRelPath" = "T"
+    }
     "database.fs"
     {
     "ProjRelPath" = "T"
     }
     "editor.fs"
-    {
-    "ProjRelPath" = "T"
-    }
-    "commands.fs"
     {
     "ProjRelPath" = "T"
     }
@@ -84,6 +84,10 @@
     "ProjRelPath" = "T"
     }
     "chip.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+    "commands.fs"
     {
     "ProjRelPath" = "T"
     }

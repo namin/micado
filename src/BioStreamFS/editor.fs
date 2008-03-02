@@ -39,11 +39,12 @@ let promptSelectEntity message =
         if ent = null
            || ent.Status = PromptStatus.Error || ent.ObjectId.IsNull || not ent.ObjectId.IsValid
         then
-           if ent.Status <> PromptStatus.Cancel
-           then writeLine "You did not select an entity.";
+           writeLine "You did not select an entity.";
            None
         else
-           Some ent.ObjectId
+        if ent.Status = PromptStatus.Cancel
+        then None
+        else Some ent.ObjectId
     promptForEntity |> idIfValid |>  Option.map Database.readEntityFromId
     
 /// prompts the user to select a polyline
@@ -55,4 +56,23 @@ let promptSelectPolyline message =
         | _ -> editor().WriteMessage("Selected entity is not a polyline.")
                None
     promptSelectEntity message |> Option.bind justPolyline
+    
+/// prompts the user to select a point
+/// returns the selected point if the user complies
+let promptPoint message =
+    let promptForPoint =
+        try
+            editor().GetPoint(new PromptPointOptions(message))
+        with _ -> null
+    let pointIfValid (res : PromptPointResult) =
+        if res = null
+           || res.Status = PromptStatus.Error
+        then
+           writeLine "You did not select a point.";
+           None
+        else
+        if res.Status = PromptStatus.Cancel
+        then None
+        else Some res.Value
+    promptForPoint |> pointIfValid
     

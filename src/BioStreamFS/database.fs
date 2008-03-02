@@ -23,6 +23,19 @@ let readEntityFromId (entId : ObjectId) =
     myT.Commit()
     entity :?> Entity
 
+/// writes the entity to the active database
+/// returns the given entity (for chaining)
+let writeEntity (entity :> Entity) =
+    let db = database()
+    let tm = db.TransactionManager
+    use myT = tm.StartTransaction()
+    let bt = tm.GetObject(db.BlockTableId, OpenMode.ForRead, false) :?> BlockTable
+    let btr = tm.GetObject(bt.[BlockTableRecord.ModelSpace], OpenMode.ForWrite, false) :?> BlockTableRecord
+    btr.AppendEntity(entity) |> ignore
+    tm.AddNewlyCreatedDBObject(entity, true)
+    myT.Commit()
+    entity
+    
 /// collects all entities in flow and control layers in the active database
 let collectChipEntities () =
     let mutable flowEntities = []
@@ -35,9 +48,9 @@ let collectChipEntities () =
     for id in btr do
         match tm.GetObject(id, OpenMode.ForRead, true) with
         | :? Entity as ent ->
-            if (List.mem ent.Layer Settings.flowLayers)
+            if (List.mem ent.Layer Settings.FlowLayers)
             then flowEntities <- ent :: flowEntities
-            else if (List.mem ent.Layer Settings.controlLayers)
+            else if (List.mem ent.Layer Settings.ControlLayers)
                  then controlEntities <- ent :: controlEntities
                  else ()
         | _ -> ()
