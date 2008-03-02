@@ -14,8 +14,8 @@ type ChipEntities =
       ControlEntities : Entity list }
       
 type FlowSegment = 
-    { segment : LineSegment2d
-      width : double }
+    { Segment : LineSegment2d
+      Width : double }
       
 type Flow ( segments : FlowSegment list, punches : Punch list) =
     member v.Segments = segments
@@ -23,12 +23,11 @@ type Flow ( segments : FlowSegment list, punches : Punch list) =
 
 type RestrictedEntity = Curve
 
-
 type ControlLine =
-    { valves : Valve list
-      punches : Punch list
-      others : RestrictedEntity list }
-    member v.Connected = (v.punches <> [])
+    { Valves : Valve list
+      Punches : Punch list
+      Others : RestrictedEntity list }
+    member v.Connected = (v.Punches <> [])
 
 let lazyGet computeValue optionValue =
     match !optionValue with
@@ -73,7 +72,7 @@ type Control ( valves : Valve list, punches : Punch list, others : RestrictedEnt
         let component2line els =
             let rec acc els valves punches others =
                 match els with
-                | [] -> { valves=valves; punches=punches; others=others }
+                | [] -> { Valves=valves; Punches=punches; Others=others }
                 | el::els -> match el with 
                                 | el when el<v.Valves.Length -> 
                                     acc els (v.Valves.[el]::valves) punches others
@@ -85,14 +84,14 @@ type Control ( valves : Valve list, punches : Punch list, others : RestrictedEnt
             acc els [] [] []
         Seq.to_array (seq { for c in components do
                                 let line = component2line (Set.elements c)
-                                if line.valves <> []
+                                if line.Valves <> []
                                 then yield line 
                            })                
     member private v.computeUnconnectedLines() =
         Array.filter (fun (line : ControlLine) -> not line.Connected) v.Lines
     member private v.computeUnconnectedPunches() =
         Array.filter (fun (punch : Punch) -> 
-                          not (Array.exists (fun (line : ControlLine) -> List.mem punch line.punches) v.Lines))
+                          not (Array.exists (fun (line : ControlLine) -> List.mem punch line.Punches) v.Lines))
                      v.Punches
     member v.Valves = Array.of_list valves
     member v.Punches = Array.of_list punches
@@ -102,5 +101,5 @@ type Control ( valves : Valve list, punches : Punch list, others : RestrictedEnt
     member v.UnconnectedPunches with get() = lazyGet v.computeUnconnectedPunches unconnectedPunches
 
 type Chip =
-    { flow : Flow
-      control : Control }
+    { FlowLayer : Flow
+      ControlLayer : Control }

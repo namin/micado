@@ -41,4 +41,4 @@ let createControl ( entities : Entity list ) =
     acc entities [] [] []
     
 let create(chipEntities : ChipEntities) =
-    { flow = createFlow chipEntities.FlowEntities ; control = createControl chipEntities.ControlEntities }
+    { FlowLayer = createFlow chipEntities.FlowEntities ; ControlLayer = createControl chipEntities.ControlEntities }

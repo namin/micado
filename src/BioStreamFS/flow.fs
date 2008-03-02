@@ -21,11 +21,11 @@ let midSegmentEnds width (normal : Vector2d) (point : Point2d) =
     point.Subtract(vec), point.Add(vec)
     
 let draw (flow : FlowSegment) =
-    let normal = flow.segment.Direction.GetPerpendicularVector().GetNormal()
-    let mainSegment = flow.segment.StartPoint, flow.segment.EndPoint
+    let normal = flow.Segment.Direction.GetPerpendicularVector().GetNormal()
+    let mainSegment = flow.Segment.StartPoint, flow.Segment.EndPoint
     let widthIndicatorSegments = 
-        (List.map (midSegmentEnds (flow.width/2.0) normal)
-                  [flow.segment.StartPoint; flow.segment.EndPoint])
+        (List.map (midSegmentEnds (flow.Width/2.0) normal)
+                  [flow.Segment.StartPoint; flow.Segment.EndPoint])
     List.iter drawSegmentEnds (mainSegment::widthIndicatorSegments)
     
 let from_polyline (polyline : Polyline) =
@@ -35,8 +35,8 @@ let from_polyline (polyline : Polyline) =
         let segs = [|0..3|] |> Array.map polyline.GetLineSegment2dAt
         let lens = segs |> Array.map (fun (x : LineSegment2d) -> x.Length)
         let makeFlow ia ib = 
-            { width = (max lens.[ia] lens.[ib]) ; 
-              segment = new LineSegment2d(segs.[ia].MidPoint, segs.[ib].MidPoint) }
+            { Width = (max lens.[ia] lens.[ib]) ; 
+              Segment = new LineSegment2d(segs.[ia].MidPoint, segs.[ib].MidPoint) }
         let minLen ia ib = min lens.[ia] lens.[ib]
         if minLen 0 2 < minLen 1 3
         then makeFlow 0 2 

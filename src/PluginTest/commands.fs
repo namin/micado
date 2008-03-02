@@ -35,7 +35,8 @@ let test_collectChipEntities() =
 [<CommandMethod("micado_test_chip")>]                            
 let test_chip() =
     let chip = Chip.create (Database.collectChipEntities())
-    Editor.writeLine ( sprintf "Flow: %d segments, %d punches" (chip.flow.Segments.Length) (chip.flow.Punches.Length) )
+    Editor.writeLine ( sprintf "Flow: %d segments, %d punches" 
+                               (chip.FlowLayer.Segments.Length) (chip.FlowLayer.Punches.Length) )
     Editor.writeLine ( sprintf "Control: %d control lines, %d unconnected control lines, %d unconnected punches"
-                               (chip.control.Lines.Length) (chip.control.UnconnectedLines.Length) (chip.control.UnconnectedPunches.Length))
+                               (chip.ControlLayer.Lines.Length) (chip.ControlLayer.UnconnectedLines.Length) (chip.ControlLayer.UnconnectedPunches.Length))
     
