@@ -27,36 +27,69 @@ let drawVector (pointA : Point3d) (pointB : Point3d) =
 let writeLine message =
     editor().WriteMessage(message ^ "\n")
     |> ignore
-        
+
 /// prompts the user to select an entity
-/// returns the selected entity if user complies
-let promptSelectEntity message =
+/// returns a tuple of the selected entity and the picked point if the user complies
+let promptSelectEntityAndPoint message =
     let promptForEntity =
         try
             editor().GetEntity(new PromptEntityOptions(message))
         with _ -> null
-    let idIfValid (ent : PromptEntityResult) =
-        if ent = null
-           || ent.Status = PromptStatus.Error || ent.ObjectId.IsNull || not ent.ObjectId.IsValid
+    let ifValid (res : PromptEntityResult) =
+        if res = null
+           || res.Status = PromptStatus.Error || res.ObjectId.IsNull || not res.ObjectId.IsValid
         then
            writeLine "You did not select an entity.";
            None
         else
-        if ent.Status = PromptStatus.Cancel
+        if res.Status = PromptStatus.Cancel
         then None
-        else Some ent.ObjectId
-    promptForEntity |> idIfValid |>  Option.map Database.readEntityFromId
+        else Some (Database.readEntityFromId res.ObjectId, res.PickedPoint)
+    promptForEntity |> ifValid
     
+/// prompts the user to select an entity
+/// returns the selected entity if user complies
+let promptSelectEntity message =
+    promptSelectEntityAndPoint message
+ |> Option.map (function | (entity, point) -> entity)
+
+/// returns the entity as polyline if it's possible
+let justPolyline (entity : Entity) =
+    match entity with
+    | :? Polyline as polyline -> Some polyline
+    | _ -> editor().WriteMessage("Selected entity is not a polyline.")
+           None
+
+/// prompts the user to select a polyline
+/// returns a tuple of the selected polyline and the picked point if the user complies
+let promptSelectPolylineAndPoint message =
+    promptSelectEntityAndPoint message
+ |> Option.bind (function | (entity, point) -> justPolyline entity |> Option.map (fun poly -> (poly, point)))
+ 
 /// prompts the user to select a polyline
 /// returns the selected polyline if the user complies
 let promptSelectPolyline message =
-    let justPolyline (entity : Entity) =
-        match entity with
-        | :? Polyline as polyline -> Some polyline
-        | _ -> editor().WriteMessage("Selected entity is not a polyline.")
-               None
     promptSelectEntity message |> Option.bind justPolyline
-    
+
+let justFlowSegment (polyline : Polyline) =
+    Flow.from_polyline polyline
+    |> function
+       | None -> writeLine "The selected polyline could not be converted to a flow segment."
+                 None
+       | s -> s
+                    
+/// prompts the user to select a flow segment
+/// returns the selected segment and the picked point if the user complies
+let promptSelectFlowSegmentAndPoint message =
+    promptSelectPolylineAndPoint message
+ |> Option.bind (function | (polyline, point) -> justFlowSegment polyline |> Option.map (fun flow -> (flow, point)))
+
+/// prompts the user to select a flow segment
+/// returns the selected segment if the user complies
+let promptSelectFlowSegment message =
+    promptSelectPolyline message
+ |> Option.bind justFlowSegment
+ 
 /// prompts the user to select a point
 /// returns the selected point if the user complies
 let promptPoint message =

@@ -59,6 +59,10 @@
     {
     "ProjRelPath" = "T"
     }
+    "flow.fs"
+    {
+    "ProjRelPath" = "T"
+    }
     "creation.fs"
     {
     "ProjRelPath" = "T"
@@ -71,15 +75,7 @@
     {
     "ProjRelPath" = "T"
     }
-    "prototype.fs"
-    {
-    "ProjRelPath" = "T"
-    }
     "bridge.fs"
-    {
-    "ProjRelPath" = "T"
-    }
-    "flow.fs"
     {
     "ProjRelPath" = "T"
     }
@@ -88,6 +84,14 @@
     "ProjRelPath" = "T"
     }
     "commands.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+    "debug.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+    "prototype.fs"
     {
     "ProjRelPath" = "T"
     }

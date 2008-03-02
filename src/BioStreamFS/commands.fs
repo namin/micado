@@ -14,3 +14,12 @@ let placePunch() =
  |> Option.map Database.writeEntity
  |> Option.map (fun (punch) -> Editor.writeLine ("Created punch at" ^ punch.Center.ToString() ^ "."))
  |> ignore
+ 
+[<CommandMethod("PlaceValve")>]
+let placeValve() =
+    Editor.promptSelectFlowSegmentAndPoint "Select point on flow segment: "
+ |> Option.map (fun (flowSegment, point3d) -> Creation.valve flowSegment (Geometry.to2d point3d))
+ |> Option.map Database.writeEntity
+ |> Option.map (fun (valve) -> Editor.writeLine ("Created valve at" ^ valve.Center.ToString() ^ "."))
+ |> ignore
+ 

@@ -15,14 +15,8 @@ open BioStream.Micado.Plugin
 
 [<CommandMethod("micado_test_polyline2flow")>]
 let test_polyline2flow() =
-    Editor.promptSelectPolyline "Select a polyline"
- |> Option.bind (fun poly -> 
-                    Flow.from_polyline poly 
-                 |> function
-                    | None -> Editor.writeLine "The polyline could not be converted to a flow segment."
-                              None
-                    | s -> s)
- |> Option.map Flow.draw 
+    Editor.promptSelectFlowSegment "select a flow segment (try a polyline): "
+ |> Option.map Debug.drawFlowSegment 
  |> ignore
  
 [<CommandMethod("micado_test_collectChipEntities")>]
