@@ -95,7 +95,7 @@ def main():
         srcFilename = "micado-debug.scr"
         generateDirectory = generateDirectoryDebug
         pluginDirectory = pluginDirectoryDebug
-        netloadFilenames.extend([debugExtraNetloadFilenames])
+        netloadFilenames.extend(debugExtraNetloadFilenames)
         
     if len(args) >= 2:
         pluginDirectory = args[1]
