@@ -52,7 +52,7 @@ let test_chip() =
 /// test the routing grid
 let test_grid() =
     Chip.create (Database.collectChipEntities())
- |> Routing.ChipGrid
+ |> Routing.createChipGrid
  |> Debug.drawGrid
  |> ignore
  
