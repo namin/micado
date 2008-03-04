@@ -124,14 +124,24 @@ type CalculatorGrid (g : SimpleGrid) =
             for y in [lry..ury] do
                 yield (x,y)
         }
+    let neighborCoordinatesWithSlope (slope : FlowSegmentSlope) (x,y) =
+        match slope with
+        | Tilted -> Seq.empty
+        | Horizontal -> { for dx in deltas when g.withinX(x+dx) -> (x+dx,y) }
+        | Vertical -> { for dy in deltas when g.withinY(y+dy) -> (x,y+dy) }
     member v.surroundingIndices (point : Point2d) =
         point |> closestLowerLeftCoordinates |> surroundingCoordinates |> Seq.map g.coordinates2index
-    member v.interiorIndices (polyline :> Polyline) =
+    [<OverloadID("interiorIndicesPolyline")>]
+    member v.interiorIndices (polyline : Polyline) =
         polyline.GeometricExtents
      |> fun (e) -> allCoordinatesInBoundingBox (Geometry.to2d e.MinPoint) (Geometry.to2d e.MaxPoint)
      |> Seq.filter (fun (c) -> c |> g.coordinates2point |> interiorPoint polyline)
      |> Seq.map g.coordinates2index
-        
+    [<OverloadID("interiorIndicesFlowSegment")>]
+    member v.interiorIndices (flowSegment : FlowSegment) =
+        flowSegment.to_polyline Settings.FlowExtraWidth |> v.interiorIndices     
+    member v.neighborsWithSlope (slope : FlowSegmentSlope) index =
+        index |> g.index2coordinates |> neighborCoordinatesWithSlope slope |> Seq.map g.coordinates2index
         
 type ChipGrid ( chip : Chip ) =
     let g = new SimpleGrid (Settings.Resolution, chip.BoundingBox)
@@ -152,7 +162,7 @@ type ChipGrid ( chip : Chip ) =
         let nodes' = punch.Center :: nodes
         let edges' = Seq.fold (fun edges fromIndex -> addEdge fromIndex n edges) edges indices
         (n, (n+1, nodes', edges'))
-    let addInterior lineIndex edges polyline =
+    let addInterior lineIndex edges (polyline : Polyline) =
         (c.interiorIndices polyline)
      |> Seq.fold (fun edges toIndex -> addEdge lineIndex toIndex edges) edges      
     let addValve line lineIndex (n,nodes,edges) (valve : Valve) =
@@ -182,6 +192,16 @@ type ChipGrid ( chip : Chip ) =
         let (line2index, acc'') = addAll addLine acc' lines
         let (nodeCount, nodes, edges) = acc''
         (punch2index, line2index, nodeCount, arrayOfRevList nodes, edges)
+    let addFlowSegment removedEdges (flowSegment : FlowSegment) =
+        match flowSegment.Slope with
+        | Tilted -> removedEdges
+        | slope -> let removeNeighbors removedEdges index = 
+                       c.neighborsWithSlope slope index
+                    |> Seq.fold (fun removedEdges neighbor -> addEdge index neighbor removedEdges |> addEdge neighbor index) removedEdges
+                   c.interiorIndices flowSegment
+                |> Seq.fold removeNeighbors removedEdges 
+    let removedEdges = 
+        List.fold_left addFlowSegment Map.empty chip.FlowLayer.Segments
     let toPoint index =
         if index < ig.NodeCount
         then ig.ToPoint index
@@ -190,11 +210,19 @@ type ChipGrid ( chip : Chip ) =
         match Map.tryfind index edges with
         | None -> Seq.empty
         | Some lst -> Seq.of_list lst
+    let filteredNeighbors index =
+        if index >= ig.NodeCount
+        then Seq.empty
+        else ig.Neighbors index
+          |> fun (seq) ->
+                match Map.tryfind index removedEdges with 
+                | None -> seq
+                | Some lst -> seq |> Seq.filter (fun (x) -> not (List.mem x lst)) 
     let neighbors index =
-        {yield! extraNeighbors index
-         if index < ig.NodeCount
-         then yield! ig.Neighbors index
-        } 
+        { 
+          yield! extraNeighbors index
+          yield! filteredNeighbors index
+        }
     interface IGrid with
         member v.NodeCount =  nodeCount
         member v.Neighbors index = neighbors index

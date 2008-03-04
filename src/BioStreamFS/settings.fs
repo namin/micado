@@ -17,4 +17,5 @@ let ValveRelativeHeight = 1.0
 
 let Resolution = 0.5
 let ConnectionWidth = 0.1
+let FlowExtraWidth = 0.2
 
