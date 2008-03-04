@@ -81,6 +81,9 @@ let onLeftSide (p : Point2d) (a : Point2d) (b : Point2d) =
 
 /// whether the given point is inside the area delimited by the given polyline
 let interiorPoint (polyline :> Polyline) (p : Point2d) =
+    if not polyline.Closed
+    then false
+    else
     let pointOnLeftSide = onLeftSide p
     let pointOnInnerSide prevLeft a b =
         let curLeft = pointOnLeftSide a b
@@ -102,7 +105,37 @@ let interiorPoint (polyline :> Polyline) (p : Point2d) =
              else checkSides (fromSide+1) prevLeft b
     checkSides 0 None (polylinePoint 0)
 
+/// converts the given polyline to a sequence of equivalent polylines:
+/// if the polyline is closed, just return a singleton polyline which is expanded by the extra width;
+/// if the polyine is not closed, for each side, returns a polyline segment with the segment width 
+/// and additionally expanded by the extra width
+let to_polylines extraWidth (polyline : Polyline) =
+    if polyline.Closed 
+    then if extraWidth = 0.0
+         then { yield polyline }
+         else
+         let ies = [|0..polyline.NumberOfVertices-1|]
+         let segments = Array.map polyline.GetLineSegment2dAt ies
+         let get i = i % polyline.NumberOfVertices |> fun (i) -> if i<0 then i+polyline.NumberOfVertices else i 
+         let expand i = (polyline.GetPoint2dAt i)
+                       -(segments.[i].Direction*extraWidth)
+                       +(segments.[get(i-1)].Direction*extraWidth)
+         let points = Array.map expand ies
+         let polyline' = new Polyline()
+         let addVertex point = polyline'.AddVertexAt(polyline'.NumberOfVertices, point, 0.0, 0.0, 0.0)
+         Array.iter addVertex points
+         polyline'.Closed <- true
+         { yield polyline' }
+    else let to_segmentPolyline (width, segment : LineSegment2d) =
+            let extraInDir d = segment.Direction*float(d)*extraWidth
+            let a = segment.StartPoint + extraInDir (-1)
+            let b = segment.EndPoint + extraInDir 1
+            segmentPolyline (width+extraWidth) a b
+         let allSides = {for i in [0..polyline.NumberOfVertices-2] -> polyline.GetStartWidthAt i, polyline.GetLineSegment2dAt i}
+         {for side in allSides -> to_segmentPolyline side}
+         
 type CalculatorGrid (g : SimpleGrid) =
+    let ig = g :> IGrid
     let closestCoordinates rounder (point : Point2d) =
         [| point.X - g.LowerLeft.X; point.Y - g.LowerLeft.Y |]
      |> Array.map (fun d -> int (rounder(d / g.Resolution)))
@@ -117,9 +150,9 @@ type CalculatorGrid (g : SimpleGrid) =
                 if g.within c
                 then yield c
         }
-    let allCoordinatesInBoundingBox (lr : Point2d) (ur : Point2d) =
-        let (lrx, lry) = closestUpperRightCoordinates lr
-        let (urx, ury) = closestLowerLeftCoordinates ur
+    let allCoordinatesInBoundingBox lr ur =
+        let (lrx, lry) =  lr
+        let (urx, ury) =  ur
         { for x in [lrx..urx] do
             for y in [lry..ury] do
                 yield (x,y)
@@ -134,15 +167,35 @@ type CalculatorGrid (g : SimpleGrid) =
     [<OverloadID("interiorIndicesPolyline")>]
     member v.interiorIndices (polyline : Polyline) =
         polyline.GeometricExtents
-     |> fun (e) -> allCoordinatesInBoundingBox (Geometry.to2d e.MinPoint) (Geometry.to2d e.MaxPoint)
+     |> fun (e) -> allCoordinatesInBoundingBox (closestUpperRightCoordinates (Geometry.to2d e.MinPoint)) 
+                                               (closestLowerLeftCoordinates  (Geometry.to2d e.MaxPoint))
      |> Seq.filter (fun (c) -> c |> g.coordinates2point |> interiorPoint polyline)
-     |> Seq.map g.coordinates2index
+     |> Seq.map g.coordinates2index 
     [<OverloadID("interiorIndicesFlowSegment")>]
     member v.interiorIndices (flowSegment : FlowSegment) =
         flowSegment.to_polyline Settings.FlowExtraWidth |> v.interiorIndices     
     member v.neighborsWithSlope (slope : FlowSegmentSlope) index =
         index |> g.index2coordinates |> neighborCoordinatesWithSlope slope |> Seq.map g.coordinates2index
-        
+    /// @require given polyline must be closed
+    member v.outerEdges (polyline : Polyline) =
+        let outerBoundingBoxIndices (entity :> Entity) =
+            entity.GeometricExtents
+         |> fun (e) -> allCoordinatesInBoundingBox (closestLowerLeftCoordinates  (Geometry.to2d e.MinPoint)) 
+                                                   (closestUpperRightCoordinates (Geometry.to2d e.MaxPoint))
+         |> Seq.map g.coordinates2index                                               
+        let intersectWithPolyline = entitiesIntersect polyline
+        let interiorOfPolyline = interiorPoint polyline
+        { for a in outerBoundingBoxIndices polyline do
+            let ptA = ig.ToPoint a
+            for b in ig.Neighbors a do
+                if a < b // avoid duplicates
+                then let ptB = ig.ToPoint b
+                     if intersectWithPolyline (connectionSegment ptA ptB)
+                     then if not (interiorOfPolyline ptA)
+                          then yield (b,a)
+                          if not (interiorOfPolyline ptB)
+                          then yield (a,b)
+        }
 type ChipGrid ( chip : Chip ) =
     let g = new SimpleGrid (Settings.Resolution, chip.BoundingBox)
     let ig = g :> IGrid
@@ -157,6 +210,9 @@ type ChipGrid ( chip : Chip ) =
         | Some lst -> if List.mem toIndex lst
                       then edges
                       else Map.add fromIndex (toIndex::lst) edges
+    let addDoubleEdge fromIndex toIndex edges =
+        addEdge fromIndex toIndex edges
+     |> addEdge toIndex fromIndex
     let addPunch (n,nodes,edges) (punch : Punch) =
         let indices = c.surroundingIndices punch.Center 
         let nodes' = punch.Center :: nodes
@@ -202,6 +258,11 @@ type ChipGrid ( chip : Chip ) =
                 |> Seq.fold removeNeighbors removedEdges 
     let removedEdges = 
         List.fold_left addFlowSegment Map.empty chip.FlowLayer.Segments
+     |> fun removedEdges -> 
+            chip.ControlLayer.Obstacles
+         |> Seq.map_concat (to_polylines 0.0)
+         |> Seq.map_concat c.outerEdges
+         |> Seq.fold (fun removedEdges (a,b) -> addDoubleEdge a b removedEdges) removedEdges
     let toPoint index =
         if index < ig.NodeCount
         then ig.ToPoint index
