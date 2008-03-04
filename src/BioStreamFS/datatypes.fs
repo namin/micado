@@ -26,7 +26,7 @@ type Flow ( segments : FlowSegment list, punches : Punch list) =
     member v.Punches = punches
 
 /// acceptable entity type for any control entity other than valve and punch
-type RestrictedEntity = Curve
+type RestrictedEntity = Polyline
 
 let entitiesIntersect (entity1 :> Entity) (entity2 :> Entity) =
     let points = new Point3dCollection()

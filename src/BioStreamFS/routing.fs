@@ -2,6 +2,7 @@
 
 module BioStream.Micado.Core.Routing
 
+open BioStream.Micado.Core
 open BioStream.Micado.Common
 open BioStream.Micado.Common.Datatypes
 open BioStream.Micado.Core.Chip
@@ -9,6 +10,7 @@ open BioStream.Micado.User
 open BioStream
 
 open Autodesk.AutoCAD.Geometry
+open Autodesk.AutoCAD.DatabaseServices
 
 type IGrid =
     inherit Graph.IGraph
@@ -62,11 +64,51 @@ type SimpleGrid ( resolution, boundingBox : Point2d * Point2d ) =
         member v.Neighbors index = Seq.map coordinates2index (neighborCoordinates (index2coordinates index))
         member v.ToPoint index = index |> index2coordinates |> coordinates2point
 
+let connectionSegment = segmentPolyline (Settings.ConnectionWidth)
+
+/// whether the first given point is on the left side 
+/// of the segment from the second given point to the third given:
+/// returns None if the point is on the segment
+let onLeftSide (p : Point2d) (a : Point2d) (b : Point2d) =
+    /// constructs a 3D vector from f to t
+    let vector (f : Point2d) (t : Point2d) = new Vector3d(t.X - f.X, t.Y - f.Y, 0.0)
+    let vAB = vector a b
+    let vAP = vector a p
+    let vCross = vAB.CrossProduct(vAP)
+    if vCross.Z = 0.0
+    then None
+    else Some (vCross.Z > 0.0)
+
+/// whether the given point is inside the area delimited by the given polyline
+let interiorPoint (polyline :> Polyline) (p : Point2d) =
+    let pointOnLeftSide = onLeftSide p
+    let pointOnInnerSide prevLeft a b =
+        let curLeft = pointOnLeftSide a b
+        match prevLeft, curLeft with
+        | _, None -> // check that point is on segment
+                     let within ac bc pc = (min ac bc) <= pc && pc <= (max ac bc)
+                     (within a.X b.X p.X && within a.Y b.Y p.Y, prevLeft)
+        | Some prevLeft', Some curLeft' when prevLeft' <> curLeft' -> (false, prevLeft)
+        | _ -> (true, curLeft)
+    let n = polyline.NumberOfVertices - (if polyline.Closed then 0 else 1)
+    let polylinePoint i = polyline.GetPoint2dAt(i % polyline.NumberOfVertices)
+    let rec checkSides fromSide prevLeft a =
+        if fromSide = n
+        then true
+        else let b = polylinePoint (fromSide+1)
+             let (ok, prevLeft) = pointOnInnerSide prevLeft a b
+             if not ok
+             then false
+             else checkSides (fromSide+1) prevLeft b
+    checkSides 0 None (polylinePoint 0)
+
 type CalculatorGrid (g : SimpleGrid) =
-    let closestLowerLeftCoordinates (point : Point2d) =
+    let closestCoordinates rounder (point : Point2d) =
         [| point.X - g.LowerLeft.X; point.Y - g.LowerLeft.Y |]
-     |> Array.map (fun d -> int (System.Math.Floor(d / g.Resolution)))
+     |> Array.map (fun d -> int (rounder(d / g.Resolution)))
      |> fun (a) -> (a.[0], a.[1])
+    let closestLowerLeftCoordinates = closestCoordinates System.Math.Floor
+    let closestUpperRightCoordinates = closestCoordinates System.Math.Ceiling
     let surroundingCoordinates lowerLeftCoordinates =
         let x,y = lowerLeftCoordinates
         { for dx in [0;1] do
@@ -75,11 +117,22 @@ type CalculatorGrid (g : SimpleGrid) =
                 if g.within c
                 then yield c
         }
+    let allCoordinatesInBoundingBox (lr : Point2d) (ur : Point2d) =
+        let (lrx, lry) = closestUpperRightCoordinates lr
+        let (urx, ury) = closestLowerLeftCoordinates ur
+        { for x in [lrx..urx] do
+            for y in [lry..ury] do
+                yield (x,y)
+        }
     member v.surroundingIndices (point : Point2d) =
         point |> closestLowerLeftCoordinates |> surroundingCoordinates |> Seq.map g.coordinates2index
-
-let connectionSegment = segmentPolyline (Settings.ConnectionWidth)
-    
+    member v.interiorIndices (polyline :> Polyline) =
+        polyline.GeometricExtents
+     |> fun (e) -> allCoordinatesInBoundingBox (Geometry.to2d e.MinPoint) (Geometry.to2d e.MaxPoint)
+     |> Seq.filter (fun (c) -> c |> g.coordinates2point |> interiorPoint polyline)
+     |> Seq.map g.coordinates2index
+        
+        
 type ChipGrid ( chip : Chip ) =
     let g = new SimpleGrid (Settings.Resolution, chip.BoundingBox)
     let ig = g :> IGrid
@@ -91,12 +144,17 @@ type ChipGrid ( chip : Chip ) =
     let addEdge fromIndex toIndex edges =
         match Map.tryfind fromIndex edges with
         | None -> Map.add fromIndex [toIndex] edges
-        | Some lst -> Map.add fromIndex (toIndex::lst) edges
+        | Some lst -> if List.mem toIndex lst
+                      then edges
+                      else Map.add fromIndex (toIndex::lst) edges
     let addPunch (n,nodes,edges) (punch : Punch) =
         let indices = c.surroundingIndices punch.Center 
         let nodes' = punch.Center :: nodes
         let edges' = Seq.fold (fun edges fromIndex -> addEdge fromIndex n edges) edges indices
         (n, (n+1, nodes', edges'))
+    let addInterior lineIndex edges polyline =
+        (c.interiorIndices polyline)
+     |> Seq.fold (fun edges toIndex -> addEdge lineIndex toIndex edges) edges      
     let addValve line lineIndex (n,nodes,edges) (valve : Valve) =
         let conflicts index =
             index |> ig.ToPoint |> connectionSegment valve.Center |> chip.ControlLayer.intersectOutside line
@@ -105,11 +163,13 @@ type ChipGrid ( chip : Chip ) =
         let edges' = Seq.fold (fun edges toIndex -> addEdge n toIndex edges) 
                               (addEdge lineIndex n edges)
                               indices
-        (n+1, nodes', edges')
+        let edges'' = addInterior lineIndex edges' (valve :> Polyline)
+        (n+1, nodes', edges'')
     let addLine (n,nodes,edges) (line : ControlLine) =
         let lineCenter = (List.hd line.Valves).Center // arbitrarily set the line point to the first valve center
         let (n',nodes',edges') = List.fold_left (addValve line n) (n+1,lineCenter::nodes,edges) (line.Valves)
-        (n, (n', nodes', edges'))
+        let edges'' = List.fold_left (addInterior n) edges' line.Others
+        (n, (n', nodes', edges''))
     let accadd adder (lst, acc) el =
         let (eli, acc') = adder acc el
         (eli::lst, acc')
