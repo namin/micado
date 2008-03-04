@@ -44,15 +44,15 @@ type ChipEntities =
     { FlowEntities : Entity list
       ControlEntities : Entity list }
 
-type FlowSegmentAngle = Horizontal | Vertical | Tilted
+type FlowSegmentSlope = Horizontal | Vertical | Tilted
 
 /// a flow segment
 type FlowSegment = 
     { Segment : LineSegment2d
       Width : double }
     member v.to_polyline extraWidth = segmentPolyline (v.Width+extraWidth) (v.Segment.StartPoint) (v.Segment.EndPoint)
-    member private v.angle = ref None : FlowSegmentAngle option ref
-    member private v.computeAngle() = 
+    member private v.slope= ref None : FlowSegmentSlope option ref
+    member private v.computeSlope() = 
         let around delta base angle =
             Geometry.angleWithin (base-delta) (base+delta) angle
         let angle = Geometry.rad2deg (v.Segment.Direction.Angle)
@@ -61,7 +61,7 @@ type FlowSegment =
         | _ when (near 0) -> Horizontal
         | _ when (near 90) -> Vertical
         | _ -> Tilted         
-    member v.Angle = lazyGet v.computeAngle v.angle
+    member v.Slope = lazyGet v.computeSlope v.slope
     
 /// flow layer of a chip
 type Flow ( segments : FlowSegment list, punches : Punch list) =
