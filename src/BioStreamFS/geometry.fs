@@ -22,5 +22,14 @@ let to3d (point2d : Point2d) =
 
 let to2d (point3d : Point3d) =
     point3d.Convert2d(xyPlane)
+    
+/// returns the two points, s.t.,
+/// the given point is mid-way in between,
+/// the distance between the given point and each returned point is the given width,
+/// the direction between the given point and each returned point is either the given normal or its reverse                                                           
+/// @requires normal is a normal vector
+let midSegmentEnds width (normal : Vector2d) (point : Point2d) =
+    let vec = normal.MultiplyBy(width)
+    point.Subtract(vec), point.Add(vec)
  
     

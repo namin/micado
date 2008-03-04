@@ -56,5 +56,18 @@ let test_grid() =
  |> Debug.drawGrid
  |> ignore
  
+[<CommandMethod("micado_test_entities_intersect")>]
+/// prompts for two entities and prints whether they intersect
+let test_entities_intersect() =
+    let entity1 = Editor.promptSelectEntity "select first entity"
+    let entity2 = entity1 |> Option.bind (fun entity1 -> Editor.promptSelectEntity "select second entity")
+    match entity1, entity2 with
+    | Some entity1, Some entity2 ->
+        match Datatypes.entitiesIntersect entity1 entity2 with
+        | true -> Editor.writeLine "selected entities intersect"
+        | false -> Editor.writeLine "selected entities do not intersect"
+    | _ -> ()
+ 
+ 
   
     

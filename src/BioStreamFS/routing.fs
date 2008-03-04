@@ -77,6 +77,8 @@ type CalculatorGrid (g : SimpleGrid) =
         }
     member v.surroundingIndices (point : Point2d) =
         point |> closestLowerLeftCoordinates |> surroundingCoordinates |> Seq.map g.coordinates2index
+
+let connectionSegment = segmentPolyline (Settings.ConnectionWidth)
     
 type ChipGrid ( chip : Chip ) =
     let g = new SimpleGrid (Settings.Resolution, chip.BoundingBox)
@@ -95,8 +97,10 @@ type ChipGrid ( chip : Chip ) =
         let nodes' = punch.Center :: nodes
         let edges' = Seq.fold (fun edges fromIndex -> addEdge fromIndex n edges) edges indices
         (n, (n+1, nodes', edges'))
-    let addValve lineIndex (n,nodes,edges) (valve : Valve) =
-        let indices = c.surroundingIndices valve.Center
+    let addValve line lineIndex (n,nodes,edges) (valve : Valve) =
+        let conflicts index =
+            index |> ig.ToPoint |> connectionSegment valve.Center |> chip.ControlLayer.intersectOutside line
+        let indices = c.surroundingIndices valve.Center |> Seq.filter (fun (i) -> not (conflicts i))
         let nodes' = valve.Center :: nodes
         let edges' = Seq.fold (fun edges toIndex -> addEdge n toIndex edges) 
                               (addEdge lineIndex n edges)
@@ -104,7 +108,7 @@ type ChipGrid ( chip : Chip ) =
         (n+1, nodes', edges')
     let addLine (n,nodes,edges) (line : ControlLine) =
         let lineCenter = (List.hd line.Valves).Center // arbitrarily set the line point to the first valve center
-        let (n',nodes',edges') = List.fold_left (addValve n) (n+1,lineCenter::nodes,edges) (line.Valves)
+        let (n',nodes',edges') = List.fold_left (addValve line n) (n+1,lineCenter::nodes,edges) (line.Valves)
         (n, (n', nodes', edges'))
     let accadd adder (lst, acc) el =
         let (eli, acc') = adder acc el

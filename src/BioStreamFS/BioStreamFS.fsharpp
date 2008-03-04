@@ -47,15 +47,15 @@
     {
     "ProjRelPath" = "T"
     }
+    "geometry.fs"
+    {
+    "ProjRelPath" = "T"
+    }
     "datatypes.fs"
     {
     "ProjRelPath" = "T"
     }
     "settings.fs"
-    {
-    "ProjRelPath" = "T"
-    }
-    "geometry.fs"
     {
     "ProjRelPath" = "T"
     }

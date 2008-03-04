@@ -5,6 +5,7 @@ module BioStream.Micado.Common.Datatypes
 
 open BioStream
 open BioStream.Micado.Common
+open BioStream.Micado.Core
 
 open Autodesk.AutoCAD.DatabaseServices
 open Autodesk.AutoCAD.Geometry
@@ -27,6 +28,11 @@ type Flow ( segments : FlowSegment list, punches : Punch list) =
 /// acceptable entity type for any control entity other than valve and punch
 type RestrictedEntity = Curve
 
+let entitiesIntersect (entity1 :> Entity) (entity2 :> Entity) =
+    let points = new Point3dCollection()
+    entity1.IntersectWith(entity2, Intersect.OnBothOperands, points, 0, 0)
+    points.Count > 0
+    
 /// a control line represents a set of linked valves
 /// with punches if connected,
 /// others typically holds all the lines connecting the valves between them and to the punches
@@ -35,22 +41,22 @@ type ControlLine =
       Punches : Punch list
       Others : RestrictedEntity list }
     member v.Connected = (v.Punches <> [])
-
+    member v.intersectWith (entity :> Entity) =
+        let intersectWithEntity (other :> Entity) = entitiesIntersect entity other
+        List.exists intersectWithEntity v.Valves 
+     || List.exists intersectWithEntity v.Punches 
+     || List.exists intersectWithEntity v.Others
+        
 /// an entity intersection graph
 /// has the entities as nodes
 /// and an edge only between any two entities that intersect
 let entityIntersectionGraph ( entities : Entity array ) =
-    let entitiesIntersect i j =
-        let enti = entities.[i]
-        let entj = entities.[j]
-        let points = new Point3dCollection()
-        enti.IntersectWith(entj, Intersect.OnBothOperands, points, 0, 0)
-        points.Count > 0
+    let entitiesIntersectByIndices i j = entitiesIntersect entities.[i] entities.[j]
     let n = entities.Length
     let table = Array2.create n n false
     for i in [0..n-1] do
         table.[i,i] <- true
-        let fi = entitiesIntersect i
+        let fi = entitiesIntersectByIndices i
         for j in [i+1..n-1] do  
             let b = fi j
             table.[i,j] <- b
@@ -75,7 +81,24 @@ let lazyGet computeValue optionValue =
         let value = computeValue()
         optionValue := Some value
         value
-        
+    
+let segmentPolyline width (startPoint : Point2d) (endPoint : Point2d) =
+    let polyline = new Polyline ()
+    let addVertex point = polyline.AddVertexAt(polyline.NumberOfVertices, point, 0.0, 0.0, 0.0)
+    if width=0.0
+    then addVertex startPoint
+         addVertex endPoint
+    else let segment = new LineSegment2d (startPoint, endPoint)
+         let normal = segment.Direction.GetPerpendicularVector()
+         let s1,s2 = Geometry.midSegmentEnds width normal startPoint
+         let e1,e2 = Geometry.midSegmentEnds width normal endPoint
+         addVertex s1
+         addVertex s2
+         addVertex e2
+         addVertex e1
+         polyline.Closed <- true
+    polyline
+    
 /// control layer of a chip
 type Control ( valves : Valve list, punches : Punch list, others : RestrictedEntity list ) =
     let lines = ref None : ControlLine array option ref
@@ -104,28 +127,34 @@ type Control ( valves : Valve list, punches : Punch list, others : RestrictedEnt
                                 if line.Valves <> []
                                 then yield line 
                            })
-    //member private v.lines = lazy v.computeLines()                
     member private v.computeUnconnectedLines() =
         Array.filter (fun (line : ControlLine) -> not line.Connected) v.Lines
-    //member private v.unconnectedLines = lazy v.computeUnconnectedLines()
     member private v.computeUnconnectedPunches() =
         Array.filter (fun (punch : Punch) -> 
                           not (Array.exists (fun (line : ControlLine) -> List.mem punch line.Punches) v.Lines))
                      v.Punches
-    //member private v.unconnectedPunches = lazy v.computeUnconnectedPunches()
     member private v.computeObstacles() =
         Array.filter (fun (other : RestrictedEntity) ->
                           not (Array.exists (fun (line : ControlLine) -> List.mem other line.Others) v.Lines))
                      v.Others
-    //member private v.obstacles = lazy v.computeObstacles()
     member v.Valves = Array.of_list valves
     member v.Punches = Array.of_list punches
     member v.Others = Array.of_list others
     /// control lines
-    member v.Lines with get() = lazyGet v.computeLines lines //v.lines.Force()
+    member v.Lines with get() = lazyGet v.computeLines lines
     /// unconnected lines are control lines that do not have punches
-    member v.UnconnectedLines with get() = lazyGet v.computeUnconnectedLines unconnectedLines//v.unconnectedLines.Force()
+    member v.UnconnectedLines with get() = lazyGet v.computeUnconnectedLines unconnectedLines
     /// unconnected punches are punches that do not belong to any control line
-    member v.UnconnectedPunches with get() = lazyGet v.computeUnconnectedPunches unconnectedPunches //v.unconnectedPunches.Force()
+    member v.UnconnectedPunches with get() = lazyGet v.computeUnconnectedPunches unconnectedPunches
     /// obstacles are others that do not belong to any control line
-    member v.Obstacles with get() = lazyGet v.computeObstacles obstacles //v.obstacles.Force()
+    member v.Obstacles with get() = lazyGet v.computeObstacles obstacles
+    /// all control lines outside the given one
+    member v.otherLines (line : ControlLine ) =
+        Array.filter (fun (otherLine) -> otherLine <> line) v.Lines
+    /// whether the given entity intersect any control entity outside the given line
+    member v.intersectOutside (line : ControlLine) (entity :> Entity) =
+        let intersectWithEntity (other :> Entity) = entitiesIntersect entity other
+        Array.exists (fun (otherLine : ControlLine) -> otherLine.intersectWith entity) (v.otherLines line)
+     || Array.exists intersectWithEntity v.Obstacles
+     || Array.exists intersectWithEntity v.UnconnectedPunches
+        
