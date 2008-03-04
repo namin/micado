@@ -10,16 +10,59 @@ open BioStream.Micado.Core
 open Autodesk.AutoCAD.DatabaseServices
 open Autodesk.AutoCAD.Geometry
 
+/// implements the lazy property idiom
+/// if optionValue is none, run computeValue and saving the returned value in optionValue and returning it
+/// if optionValue is something, returns it
+let lazyGet computeValue optionValue =
+    match !optionValue with
+    | Some value -> value
+    | None -> 
+        let value = computeValue()
+        optionValue := Some value
+        value
+        
+/// creates a hallow polyline with the given width, and starting and ending mid points
+let segmentPolyline width (startPoint : Point2d) (endPoint : Point2d) =
+    let polyline = new Polyline ()
+    let addVertex point = polyline.AddVertexAt(polyline.NumberOfVertices, point, 0.0, 0.0, 0.0)
+    if width=0.0
+    then addVertex startPoint
+         addVertex endPoint
+    else let segment = new LineSegment2d (startPoint, endPoint)
+         let normal = segment.Direction.GetPerpendicularVector()
+         let s1,s2 = Geometry.midSegmentEnds width normal startPoint
+         let e1,e2 = Geometry.midSegmentEnds width normal endPoint
+         addVertex s1
+         addVertex s2
+         addVertex e2
+         addVertex e1
+         polyline.Closed <- true
+    polyline
+
 /// chip entities are just straight out of the database
 type ChipEntities = 
     { FlowEntities : Entity list
       ControlEntities : Entity list }
 
+type FlowSegmentAngle = Horizontal | Vertical | Tilted
+
 /// a flow segment
 type FlowSegment = 
     { Segment : LineSegment2d
       Width : double }
-
+    member v.to_polyline extraWidth = segmentPolyline (v.Width+extraWidth) (v.Segment.StartPoint) (v.Segment.EndPoint)
+    member private v.angle = ref None : FlowSegmentAngle option ref
+    member private v.computeAngle() = 
+        let around delta base angle =
+            Geometry.angleWithin (base-delta) (base+delta) angle
+        let angle = Geometry.rad2deg (v.Segment.Direction.Angle)
+        let near base = (around 30 base angle) || (around 30 (base+180) angle)
+        match angle with
+        | _ when (near 0) -> Horizontal
+        | _ when (near 90) -> Vertical
+        | _ -> Tilted         
+    member v.Angle = lazyGet v.computeAngle v.angle
+    
 /// flow layer of a chip
 type Flow ( segments : FlowSegment list, punches : Punch list) =
     member v.Segments = segments
@@ -70,34 +113,6 @@ let to_entity (entity :> Entity) =
 // upcast an entire array of subtypes to entities
 let to_entities a =
     Array.map to_entity a
-
-/// implements the lazy property idiom
-/// if optionValue is none, run computeValue and saving the returned value in optionValue and returning it
-/// if optionValue is something, returns it
-let lazyGet computeValue optionValue =
-    match !optionValue with
-    | Some value -> value
-    | None -> 
-        let value = computeValue()
-        optionValue := Some value
-        value
-    
-let segmentPolyline width (startPoint : Point2d) (endPoint : Point2d) =
-    let polyline = new Polyline ()
-    let addVertex point = polyline.AddVertexAt(polyline.NumberOfVertices, point, 0.0, 0.0, 0.0)
-    if width=0.0
-    then addVertex startPoint
-         addVertex endPoint
-    else let segment = new LineSegment2d (startPoint, endPoint)
-         let normal = segment.Direction.GetPerpendicularVector()
-         let s1,s2 = Geometry.midSegmentEnds width normal startPoint
-         let e1,e2 = Geometry.midSegmentEnds width normal endPoint
-         addVertex s1
-         addVertex s2
-         addVertex e2
-         addVertex e1
-         polyline.Closed <- true
-    polyline
     
 /// control layer of a chip
 type Control ( valves : Valve list, punches : Punch list, others : RestrictedEntity list ) =
