@@ -20,22 +20,19 @@ let lazyGet computeValue optionValue =
         let value = computeValue()
         optionValue := Some value
         value
-        
+
+let addVertexTo (polyline :> Polyline) (point : Point2d) =
+    polyline.AddVertexAt(polyline.NumberOfVertices, point, 0.0, 0.0, 0.0)
+            
 /// creates a hallow polyline with the given width, and starting and ending mid points
 let segmentPolyline width (startPoint : Point2d) (endPoint : Point2d) =
     let polyline = new Polyline ()
-    let addVertex point = polyline.AddVertexAt(polyline.NumberOfVertices, point, 0.0, 0.0, 0.0)
+    let addVertex = addVertexTo polyline
     if width=0.0
     then addVertex startPoint
          addVertex endPoint
     else let segment = new LineSegment2d (startPoint, endPoint)
-         let normal = segment.Direction.GetPerpendicularVector()
-         let s1,s2 = Geometry.midSegmentEnds width normal startPoint
-         let e1,e2 = Geometry.midSegmentEnds width normal endPoint
-         addVertex s1
-         addVertex s2
-         addVertex e2
-         addVertex e1
+         List.iter addVertex (Geometry.rectangleCorners width segment)
          polyline.Closed <- true
     polyline
 

@@ -99,6 +99,10 @@
     {
     "ProjRelPath" = "T"
     }
+    "legacy.fs"
+    {
+    "ProjRelPath" = "T"
+    }
 }
 "ProjStartupServices"
 {

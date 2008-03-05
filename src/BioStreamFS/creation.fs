@@ -24,7 +24,7 @@ let valve (flowSegment : FlowSegment) (clickedPoint : Point2d) =
                                    -> centerPoint.Add(vW).Add(vH) |])
     let valve = new Valve()
     valve.Center <- centerPoint
-    let addVertex point = valve.AddVertexAt(valve.NumberOfVertices, point, 0.0, 0.0, 0.0)
+    let addVertex = addVertexTo valve
     Array.iter addVertex points
     valve.Closed <- true
     valve

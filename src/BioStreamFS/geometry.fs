@@ -52,3 +52,12 @@ let angleWithin a b angle =
     if a>b
     then not (b<=angle && angle<a)
     else a<=angle && angle<b
+
+/// returns four corners of a rectangle made
+/// from a line segment of the given width
+/// in an order suitable for inserting into a polyline
+let rectangleCorners width (segment : LineSegment2d) =
+    let normal = segment.Direction.GetPerpendicularVector()
+    let s1,s2 = midSegmentEnds width normal segment.StartPoint
+    let e1,e2 = midSegmentEnds width normal segment.EndPoint
+    [s1;s2;e2;e1]

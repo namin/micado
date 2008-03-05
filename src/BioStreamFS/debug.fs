@@ -31,7 +31,7 @@ let drawFlowSegment (flow : FlowSegment) =
 /// with a little head (proportional to the length of the arrow) 
 /// pointing at the second point
 let drawArrow (startPoint : Point2d) (endPoint : Point2d) =
-    let p = 0.2 // head tip length / segment length
+    let p = 0.3 // head tip length / segment length
     let a = 30.0 * (System.Math.PI / 180.0) // angle of head tip relative to arrow line
     let segment = new LineSegment2d (startPoint, endPoint)
     drawSegment segment
