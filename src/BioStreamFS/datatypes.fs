@@ -39,6 +39,8 @@ let segmentPolyline width (startPoint : Point2d) (endPoint : Point2d) =
          polyline.Closed <- true
     polyline
 
+let segmentPolyline0 = segmentPolyline 0.0
+
 /// chip entities are just straight out of the database
 type ChipEntities = 
     { FlowEntities : Entity list

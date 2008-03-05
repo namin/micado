@@ -22,7 +22,10 @@ let to3d (point2d : Point2d) =
 
 let to2d (point3d : Point3d) =
     point3d.Convert2d(xyPlane)
-    
+
+let upVector = new Vector2d(0.0, 1.0)
+let rightVector = new Vector2d(1.0, 0.0)
+        
 /// returns the two points, s.t.,
 /// the given point is mid-way in between,
 /// the distance between the given point and each returned point is the given width,

@@ -35,7 +35,7 @@ let drawArrow (startPoint : Point2d) (endPoint : Point2d) =
     let a = 30.0 * (System.Math.PI / 180.0) // angle of head tip relative to arrow line
     let segment = new LineSegment2d (startPoint, endPoint)
     drawSegment segment
-    let tip = segment.Direction.Negate().MultiplyBy(p)
+    let tip = segment.Direction.Negate().MultiplyBy(p*segment.Length)
     let drawHeadTip d = drawSegmentEnds (endPoint, endPoint.Add(tip.RotateBy(float(d)*a)))
     drawHeadTip (+1)
     drawHeadTip (-1)

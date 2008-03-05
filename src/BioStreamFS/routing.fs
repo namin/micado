@@ -66,6 +66,18 @@ type SimpleGrid ( resolution, boundingBox : Point2d * Point2d ) =
 
 let connectionSegment = segmentPolyline (Settings.ConnectionWidth)
 
+let squarePolyline width (center : Point2d) = 
+    let polyline = new Polyline()
+    let addVertex (du,dr) = 
+        polyline.AddVertexAt(polyline.NumberOfVertices, 
+                             center
+                            +Geometry.upVector.MultiplyBy(float(du)*width)
+                            +Geometry.rightVector.MultiplyBy(float(dr)*width),
+                             0.0, 0.0, 0.0)
+    Seq.iter addVertex [(1,1); (-1,1); (-1,-1); (1,-1)]
+    polyline.Closed <- true
+    polyline
+    
 /// whether the first given point is on the left side 
 /// of the segment from the second given point to the third given:
 /// returns None if the point is on the segment
@@ -150,11 +162,15 @@ type CalculatorGrid (g : SimpleGrid) =
                 if g.within c
                 then yield c
         }
-    let allCoordinatesInBoundingBox lr ur =
-        let (lrx, lry) =  lr
+    let innerBoundingBox (llPt : Point2d) (urPt : Point2d) =
+        (closestUpperRightCoordinates llPt, closestLowerLeftCoordinates urPt)
+    let outerBoundingBox (llPt : Point2d) (urPt : Point2d) =
+        (closestLowerLeftCoordinates llPt, closestUpperRightCoordinates urPt)
+    let allCoordinatesInBoundingBox (ll, ur) =
+        let (llx, lly) =  ll
         let (urx, ury) =  ur
-        { for x in [lrx..urx] do
-            for y in [lry..ury] do
+        { for x in [llx..urx] do
+            for y in [lly..ury] do
                 yield (x,y)
         }
     let neighborCoordinatesWithSlope (slope : FlowSegmentSlope) (x,y) =
@@ -167,8 +183,8 @@ type CalculatorGrid (g : SimpleGrid) =
     [<OverloadID("interiorIndicesPolyline")>]
     member v.interiorIndices (polyline : Polyline) =
         polyline.GeometricExtents
-     |> fun (e) -> allCoordinatesInBoundingBox (closestUpperRightCoordinates (Geometry.to2d e.MinPoint)) 
-                                               (closestLowerLeftCoordinates  (Geometry.to2d e.MaxPoint))
+     |> fun (e) -> innerBoundingBox (Geometry.to2d e.MinPoint) (Geometry.to2d e.MaxPoint)
+     |> allCoordinatesInBoundingBox
      |> Seq.filter (fun (c) -> c |> g.coordinates2point |> interiorPoint polyline)
      |> Seq.map g.coordinates2index 
     [<OverloadID("interiorIndicesFlowSegment")>]
@@ -176,12 +192,12 @@ type CalculatorGrid (g : SimpleGrid) =
         flowSegment.to_polyline Settings.FlowExtraWidth |> v.interiorIndices     
     member v.neighborsWithSlope (slope : FlowSegmentSlope) index =
         index |> g.index2coordinates |> neighborCoordinatesWithSlope slope |> Seq.map g.coordinates2index
-    /// @require given polyline must be closed
+    [<OverloadID("outerEdgesPolyline")>]
     member v.outerEdges (polyline : Polyline) =
         let outerBoundingBoxIndices (entity :> Entity) =
             entity.GeometricExtents
-         |> fun (e) -> allCoordinatesInBoundingBox (closestLowerLeftCoordinates  (Geometry.to2d e.MinPoint)) 
-                                                   (closestUpperRightCoordinates (Geometry.to2d e.MaxPoint))
+         |> fun (e) -> outerBoundingBox (Geometry.to2d e.MinPoint) (Geometry.to2d e.MaxPoint)
+         |> allCoordinatesInBoundingBox
          |> Seq.map g.coordinates2index                                               
         let intersectWithPolyline = entitiesIntersect polyline
         let interiorOfPolyline = interiorPoint polyline
@@ -190,12 +206,33 @@ type CalculatorGrid (g : SimpleGrid) =
             for b in ig.Neighbors a do
                 if a < b // avoid duplicates
                 then let ptB = ig.ToPoint b
-                     if intersectWithPolyline (connectionSegment ptA ptB)
+                     if intersectWithPolyline (connectionSegment ptA ptB) //(segmentPolyline0 ptA ptB)
                      then if not (interiorOfPolyline ptA)
                           then yield (b,a)
                           if not (interiorOfPolyline ptB)
                           then yield (a,b)
         }
+    [<OverloadID("outerEdgesPunch")>]
+    member v.outerEdges (punch : Punch) =
+        let center = punch.Center
+        let width = Settings.Punch2Line
+        let (minX, minY), (maxX, maxY) =
+            closestLowerLeftCoordinates center, closestUpperRightCoordinates center
+        let bounds =
+            let cornerPoint d = center
+                               +Geometry.upVector.MultiplyBy(float(d)*width)
+                               +Geometry.rightVector.MultiplyBy(float(d)*width)
+            innerBoundingBox (cornerPoint (-1)) (cornerPoint (+1))
+        let cs = allCoordinatesInBoundingBox bounds
+        let outer1 c c' minC maxC = (c' < c && c <= minC) || (c' > c && c >= maxC)
+        let outer (x,y) (x',y') = outer1 x x' minX maxX || outer1 y y' minY maxY
+        { for c in cs do
+            let i = g.coordinates2index c
+            for c' in g.neighborCoordinates c do
+                if outer c c'
+                then yield (i,(g.coordinates2index c'))
+        }
+               
 type ChipGrid ( chip : Chip ) =
     let g = new SimpleGrid (Settings.Resolution, chip.BoundingBox)
     let ig = g :> IGrid
@@ -256,13 +293,38 @@ type ChipGrid ( chip : Chip ) =
                     |> Seq.fold (fun removedEdges neighbor -> addEdge index neighbor removedEdges |> addEdge neighbor index) removedEdges
                    c.interiorIndices flowSegment
                 |> Seq.fold removeNeighbors removedEdges 
+    let incomingEdges removedEdges (a,b) = addEdge b a removedEdges
+    let outgoingEdges removedEdges (a,b) = addEdge a b removedEdges
+    let doubleEdges removedEdges (a,b) = addDoubleEdge a b removedEdges
+    let removeOfPolylines f (polylines : Polyline seq) removedEdges =
+        polylines
+     |> Seq.map_concat c.outerEdges
+     |> Seq.fold f removedEdges
+    let removeOfPunch f removedEdges (punch : Punch) =
+        punch
+     |> c.outerEdges
+     |> Seq.fold f removedEdges
+    let removeOfPunches f (punches : Punch list) removedEdges =
+        Seq.fold (removeOfPunch f) removedEdges punches
+    let removeEdgesOfLine removedEdges (line : ControlLine) =
+        let valvePolylines (valves : Valve list) =
+            valves |> Seq.map (fun (valve) -> valve :> Polyline) |> Seq.map_concat (to_polylines Settings.ValveExtraWidth)
+        let otherPolylines(others : RestrictedEntity list) =
+            others |> Seq.map_concat (to_polylines Settings.ControlLineExtraWidth)
+        removedEdges
+     |> removeOfPolylines incomingEdges (valvePolylines line.Valves)
+     |> removeOfPolylines incomingEdges (otherPolylines line.Others)
+     |> removeOfPunches   incomingEdges line.Punches
     let removedEdges = 
         List.fold_left addFlowSegment Map.empty chip.FlowLayer.Segments
-     |> fun removedEdges -> 
-            chip.ControlLayer.Obstacles
+     |> (chip.ControlLayer.Obstacles
          |> Seq.map_concat (to_polylines 0.0)
-         |> Seq.map_concat c.outerEdges
-         |> Seq.fold (fun removedEdges (a,b) -> addDoubleEdge a b removedEdges) removedEdges
+         |> removeOfPolylines doubleEdges)
+     |> fun removedEdges ->
+            chip.ControlLayer.Lines
+         |> Array.fold_left removeEdgesOfLine removedEdges
+     |> removeOfPunches outgoingEdges (List.of_array chip.ControlLayer.UnconnectedPunches)
+     |> removeOfPunches incomingEdges chip.FlowLayer.Punches
     let toPoint index =
         if index < ig.NodeCount
         then ig.ToPoint index
