@@ -358,7 +358,7 @@ let createChipGrid (chip : Chip) =
 /// tries to find a routing solution,
 /// in which each source is routed to a target, 
 /// minimizing the total wiring length
-/// but not, notably, the number of vias
+/// but not, notably, the number of vias,
 /// based on the paper
 /// Hua Xiang, Xiaoping Tang, and Martin D. F. Wong. Min-cost Flow Based Algorithm for Simultaneous Pin Assignment and Routing, IEEE Transactions on Computer-Aided Design of Integrated Circuits and Systems, Vol. 22, No. 7, pp 870-878, July, 2003. 
 let minCostFlowRouting ( grid :> IRoutingGrid ) =
@@ -367,9 +367,9 @@ let minCostFlowRouting ( grid :> IRoutingGrid ) =
     let nodeCount = grid.NodeCount
     // the indices of the vertices start at 1
     let node2incomingVertex (node : int) =
-        (uint32(node) + uint32(1)) : uint32
+        uint32(node + 1) : uint32
     let node2outgoingVertex (node : int) = 
-        (uint32(nodeCount) + uint32(node) + uint32(1)) : uint32
+        uint32(nodeCount + node + 1) : uint32
     let outgoingVertex2node (vertex : uint32) =
         int(vertex) - nodeCount - 1
     let incomingVertex2node (vertex : uint32) =
@@ -422,6 +422,8 @@ let minCostFlowRouting ( grid :> IRoutingGrid ) =
             else let node' = incomingVertex' |> incomingVertex2node
                  let outgoingVertex' =  node' |> node2outgoingVertex
                  helper (node' :: acc) outgoingVertex'
+        // the source node is purposefully not part of the trace
+        // as it corresponds to a super node linking to all possible starting points for the source
         helper [] (sourceNode |> node2outgoingVertex)
     let traceAllConnections x =
         Array.map (traceConnection x) sources
