@@ -43,14 +43,14 @@ type ChipEntities =
     { FlowEntities : Entity list
       ControlEntities : Entity list }
 
-type FlowSegmentSlope = Horizontal | Vertical | Tilted
+type SegmentSlope = Horizontal | Vertical | Tilted
 
 /// a flow segment
 type FlowSegment = 
     { Segment : LineSegment2d
       Width : double }
-    member v.to_polyline extraWidth = segmentPolyline (v.Width+extraWidth) (v.Segment.StartPoint) (v.Segment.EndPoint)
-    member private v.slope= ref None : FlowSegmentSlope option ref
+    member v.to_polyline extraWidth = segmentPolyline (v.Width/2.0+extraWidth) (v.Segment.StartPoint) (v.Segment.EndPoint)
+    member private v.slope= ref None : SegmentSlope option ref
     member private v.computeSlope() = 
         let around delta base angle =
             Geometry.angleWithin (base-delta) (base+delta) angle

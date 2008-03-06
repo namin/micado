@@ -12,9 +12,16 @@ open BioStream
 open Autodesk.AutoCAD.Geometry
 open Autodesk.AutoCAD.DatabaseServices
 
+open MgCS2
+
 type IGrid =
     inherit Graph.IGraph
     abstract ToPoint : int -> Point2d
+
+type IRoutingGrid =
+    inherit IGrid
+    abstract Sources : int array
+    abstract Targets : int array
 
 let deltas = [1;-1]
     
@@ -25,10 +32,10 @@ type SimpleGrid ( resolution, boundingBox : Point2d * Point2d ) =
     let nX = int (System.Math.Ceiling(sizeX / resolution)) + 1
     let nY = int (System.Math.Ceiling(sizeY / resolution)) + 1
     let nodeCount = nX*nY
-    let withinX x =
-        0<=x && x<nX
-    let withinY y =
-        0<=y && y<nY
+    let withinC nC c =
+        0<=c && c<nC
+    let withinX = withinC nX
+    let withinY = withinC nY
     let within (x,y) =
         withinX x && withinY y
     let index2coordinates index =
@@ -65,18 +72,6 @@ type SimpleGrid ( resolution, boundingBox : Point2d * Point2d ) =
         member v.ToPoint index = index |> index2coordinates |> coordinates2point
 
 let connectionSegment = segmentPolyline (Settings.ConnectionWidth)
-
-let squarePolyline width (center : Point2d) = 
-    let polyline = new Polyline()
-    let addVertex (du,dr) = 
-        polyline.AddVertexAt(polyline.NumberOfVertices, 
-                             center
-                            +Geometry.upVector.MultiplyBy(float(du)*width)
-                            +Geometry.rightVector.MultiplyBy(float(dr)*width),
-                             0.0, 0.0, 0.0)
-    Seq.iter addVertex [(1,1); (-1,1); (-1,-1); (1,-1)]
-    polyline.Closed <- true
-    polyline
     
 /// whether the first given point is on the left side 
 /// of the segment from the second given point to the third given:
@@ -100,9 +95,9 @@ let interiorPoint (polyline :> Polyline) (p : Point2d) =
     let pointOnInnerSide prevLeft a b =
         let curLeft = pointOnLeftSide a b
         match prevLeft, curLeft with
-        | _, None -> // check that point is on segment
-                     let within ac bc pc = (min ac bc) <= pc && pc <= (max ac bc)
-                     (within a.X b.X p.X && within a.Y b.Y p.Y, prevLeft)
+        | _, None -> let within ac bc pc = (min ac bc) <= pc && pc <= (max ac bc)
+                     let onSegment = within a.X b.X p.X && within a.Y b.Y p.Y
+                     (onSegment, prevLeft)
         | Some prevLeft', Some curLeft' when prevLeft' <> curLeft' -> (false, prevLeft)
         | _ -> (true, curLeft)
     let n = polyline.NumberOfVertices - (if polyline.Closed then 0 else 1)
@@ -173,24 +168,27 @@ type CalculatorGrid (g : SimpleGrid) =
             for y in [lly..ury] do
                 yield (x,y)
         }
-    let neighborCoordinatesWithSlope (slope : FlowSegmentSlope) (x,y) =
+    let neighborCoordinatesWithSlope (slope : SegmentSlope) (x,y) =
         match slope with
         | Tilted -> Seq.empty
         | Horizontal -> { for dx in deltas when g.withinX(x+dx) -> (x+dx,y) }
         | Vertical -> { for dy in deltas when g.withinY(y+dy) -> (x,y+dy) }
-    member v.surroundingIndices (point : Point2d) =
-        point |> closestLowerLeftCoordinates |> surroundingCoordinates |> Seq.map g.coordinates2index
-    [<OverloadID("interiorIndicesPolyline")>]
-    member v.interiorIndices (polyline : Polyline) =
+    let allInteriorCoordinates (polyline : Polyline) =
         polyline.GeometricExtents
      |> fun (e) -> innerBoundingBox (Geometry.to2d e.MinPoint) (Geometry.to2d e.MaxPoint)
      |> allCoordinatesInBoundingBox
      |> Seq.filter (fun (c) -> c |> g.coordinates2point |> interiorPoint polyline)
+    member v.surroundingIndices (point : Point2d) =
+        point |> closestLowerLeftCoordinates |> surroundingCoordinates |> Seq.map g.coordinates2index
+    [<OverloadID("interiorIndicesPolyline")>]
+    member v.interiorIndices (polyline : Polyline) =
+        polyline
+     |> allInteriorCoordinates
      |> Seq.map g.coordinates2index 
     [<OverloadID("interiorIndicesFlowSegment")>]
     member v.interiorIndices (flowSegment : FlowSegment) =
         flowSegment.to_polyline Settings.FlowExtraWidth |> v.interiorIndices     
-    member v.neighborsWithSlope (slope : FlowSegmentSlope) index =
+    member v.neighborsWithSlope (slope : SegmentSlope) index =
         index |> g.index2coordinates |> neighborCoordinatesWithSlope slope |> Seq.map g.coordinates2index
     [<OverloadID("outerEdgesPolyline")>]
     member v.outerEdges (polyline : Polyline) =
@@ -206,7 +204,7 @@ type CalculatorGrid (g : SimpleGrid) =
             for b in ig.Neighbors a do
                 if a < b // avoid duplicates
                 then let ptB = ig.ToPoint b
-                     if intersectWithPolyline (connectionSegment ptA ptB) //(segmentPolyline0 ptA ptB)
+                     if intersectWithPolyline (connectionSegment ptA ptB) //(segmentPolyline0 ptA ptB)  
                      then if not (interiorOfPolyline ptA)
                           then yield (b,a)
                           if not (interiorOfPolyline ptB)
@@ -232,15 +230,16 @@ type CalculatorGrid (g : SimpleGrid) =
                 if outer c c'
                 then yield (i,(g.coordinates2index c'))
         }
-               
+
+let arrayOfRevList lst =
+    lst |> List.rev |> Array.of_list
+        
 type ChipGrid ( chip : Chip ) =
     let g = new SimpleGrid (Settings.Resolution, chip.BoundingBox)
     let ig = g :> IGrid
     let c = new CalculatorGrid (g)
     let lines = chip.ControlLayer.UnconnectedLines
     let punches = chip.ControlLayer.UnconnectedPunches
-    let arrayOfRevList lst =
-        lst |> List.rev |> Array.of_list
     let addEdge fromIndex toIndex edges =
         match Map.tryfind fromIndex edges with
         | None -> Map.add fromIndex [toIndex] edges
@@ -346,10 +345,122 @@ type ChipGrid ( chip : Chip ) =
           yield! extraNeighbors index
           yield! filteredNeighbors index
         }
-    interface IGrid with
+    interface IRoutingGrid with
         member v.NodeCount =  nodeCount
         member v.Neighbors index = neighbors index
         member v.ToPoint index = toPoint index
+        member v.Sources with get() = Array.copy line2index
+        member v.Targets with get() = Array.copy punch2index
         
 let createChipGrid (chip : Chip) =
     new ChipGrid (chip)
+    
+/// tries to find a routing solution,
+/// in which each source is routed to a target, 
+/// minimizing the total wiring length
+/// but not, notably, the number of vias
+/// based on the paper
+/// Hua Xiang, Xiaoping Tang, and Martin D. F. Wong. Min-cost Flow Based Algorithm for Simultaneous Pin Assignment and Routing, IEEE Transactions on Computer-Aided Design of Integrated Circuits and Systems, Vol. 22, No. 7, pp 870-878, July, 2003. 
+let minCostFlowRouting ( grid :> IRoutingGrid ) =
+    let sources = grid.Sources
+    let targets = grid.Targets
+    let nodeCount = grid.NodeCount
+    // the indices of the vertices start at 1
+    let node2incomingVertex (node : int) =
+        (uint32(node) + uint32(1)) : uint32
+    let node2outgoingVertex (node : int) = 
+        (uint32(nodeCount) + uint32(node) + uint32(1)) : uint32
+    let outgoingVertex2node (vertex : uint32) =
+        int(vertex) - nodeCount - 1
+    let incomingVertex2node (vertex : uint32) =
+        int(vertex) - 1
+    let addEdge source (outgoingEdges, (numberOfEdges, edge2source, edge2target, edge2capacity, edge2cost)) target =
+        (numberOfEdges :: outgoingEdges, 
+         (numberOfEdges+1, source :: edge2source, target :: edge2target, 1.0 :: edge2capacity, 1.0 :: edge2cost))
+    let addNode (node2outgoingEdges, acc) node =
+        let outgoingVertex = node2outgoingVertex node
+        let outgoingEdges, (numberOfEdges, edge2source, edge2target, edge2capacity, edge2cost) =
+            Seq.fold (addEdge outgoingVertex)
+                     ([], acc)
+                     ((grid.Neighbors node) |> Seq.map node2incomingVertex)
+        (outgoingEdges :: node2outgoingEdges, 
+         (numberOfEdges+1, (node2incomingVertex node) :: edge2source, outgoingVertex :: edge2target, 1.0 :: edge2capacity, 0.0 :: edge2cost))
+    let numberOfVertices = nodeCount*2 + 2
+    let super_source_vertex = uint32(numberOfVertices - 1)
+    let super_target_vertex = uint32(numberOfVertices)
+    let addSuperSourceEdges acc =
+        Seq.fold (fun (numberOfEdges, edge2source, edge2target, edge2capacity, edge2cost) source ->
+                    (numberOfEdges+1, super_source_vertex :: edge2source, source :: edge2target, 1.0 :: edge2capacity, 0.0 :: edge2cost))
+                 acc
+                 (sources |> Seq.map node2incomingVertex)
+    let addSuperTargetEdges node2outgoingEdges acc =  
+        Seq.fold (fun (numberOfEdges, edge2source, edge2target, edge2capacity, edge2cost) target ->
+                    node2outgoingEdges.[target] <- numberOfEdges :: node2outgoingEdges.[target]
+                    (numberOfEdges+1,  (node2outgoingVertex target) :: edge2source, super_target_vertex :: edge2target, 1.0 :: edge2capacity, 0.0 :: edge2cost))
+                 acc
+                 targets           
+    let node2outgoingEdges, acc =
+        Seq.fold addNode ([], (0, [], [], [], [])) {0..nodeCount-1}
+    let node2outgoingEdges = arrayOfRevList node2outgoingEdges
+    let acc = addSuperSourceEdges acc
+    let acc = addSuperTargetEdges node2outgoingEdges acc    
+    let numberOfEdges, edge2source, edge2target, edge2capacity, edge2cost = acc
+    let edge2source = arrayOfRevList edge2source
+    let edge2target = arrayOfRevList edge2target
+    let edge2capacity = arrayOfRevList edge2capacity
+    let edge2cost = arrayOfRevList edge2cost
+    let vertex2deficit = Array.create numberOfVertices 0.0
+    vertex2deficit.[int(super_source_vertex)-1] <- - float(sources.Length)
+    vertex2deficit.[int(super_target_vertex)-1] <- + float(sources.Length)
+    let traceConnection x sourceNode =
+        let rec helper acc outgoingVertex =
+            let node = outgoingVertex2node outgoingVertex
+            let edge = List.find (fun (edge) -> x.[edge] = 1.0) node2outgoingEdges.[node]
+            let incomingVertex' = edge2target.[edge]
+            if incomingVertex' = super_target_vertex
+            then acc
+            else let node' = incomingVertex' |> incomingVertex2node
+                 let outgoingVertex' =  node' |> node2outgoingVertex
+                 helper (node' :: acc) outgoingVertex'
+        helper [] (sourceNode |> node2outgoingVertex)
+    let traceAllConnections x =
+        Array.map (traceConnection x) sources
+    let findMinCostFlow() =
+        let solver = new MgMCFSolver(uint32(numberOfVertices), uint32(numberOfEdges), edge2capacity, edge2cost, vertex2deficit, edge2source, edge2target)
+        solver.SolveMCF();
+        if not (solver.HasSolution())
+        then None
+        else let x = Array.create numberOfEdges 0.0
+             solver.MCFGetX(x)
+             Some x
+    let solve() =
+        match findMinCostFlow() with
+        | None -> None
+        | Some x -> Some (traceAllConnections x)
+    solve()
+
+let presentConnections (grid :> IGrid) connections =
+    let trace2points trace =
+        let segmentSlope (a : Point2d) (b : Point2d) =
+            match a.X=b.X, a.Y=b.Y with
+            | true, _ -> Horizontal
+            | _, true -> Vertical
+            | _, _ -> Tilted
+        let onlyTurningPoints points =
+            let rec helper acc slope point rest =
+                match rest with
+                | [] -> point :: acc
+                | point' :: rest' ->
+                    let slope' = segmentSlope point point'
+                    if slope=Tilted or slope <> slope'
+                    then helper (point :: acc) slope' point' rest'
+                    else helper acc slope' point' rest'
+            helper [] Tilted (List.hd points) (List.tl points)
+        trace |> List.map grid.ToPoint |> onlyTurningPoints
+    let points2entities points =
+        let polyline = new Polyline()
+        let addVertex point = polyline.AddVertexAt(polyline.NumberOfVertices, point, 0.0, Settings.ConnectionWidth, Settings.ConnectionWidth)
+        List.iter addVertex points
+        { yield (polyline :> Entity) }
+    connections |> Array.map trace2points |> Seq.of_array |> Seq.map_concat points2entities
+   

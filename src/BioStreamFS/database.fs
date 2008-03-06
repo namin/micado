@@ -10,9 +10,13 @@ open BioStream.Micado.Common.Datatypes
 open Autodesk.AutoCAD.DatabaseServices
 open Autodesk.AutoCAD.ApplicationServices
 
+/// returns the active document
+let doc() =
+    Application.DocumentManager.MdiActiveDocument
+    
 /// returns the active database
 let database() =
-    Application.DocumentManager.MdiActiveDocument.Database
+    doc().Database
 
 /// reads the entity from the active database and returns it
 /// @requires entId points to an entity in the active database
@@ -29,6 +33,7 @@ let writeEntity (entity :> Entity) =
     let db = database()
     let tm = db.TransactionManager
     use myT = tm.StartTransaction()
+    use doclock = doc().LockDocument()
     let bt = tm.GetObject(db.BlockTableId, OpenMode.ForRead, false) :?> BlockTable
     let btr = tm.GetObject(bt.[BlockTableRecord.ModelSpace], OpenMode.ForWrite, false) :?> BlockTableRecord
     btr.AppendEntity(entity) |> ignore
@@ -36,6 +41,21 @@ let writeEntity (entity :> Entity) =
     myT.Commit()
     entity
 
+/// writes all the given entities to the active database
+/// returning the sequence of entities (for chaining)
+let writeEntities (entities : Entity seq) =
+    let db = database()
+    let tm = db.TransactionManager
+    use myT = tm.StartTransaction()
+    use doclock = doc().LockDocument()
+    let bt = tm.GetObject(db.BlockTableId, OpenMode.ForRead, false) :?> BlockTable
+    let btr = tm.GetObject(bt.[BlockTableRecord.ModelSpace], OpenMode.ForWrite, false) :?> BlockTableRecord
+    for entity in entities do
+        btr.AppendEntity(entity) |> ignore
+        tm.AddNewlyCreatedDBObject(entity, true)
+    myT.Commit()
+    entities
+        
 /// erases an entity from the active database    
 let eraseEntity (entity :> Entity) =
     let tm = database().TransactionManager

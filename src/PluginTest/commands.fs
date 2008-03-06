@@ -67,7 +67,16 @@ let test_entities_intersect() =
         | true -> Editor.writeLine "selected entities intersect"
         | false -> Editor.writeLine "selected entities do not intersect"
     | _ -> ()
- 
- 
-  
-    
+
+[<CommandMethod("micado_test_min_cost_flow_routing")>]
+/// test the min cost flow routing algorithm
+let test_min_cost_flow_routing() =
+    let chipGrid = Chip.create (Database.collectChipEntities()) |> Routing.createChipGrid
+    chipGrid
+ |> Routing.minCostFlowRouting
+ |> function
+    | None -> Editor.writeLine "no solution found"
+    | Some connections ->
+        Routing.presentConnections chipGrid connections
+     |> Database.writeEntities |> ignore
+ |> ignore
