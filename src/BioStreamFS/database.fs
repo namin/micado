@@ -36,13 +36,13 @@ let writeEntity (entity :> Entity) =
     use doclock = doc().LockDocument()
     let bt = tm.GetObject(db.BlockTableId, OpenMode.ForRead, false) :?> BlockTable
     let btr = tm.GetObject(bt.[BlockTableRecord.ModelSpace], OpenMode.ForWrite, false) :?> BlockTableRecord
-    btr.AppendEntity(entity) |> ignore
+    let objectId = btr.AppendEntity(entity)
     tm.AddNewlyCreatedDBObject(entity, true)
     myT.Commit()
-    entity
+    objectId |> readEntityFromId
 
 /// writes all the given entities to the active database
-/// returning the sequence of entities (for chaining)
+/// returning the sequence of written entities (for chaining)
 let writeEntities (entities : Entity seq) =
     let db = database()
     let tm = db.TransactionManager
@@ -50,20 +50,33 @@ let writeEntities (entities : Entity seq) =
     use doclock = doc().LockDocument()
     let bt = tm.GetObject(db.BlockTableId, OpenMode.ForRead, false) :?> BlockTable
     let btr = tm.GetObject(bt.[BlockTableRecord.ModelSpace], OpenMode.ForWrite, false) :?> BlockTableRecord
-    for entity in entities do
-        btr.AppendEntity(entity) |> ignore
-        tm.AddNewlyCreatedDBObject(entity, true)
+    let objectIds = [ for entity in entities do
+                        yield btr.AppendEntity(entity)
+                        do tm.AddNewlyCreatedDBObject(entity, true) ]
     myT.Commit()
-    entities
+    objectIds |> Seq.map readEntityFromId
         
 /// erases an entity from the active database    
 let eraseEntity (entity :> Entity) =
     let tm = database().TransactionManager
     use myT = tm.StartTransaction()
-    let entity' = tm.GetObject(entity.ObjectId, OpenMode.ForWrite, true)
+    let entity' = if entity.IsWriteEnabled 
+                  then entity :> DBObject 
+                  else tm.GetObject(entity.ObjectId, OpenMode.ForWrite, true)
     entity'.Erase()
     myT.Commit()
 
+/// erases all the given entities from the active database    
+let eraseEntities (entities : Entity seq) =
+    let tm = database().TransactionManager
+    use myT = tm.StartTransaction()
+    for entity in entities do
+        let entity' = if entity.IsWriteEnabled 
+                      then entity :> DBObject 
+                      else tm.GetObject(entity.ObjectId, OpenMode.ForWrite, true)
+        entity'.Erase()
+    myT.Commit()
+    
 /// collects all objects in database satisfying the given predicate
 let collect f =
     let mutable objects = []

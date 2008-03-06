@@ -80,3 +80,42 @@ let test_min_cost_flow_routing() =
         Routing.presentConnections chipGrid connections
      |> Database.writeEntities |> ignore
  |> ignore
+
+[<CommandMethod("micado_test_routing")>]
+/// test the routing algorithms in sequence: 
+/// start with the min cost flow routing algorithm
+/// then interactively iterate over the iterative routing algorithm
+let test_routing() =
+    let chipGrid = Chip.create (Database.collectChipEntities()) |> Routing.createChipGrid
+    let presenter = Routing.presentConnections chipGrid 
+    let rec promptIterate (iterativeSolver : Routing.IterativeRouting) currentSolution =
+        match Editor.promptYesOrNo true "Iterate?" with
+        | false -> ()
+        | true -> Database.eraseEntities currentSolution
+                  iterativeSolver.iterate() |> presenter |> Database.writeEntities |> promptIterate iterativeSolver
+    chipGrid
+ |> Routing.minCostFlowRouting
+ |> function
+    | None -> Editor.writeLine "no solution found"
+    | Some connections ->
+        let entities = presenter connections |> Database.writeEntities
+        promptIterate (new Routing.IterativeRouting (chipGrid, connections)) entities
+ |> ignore
+ 
+[<CommandMethod("micado_test_routing_stable")>]
+/// test the routing algorithms in sequence:
+/// first with the min cost flow routing algorithm
+/// then the iterative routing algorithm until it stabilizes
+let test_routing_stable() =
+    let chipGrid = Chip.create (Database.collectChipEntities()) |> Routing.createChipGrid
+    let presenter = Routing.presentConnections chipGrid 
+    chipGrid
+ |> Routing.minCostFlowRouting
+ |> function
+    | None -> Editor.writeLine "no solution found"
+    | Some connections ->
+        let iterativeSolver = new Routing.IterativeRouting (chipGrid, connections)
+        let n = iterativeSolver.stabilize()
+        iterativeSolver.Solution |> presenter |> Database.writeEntities |> ignore
+        Editor.writeLine ("iterative routing ran for " ^ n.ToString() ^ " iterations")
+ |> ignore

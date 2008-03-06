@@ -22,6 +22,7 @@ type IRoutingGrid =
     inherit IGrid
     abstract Sources : int array
     abstract Targets : int array
+    abstract InverseNeighbors : int -> int seq // needed for traceback
 
 let deltas = [1;-1]
     
@@ -328,11 +329,11 @@ type ChipGrid ( chip : Chip ) =
         if index < ig.NodeCount
         then ig.ToPoint index
         else nodes.[index-ig.NodeCount]
-    let extraNeighbors index =
+    let extraNeighbors edges index =
         match Map.tryfind index edges with
         | None -> Seq.empty
         | Some lst -> Seq.of_list lst
-    let filteredNeighbors index =
+    let filteredNeighbors removedEdges index =
         if index >= ig.NodeCount
         then Seq.empty
         else ig.Neighbors index
@@ -340,17 +341,30 @@ type ChipGrid ( chip : Chip ) =
                 match Map.tryfind index removedEdges with 
                 | None -> seq
                 | Some lst -> seq |> Seq.filter (fun (x) -> not (List.mem x lst)) 
-    let neighbors index =
+    let computeNeighbors edges removedEdges index =
         { 
-          yield! extraNeighbors index
-          yield! filteredNeighbors index
+          yield! extraNeighbors edges index
+          yield! filteredNeighbors removedEdges index
         }
+    let neighbors = computeNeighbors edges removedEdges
+    let inverseMap map =
+        let add value' map' key' =
+            match Map.tryfind key' map' with
+            | None -> Map.add key' [value'] map'
+            | Some lst -> Map.add key' (value'::lst) map'
+        let addEntry key values map' =
+            List.fold_left (add key) map' values
+        Map.fold addEntry map Map.empty
+    let inverseEdges = inverseMap edges
+    let inverseRemovedEdges = inverseMap removedEdges
+    let inverseNeighbors = computeNeighbors inverseEdges inverseRemovedEdges
     interface IRoutingGrid with
         member v.NodeCount =  nodeCount
         member v.Neighbors index = neighbors index
         member v.ToPoint index = toPoint index
         member v.Sources with get() = Array.copy line2index
         member v.Targets with get() = Array.copy punch2index
+        member v.InverseNeighbors index = inverseNeighbors index
         
 let createChipGrid (chip : Chip) =
     new ChipGrid (chip)
@@ -441,13 +455,116 @@ let minCostFlowRouting ( grid :> IRoutingGrid ) =
         | Some x -> Some (traceAllConnections x)
     solve()
 
+let segmentSlope (a : Point2d) (b : Point2d) =
+    match a.X=b.X, a.Y=b.Y with
+    | true, _ -> Horizontal
+    | _, true -> Vertical
+    | _, _ -> Tilted
+            
+type IterativeRouting (grid : IRoutingGrid, initialSolution) =
+    let isTarget =
+        let targets = 
+            grid.Targets |> Array.map (fun (target) -> target, true) |> Map.of_array
+        fun (node) ->
+            Map.mem node targets
+    let node2used = Array.create grid.NodeCount false
+    let findTrace sourceNode =
+        let node2level = Array.create grid.NodeCount (-1)
+        node2level.[sourceNode] <- 0
+        // bug fix: I changed from Seq to List
+        // because Seq doesn't interact well with the side-effects in node2level
+        // Seq will cause the neighbors filter to be evaluated _after_ 
+        // the setting of the neighbors' node2level causing them to be all ignored
+        let exploreNode node =
+            let level = node2level.[node]+1
+            let neighbors = grid.Neighbors node |> List.of_seq |> List.filter (fun (node') -> (not node2used.[node']) && (node2level.[node'] = -1))
+            List.iter (fun (node') ->  node2level.[node'] <- level) neighbors
+            neighbors
+        let rec exploreBFS queue =
+            if queue = []
+            then failwith "did not find any target"
+            else
+            let reachedTargets = List.filter isTarget queue
+            if reachedTargets <> []
+            then reachedTargets
+            else
+            exploreBFS (List.map_concat exploreNode queue)           
+        let reachedTargets = exploreBFS [sourceNode]
+        let previousCells (node, level, point, slope) =
+            grid.InverseNeighbors node 
+         |> Seq.filter (fun (node') -> node2level.[node'] = level-1)
+         |> Seq.map (fun (node') ->
+                        let point' = grid.ToPoint node'
+                        let slope' = segmentSlope point' point
+                        (node',level-1,point',slope'))
+        let rec tracebackWith (slopeChanges, trace) (node,level,point,slope) =
+            if level = 0
+            // consistent with minCostFlowRouting
+            // - don't include the sourceNode in the trace
+            //   (it has no incoming edges, so it doesn't matter whether we mark it used or not)
+            // - reverse the trace so that the real target is first
+            then (slopeChanges, List.rev trace)
+            else
+            let cells = previousCells (node,level,point,slope)
+            let (slopeDelta, cell) = 
+                    cells 
+                    |> Seq.filter (fun (cell) -> 
+                                    let _, _, _,slope' = cell
+                                    slope' = slope)
+                    |> fun (preferredCells) ->
+                       if Seq.nonempty preferredCells
+                       then (0, Seq.hd preferredCells)
+                       else (1, Seq.hd cells)
+            tracebackWith (slopeChanges+slopeDelta, (node :: trace)) cell
+        let keepBestTrace =
+            Seq.fold1 (fun (slopeChanges, trace) (slopeChanges', trace') ->
+                        if slopeChanges < slopeChanges'
+                        then (slopeChanges, trace)
+                        else (slopeChanges', trace'))
+        let tracebackFrom target =
+            let level = node2level.[target]
+            let point = grid.ToPoint target
+            let slope = Tilted
+            Seq.map (tracebackWith (0, [target])) (previousCells (target,level,point,slope))
+         |> keepBestTrace
+        let tracebackAll targets =
+            Seq.map tracebackFrom targets
+         |> keepBestTrace
+        tracebackAll reachedTargets |> fun (_, trace) -> trace
+    let sources = grid.Sources
+    let solution = Array.copy initialSolution
+    let markTrace mark =
+        List.iter (fun (node) -> node2used.[node] <- mark)
+    let useTrace = markTrace true
+    let freeTrace = markTrace false
+    let reTrace sourceIndex =
+        let sourceNode = sources.[sourceIndex]
+        let oldTrace = solution.[sourceIndex]
+        freeTrace oldTrace
+        let newTrace = findTrace sourceNode
+        useTrace newTrace
+        solution.[sourceIndex] <- newTrace
+        newTrace = oldTrace
+    let sourceIndices = {0..sources.Length-1}
+    let reTraceAll() =
+        Seq.for_all (fun (stable) -> stable) (Seq.map reTrace sourceIndices)
+    let rec reTraceAllUntilStable n =
+        let stable = reTraceAll()
+        if not stable
+        then reTraceAllUntilStable (n+1)
+        else n
+    do Array.iter useTrace solution
+    [<OverloadID("iterate")>]
+    member v.iterate() = reTraceAll() |> ignore
+                         v.Solution
+    [<OverloadID("iterateN")>]
+    member v.iterate(n) = Seq.iter (fun (i) -> reTraceAll() |> ignore) {0..n-1}
+                          v.Solution
+    member v.stabilize() = reTraceAllUntilStable 0
+    member v.Solution with get() = Array.copy solution
+        
 let presentConnections (grid :> IGrid) connections =
     let trace2points trace =
-        let segmentSlope (a : Point2d) (b : Point2d) =
-            match a.X=b.X, a.Y=b.Y with
-            | true, _ -> Horizontal
-            | _, true -> Vertical
-            | _, _ -> Tilted
         let onlyTurningPoints points =
             let rec helper acc slope point rest =
                 match rest with

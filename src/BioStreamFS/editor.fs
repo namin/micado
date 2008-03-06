@@ -28,6 +28,26 @@ let writeLine message =
     editor().WriteMessage(message ^ "\n")
     |> ignore
 
+/// prompts the user to answer yes or not:
+/// returns true if 'yes' and false if 'no',
+/// the boolean parameter is the default similarly coded yes/no value
+let promptYesOrNo defaultYes message =
+    let options = new PromptKeywordOptions(message)
+    options.Keywords.Add("yes")
+    options.Keywords.Add("no")
+    options.AllowArbitraryInput <- true
+    let prompt =
+        try
+            editor().GetKeywords(options)
+        with _ -> null
+    let promptPartial x =
+        prompt.StringResult.StartsWith(x)
+    let promptNot x y =
+        prompt = null || (not (promptPartial x) && not (promptPartial y))
+    match defaultYes with
+    | true -> promptNot "n" "N"
+    | false -> promptNot "y" "Y"
+
 /// prompts the user to select an entity
 /// returns a tuple of the selected entity and the picked point if the user complies
 let promptSelectEntityAndPoint message =
