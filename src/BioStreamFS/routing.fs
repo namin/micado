@@ -497,42 +497,42 @@ type IterativeRouting (grid : IRoutingGrid, initialSolution) =
                         let point' = grid.ToPoint node'
                         let slope' = segmentSlope point' point
                         (node',level-1,point',slope'))
-        let rec tracebackWith (slopeChanges, trace) (node,level,point,slope) =
-            if level = 0
-            // consistent with minCostFlowRouting
-            // - don't include the sourceNode in the trace
-            //   (it has no incoming edges, so it doesn't matter whether we mark it used or not)
-            // - reverse the trace so that the real target is first
-            then (slopeChanges, List.rev trace)
-            else
-            let cells = previousCells (node,level,point,slope)
-            let (slopeDelta, cell) = 
-                    cells 
-                    |> Seq.filter (fun (cell) -> 
-                                    let _, _, _,slope' = cell
-                                    slope' = slope)
-                    |> fun (preferredCells) ->
-                       if Seq.nonempty preferredCells
-                       then (0, Seq.hd preferredCells)
-                       else (1, Seq.hd cells)
-            tracebackWith (slopeChanges+slopeDelta, (node :: trace)) cell
         let keepBestTrace =
             Seq.fold1 (fun (slopeChanges, trace) (slopeChanges', trace') ->
                         if slopeChanges < slopeChanges'
                         then (slopeChanges, trace)
                         else (slopeChanges', trace'))
+        // note: not tail-recursive
+        let rec tracebackWith (slopeChanges, trace) (node,level,point,slope) =
+            if level = 0
+            // consistent with minCostFlowRouting
+            // - don't include the sourceNode in the trace
+            //   (it has no incoming edges, so it doesn't matter whether we mark it used or not)
+            // - LATER, reverse the trace so that the real target is first
+            then (slopeChanges, trace)
+            else
+            let cells = previousCells (node,level,point,slope)
+            let preferredCells = cells |> Seq.filter (fun (_, _, _, slope') -> slope' = slope)
+            let slopeDelta, todoCells = 
+                if Seq.nonempty preferredCells
+                then 0, preferredCells
+                else 1, cells
+            todoCells
+         |> Seq.map (tracebackWith (slopeChanges+slopeDelta, node :: trace))
+         |> keepBestTrace         
         let tracebackFrom target =
             let level = node2level.[target]
             let point = grid.ToPoint target
             let slope = Tilted
-            Seq.map (tracebackWith (0, [target])) (previousCells (target,level,point,slope))
-         |> keepBestTrace
+            tracebackWith (0, [target]) (target,level,point,slope)
         let tracebackAll targets =
             Seq.map tracebackFrom targets
          |> keepBestTrace
-        tracebackAll reachedTargets |> fun (_, trace) -> trace
+         |> (fun (slopeChanges, trace) -> (slopeChanges, List.rev trace))
+        tracebackAll reachedTargets
     let sources = grid.Sources
     let solution = Array.copy initialSolution
+    let solutionSlopeChanges = Array.create sources.Length 0
     let markTrace mark =
         List.iter (fun (node) -> node2used.[node] <- mark)
     let useTrace = markTrace true
@@ -540,14 +540,18 @@ type IterativeRouting (grid : IRoutingGrid, initialSolution) =
     let reTrace sourceIndex =
         let sourceNode = sources.[sourceIndex]
         let oldTrace = solution.[sourceIndex]
+        let oldSlopeChanges = solutionSlopeChanges.[sourceIndex]
         freeTrace oldTrace
-        let newTrace = findTrace sourceNode
+        let newSlopeChanges, newTrace = findTrace sourceNode
         useTrace newTrace
         solution.[sourceIndex] <- newTrace
-        newTrace = oldTrace
-    let sourceIndices = {0..sources.Length-1}
+        solutionSlopeChanges.[sourceIndex] <- newSlopeChanges
+        newSlopeChanges = oldSlopeChanges
+    // changed to lists to make sure reTraceAll()
+    // doesn't stop at the first sight of an unstable retrace
+    let sourceIndices = [0..sources.Length-1]
     let reTraceAll() =
-        Seq.for_all (fun (stable) -> stable) (Seq.map reTrace sourceIndices)
+        List.for_all (fun (stable) -> stable) (List.map reTrace sourceIndices)
     let rec reTraceAllUntilStable n =
         let stable = reTraceAll()
         if not stable
@@ -555,11 +559,11 @@ type IterativeRouting (grid : IRoutingGrid, initialSolution) =
         else n
     do Array.iter useTrace solution
     [<OverloadID("iterate")>]
-    member v.iterate() = reTraceAll() |> ignore
-                         v.Solution
+    member v.iterate() = let stable = reTraceAll()
+                         (stable, v.Solution)
     [<OverloadID("iterateN")>]
-    member v.iterate(n) = Seq.iter (fun (i) -> reTraceAll() |> ignore) {0..n-1}
-                          v.Solution
+    member v.iterate(n) = let stable = Seq.fold (fun _ i -> reTraceAll()) false {0..n-1}
+                          (stable, v.Solution)
     member v.stabilize() = reTraceAllUntilStable 0
     member v.Solution with get() = Array.copy solution
         

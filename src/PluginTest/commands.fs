@@ -92,7 +92,11 @@ let test_routing() =
         match Editor.promptYesOrNo true "Iterate?" with
         | false -> ()
         | true -> Database.eraseEntities currentSolution
-                  iterativeSolver.iterate() |> presenter |> Database.writeEntities |> promptIterate iterativeSolver
+                  let stable, solution = iterativeSolver.iterate()
+                  let currentEntities = solution |> presenter |> Database.writeEntities
+                  match stable with
+                  | false ->  currentEntities |> promptIterate iterativeSolver
+                  | true -> Editor.writeLine "Reached stable routing"
     chipGrid
  |> Routing.minCostFlowRouting
  |> function
