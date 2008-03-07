@@ -460,7 +460,13 @@ let segmentSlope (a : Point2d) (b : Point2d) =
     | true, _ -> Horizontal
     | _, true -> Vertical
     | _, _ -> Tilted
-            
+
+let sameSlope slope slope' =
+    match slope, slope' with
+    | Vertical, Vertical -> true
+    | Horizontal, Horizontal -> true
+    | _, _ -> false
+    
 type IterativeRouting (grid : IRoutingGrid, initialSolution) =
     let isTarget =
         let targets = 
@@ -497,13 +503,16 @@ type IterativeRouting (grid : IRoutingGrid, initialSolution) =
                         let point' = grid.ToPoint node'
                         let slope' = segmentSlope point' point
                         (node',level-1,point',slope'))
+        // non-greedy traceback doesn't appear terribly useful
+        // still, I am keeping it (though turning it off) just in case
+        let maxNonGreedyTurns = 0
         let keepBestTrace =
             Seq.fold1 (fun (slopeChanges, trace) (slopeChanges', trace') ->
                         if slopeChanges < slopeChanges'
                         then (slopeChanges, trace)
                         else (slopeChanges', trace'))
         // note: not tail-recursive
-        let rec tracebackWith (slopeChanges, trace) (node,level,point,slope) =
+        let rec tracebackWith (slopeChanges, nonGreedyTurns, trace) (node,level,point,slope) =
             if level = 0
             // consistent with minCostFlowRouting
             // - don't include the sourceNode in the trace
@@ -512,19 +521,31 @@ type IterativeRouting (grid : IRoutingGrid, initialSolution) =
             then (slopeChanges, trace)
             else
             let cells = previousCells (node,level,point,slope)
-            let preferredCells = cells |> Seq.filter (fun (_, _, _, slope') -> slope' = slope)
-            let slopeDelta, todoCells = 
-                if Seq.nonempty preferredCells
-                then 0, preferredCells
-                else 1, cells
-            todoCells
-         |> Seq.map (tracebackWith (slopeChanges+slopeDelta, node :: trace))
-         |> keepBestTrace         
+            let preferredCells = if slope = Tilted
+                                 then Seq.empty
+                                 else cells |> Seq.filter (fun (_, _, _, slope') -> sameSlope slope slope')
+            let preferredExists = Seq.nonempty preferredCells
+            let trace' = node :: trace
+            let traces =
+                if preferredExists && nonGreedyTurns >= maxNonGreedyTurns
+                then preferredCells
+                  |> Seq.map (tracebackWith (slopeChanges, nonGreedyTurns, trace'))
+                else cells 
+                  |> Seq.map (fun (cell') ->
+                                let _,_,_,slope' = cell'
+                                let noSlopeChange = (sameSlope slope' slope)
+                                let slopeChanges' =
+                                    slopeChanges + (if noSlopeChange then 0 else 1)
+                                let nonGreedyTurns' =
+                                    nonGreedyTurns
+                                  + (if noSlopeChange or not preferredExists then 0 else 1)
+                                tracebackWith (slopeChanges', nonGreedyTurns', trace') cell')
+            traces |> keepBestTrace         
         let tracebackFrom target =
             let level = node2level.[target]
             let point = grid.ToPoint target
             let slope = Tilted
-            tracebackWith (0, [target]) (target,level,point,slope)
+            tracebackWith (0, 0, [target]) (target,level,point,slope)
         let tracebackAll targets =
             Seq.map tracebackFrom targets
          |> keepBestTrace
@@ -554,17 +575,23 @@ type IterativeRouting (grid : IRoutingGrid, initialSolution) =
         List.for_all (fun (stable) -> stable) (List.map reTrace sourceIndices)
     let rec reTraceAllUntilStable n =
         let stable = reTraceAll()
+        let n' = n+1
         if not stable
-        then reTraceAllUntilStable (n+1)
-        else n
+        then reTraceAllUntilStable n'
+        else n'
     do Array.iter useTrace solution
     [<OverloadID("iterate")>]
-    member v.iterate() = let stable = reTraceAll()
-                         (stable, v.Solution)
+    /// iterates the solution once
+    /// returning an indicator of whether the solution is stable
+    member v.iterate() = reTraceAll()
     [<OverloadID("iterateN")>]
-    member v.iterate(n) = let stable = Seq.fold (fun _ i -> reTraceAll()) false {0..n-1}
-                          (stable, v.Solution)
+    /// iterates the solution the given number of times or until stable
+    /// returning an indicator of whether the solution is stable after the final iteration
+    member v.iterate(n) = Seq.exists (fun (i) -> reTraceAll()) {0..n-1} // this will stop as soon as it's stable
+    /// iterates the solution until it's stable
+    /// returning the number of iterations
     member v.stabilize() = reTraceAllUntilStable 0
+    /// the current solution
     member v.Solution with get() = Array.copy solution
         
 let presentConnections (grid :> IGrid) connections =
@@ -575,9 +602,9 @@ let presentConnections (grid :> IGrid) connections =
                 | [] -> point :: acc
                 | point' :: rest' ->
                     let slope' = segmentSlope point point'
-                    if slope=Tilted or slope <> slope'
-                    then helper (point :: acc) slope' point' rest'
-                    else helper acc slope' point' rest'
+                    if sameSlope slope slope'
+                    then helper acc slope' point' rest'
+                    else helper (point :: acc) slope' point' rest'
             helper [] Tilted (List.hd points) (List.tl points)
         trace |> List.map grid.ToPoint |> onlyTurningPoints
     let points2entities points =

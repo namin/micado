@@ -92,8 +92,8 @@ let test_routing() =
         match Editor.promptYesOrNo true "Iterate?" with
         | false -> ()
         | true -> Database.eraseEntities currentSolution
-                  let stable, solution = iterativeSolver.iterate()
-                  let currentEntities = solution |> presenter |> Database.writeEntities
+                  let stable = iterativeSolver.iterate()
+                  let currentEntities = iterativeSolver.Solution |> presenter |> Database.writeEntities
                   match stable with
                   | false ->  currentEntities |> promptIterate iterativeSolver
                   | true -> Editor.writeLine "Reached stable routing"
