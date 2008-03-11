@@ -11,6 +11,10 @@ body {
 	font-size: smaller;
 }
 
+.screenshot {
+	text-align: center;
+}
+
 ul#minitabs {
 	list-style: none;
 	margin: 0;
@@ -34,5 +38,4 @@ ul#minitabs a#current {
 	border-color: #F60;
 	color:#06F
 }
-
 ul#minitabs a:hover{border-color: #F60;color: #666}

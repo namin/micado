@@ -21,6 +21,104 @@
 
 <h1>Micado Documentation</h1>
 
+<h2>Drawing</h2>
+<h3>Flow</h3>
+<p><ul>
+ <li><em>Flow lines</em> should be drawn as polyline rectangles.</li>
+ <li><em>Flow punches</em> should be drawn using the <a href="#PlacePunch"><code>PlacePunch</code></a> command.</li>
+</ul></p>
+
+<h3>Control</h3>
+<p><ul>
+ <li><em>Valves</em> should be drawn using the <a href="#PlaceValve"><code>PlaceValve</code></a> command. Valves may be connected together by polylines (preferrably polyline rectangles), in order to be part of the same control line.</li>
+ <li><em>Control punches</em> should be drawn using the <a href="#PlacePunch"><code>PlacePunch</code></a> command.</li>
+ <li><em>Obstacles</em>, which are regions to be avoided during routing, should be drawn as polylines. As opposed to control lines, obstacles should not intersect a valve or a polyline that intersect a valve.</li>
+</ul></p>
+
+<h3>Drawing Commands</h3>
+<h4><img src="images/tool-punch.png"></img><a name="PlacePunch"></a><code>PlacePunch</code></h4>
+<p>
+The <code>PlacePunch</code> command is accessed by the Micado toolbar button <img src="images/tool-punch.png"></img>. It prompts the user for a point and draws a punch with the given point as center. The <a href="#SettingsDrawing">Drawing Settings</a> defines how the punch will be drawn.
+</p>
+
+<h4><img src="images/tool-valve.png"></img><a name="PlaceValve"></a><code>PlaceValve</code></h4>
+<p>
+The <code>PlaceValve</code> command is accessed by the Micado toolbar button <img src="images/tool-valve.png"></img>. It prompts the user to select a point on a flow segment and draws a valve centered on the flow segment near the chosen point. The width and height of the valve are proportional to the width of the flow segment, the exact ratios being defined in the <a href="#SettingsDrawing">Drawing Settings</a>.
+</p>
+
+<h3><img src="images/tool-settings.png"></img><a name="SettingsDrawing"></a>Drawing Settings</h3>
+<p>
+The Drawing Settings are in the Drawing tab of the <a href="#Settings">Micado Settings</a>.
+</p>
+<div class="screenshot"><img src="images/settings-drawing.png"></img>
+<br></br>
+Drawing tab (<a href="#units">*</a>)
+</div>
+
+<h2><a name="layers"></a>Layers</h2>
+<p>Micado must be told which AutoCAD layers are flow layers and which are control layers. Notably, this is important for <a href="#routing">routing</a>.
+</p>
+<h3><img src="images/tool-settings.png"></img><a name="SettingsLayers"></a>Layers Settings</h3>
+<p>
+The Layers Settings are in the Layer tab of the <a href="#Settings">Micado Settings</a>.
+A layer is identified by its name. You can add a layer as a Flow layer or Control layer by adding its named, checked, to the corresponding checked box list. To delete a layer from the list of Flow layers or Control Layers, simply uncheck its name in the corresponding checked box list.
+Note that it's not permitted to have a layer be both a flow and a control layer.
+</p>
+<div class="screenshot"><img src="images/settings-layers.png"></img>
+<br></br>
+Layers tab
+</div>
+
+<h2><a name="routing"></a><img src="images/tool-connect.png"></img>Routing</h2>
+<p>Micado automatically routes valves to punches with the <code>ConnectValvesToPunches</code> command, accessible by the Micado toolbar button <img src="images/tool-connect.png"></img>.</p>
+
+<p>Micado collects entities in the flow and control <a href="#layers">layers</a>. It groups the control entities into control lines: a control line consists of at least one valve, together with all other entities (valves, punches or polylines) that are connected, directory or indirectly, to that valve. If a control line already has a punch, then it is considered already connected, and will be left alone. The routing command simply attempts to connect each unconnected control line to an unconnected control punch (so the number of control punches must be at least equal to the number of unconnected control lines). This way, the routing command can be invoked iteratively to connect an already partially connected chip.
+</p>
+
+<p>Micado constraints the connections to be legal by the design rules, which are specified in the <a href="#SettingsRouting">Routing Settings</a>.
+In particular,
+<ul>
+ <li>A connection line will not follow or cross a flowline in a parallel direction.</li>
+ <li>A connection line respects a minimum distance to any other connection line.</li>
+ <li>A connection line respects a minimum distance to any punch center, apart from the punch it is connecting to.</li>
+ <li>A connection line doesn't cross any other control line.</li>
+ <li>A connection line doesn't cross any obstacle.</li>
+</ul>
+</p>
+
+<h3><img src="images/tool-settings.png"></img><a name="SettingsRouting">Routing Settings</h3>
+<p>
+The Routing Settings are in the Routing tab of the <a href="#Settings">Micado Settings</a>.
+Perhaps, the most important setting is the <em>Minimum Distance from a Line to another Line</em>, as it specifies the resolution of the manhattan grid used for routing. The <em>Extra Space</em> settings are to extend the constraints around the entity boundaries. For example, if <em>extra space around a Flowline</em> is specified, then the constraint of not following or crossing a flowline in a parallel direction is extended to include the extra space around a flowline. Similarly, the <em>extra space around a Valve</em> forbids a connection line from passing too close to another valve.
+</p>
+<div class="screenshot"><img src="images/settings-routing.png"></img>
+<br></br>
+Routing tab (<a href="#units">*</a>)
+</div>
+<p>
+
+</p>
+
+<h2><a name="Settings"></a>Settings</h2>
+<p>All the Micado Settings are accessible with the command <code>MicadoSettings</code> or the Micado toolbar button <img src="images/tool-settings.png"></img>.</p>
+
+<p>Each tab in the Micado Settings is discussed in details elsewhere:
+<ul>
+ <li><a href="#SettingsDrawing">Drawing</a>,</li>
+ <li><a href="#SettingsLayers">Layers</a>,</li>
+ <li><a href="#SettingsRouting">Routing</a>.</li>
+</ul>
+</p>
+
+<p><a name="units"></a><em>A note about units:</em> For the settings which have units, Micado uses the Insertion Scale of the AutoCAD drawing. To change the Insertion Scale in AutoCAD, select the menu Format, then Units... (The example figures are given in milimeters.)
+</p>
+
+<h3>Import.../Export...</h3>
+<p>
+For your convenience, the settings are persisted from one AutoCAD session to another by being stored in a micado-specific Application Data folder.
+In addition, you can explicitly export and import Micado settings, in order to share them with your drawings.
+</p>
+
 </body>
 
 </html>
