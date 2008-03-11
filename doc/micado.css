@@ -1,0 +1,38 @@
+body {
+	font-family: Garamond, sans-serif;
+	margin-left: 5em;
+	margin-right: 5em;
+	font-size: larger;
+}
+
+.tagline {
+	font-style: italic;
+	font-weight: lighter;
+	font-size: smaller;
+}
+
+ul#minitabs {
+	list-style: none;
+	margin: 0;
+	padding: 7px 0;
+	border-bottom: 1px solid #CCC;
+	font-weight: bold;
+	text-align: center;
+	white-space: nowrap
+}
+ul#minitabs li {
+	display: inline;
+	margin: 0 3px
+}
+ul#minitabs a {
+	text-decoration: none;
+	padding: 0 0 3px;
+	border-bottom: 4px solid #FFF;
+	color: #999
+}
+ul#minitabs a#current {
+	border-color: #F60;
+	color:#06F
+}
+
+ul#minitabs a:hover{border-color: #F60;color: #666}
