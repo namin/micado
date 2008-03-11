@@ -104,9 +104,10 @@ let collectChipEntities () =
     for id in btr do
         match tm.GetObject(id, OpenMode.ForRead, true) with
         | :? Entity as ent ->
-            if (List.mem ent.Layer Settings.FlowLayers)
+            let isEntLayer layer = (ent.Layer = layer)
+            if (Array.exists isEntLayer Settings.Current.FlowLayers)
             then flowEntities <- ent :: flowEntities
-            else if (List.mem ent.Layer Settings.ControlLayers)
+            else if (Array.exists isEntLayer Settings.Current.ControlLayers)
                  then controlEntities <- ent :: controlEntities
                  else ()
         | _ -> ()

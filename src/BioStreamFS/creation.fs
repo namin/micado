@@ -11,8 +11,8 @@ open Autodesk.AutoCAD.Geometry
 /// creates a hollow valve on the given flow segment as close to the given point as possible
 /// using the user settings for its relative width and height
 let valve (flowSegment : FlowSegment) (clickedPoint : Point2d) =
-    let relativeWidth = Settings.ValveRelativeWidth
-    let relativeHeight = Settings.ValveRelativeHeight
+    let relativeWidth = Settings.Current.ValveRelativeWidth
+    let relativeHeight = Settings.Current.ValveRelativeHeight
     let width = relativeWidth * flowSegment.Width
     let height = relativeHeight * flowSegment.Width
     let centerPoint = flowSegment.Segment.GetClosestPointTo(clickedPoint).Point
@@ -32,9 +32,9 @@ let valve (flowSegment : FlowSegment) (clickedPoint : Point2d) =
 /// creates a punch centered on the given point
 /// using the user settings for its number of bars, bar width and radius
 let punch (centerPoint : Point2d) =
-    let barNumber = Settings.PunchBarNumber
-    let barWidth = Settings.PunchBarWidth
-    let radius = Settings.PunchRadius
+    let barNumber = Settings.Current.PunchBarNumber
+    let barWidth = Settings.Current.PunchBarWidth
+    let radius = Settings.Current.PunchRadius
     let barSepAngle = 2.0 * System.Math.PI / float(barNumber)
     let radiusVector = new Vector2d(radius, 0.0)
     let barIndices = [|0..barNumber-1|]

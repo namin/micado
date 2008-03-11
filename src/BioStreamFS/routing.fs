@@ -72,7 +72,7 @@ type SimpleGrid ( resolution, boundingBox : Point2d * Point2d ) =
         member v.Neighbors index = Seq.map coordinates2index (neighborCoordinates (index2coordinates index))
         member v.ToPoint index = index |> index2coordinates |> coordinates2point
 
-let connectionSegment = segmentPolyline (Settings.ConnectionWidth)
+let connectionSegment startPoint endPoint = segmentPolyline (Settings.Current.ConnectionWidth) startPoint endPoint
     
 /// whether the first given point is on the left side 
 /// of the segment from the second given point to the third given:
@@ -188,7 +188,7 @@ type CalculatorGrid (g : SimpleGrid) =
      |> Seq.map g.coordinates2index 
     [<OverloadID("interiorIndicesFlowSegment")>]
     member v.interiorIndices (flowSegment : FlowSegment) =
-        flowSegment.to_polyline Settings.FlowExtraWidth |> v.interiorIndices     
+        flowSegment.to_polyline Settings.Current.FlowExtraWidth |> v.interiorIndices     
     member v.neighborsWithSlope (slope : SegmentSlope) index =
         index |> g.index2coordinates |> neighborCoordinatesWithSlope slope |> Seq.map g.coordinates2index
     [<OverloadID("outerEdgesPolyline")>]
@@ -214,7 +214,7 @@ type CalculatorGrid (g : SimpleGrid) =
     [<OverloadID("outerEdgesPunch")>]
     member v.outerEdges (punch : Punch) =
         let center = punch.Center
-        let width = Settings.Punch2Line
+        let width = Settings.Current.Punch2Line
         let (minX, minY), (maxX, maxY) =
             closestLowerLeftCoordinates center, closestUpperRightCoordinates center
         let bounds =
@@ -236,7 +236,7 @@ let arrayOfRevList lst =
     lst |> List.rev |> Array.of_list
         
 type ChipGrid ( chip : Chip ) =
-    let g = new SimpleGrid (Settings.Resolution, chip.BoundingBox)
+    let g = new SimpleGrid (Settings.Current.Resolution, chip.BoundingBox)
     let ig = g :> IGrid
     let c = new CalculatorGrid (g)
     let lines = chip.ControlLayer.UnconnectedLines
@@ -308,9 +308,9 @@ type ChipGrid ( chip : Chip ) =
         Seq.fold (removeOfPunch f) removedEdges punches
     let removeEdgesOfLine removedEdges (line : ControlLine) =
         let valvePolylines (valves : Valve list) =
-            valves |> Seq.map (fun (valve) -> valve :> Polyline) |> Seq.map_concat (to_polylines Settings.ValveExtraWidth)
+            valves |> Seq.map (fun (valve) -> valve :> Polyline) |> Seq.map_concat (to_polylines Settings.Current.ValveExtraWidth)
         let otherPolylines(others : RestrictedEntity list) =
-            others |> Seq.map_concat (to_polylines Settings.ControlLineExtraWidth)
+            others |> Seq.map_concat (to_polylines Settings.Current.ControlLineExtraWidth)
         removedEdges
      |> removeOfPolylines incomingEdges (valvePolylines line.Valves)
      |> removeOfPolylines incomingEdges (otherPolylines line.Others)
@@ -609,7 +609,7 @@ let presentConnections (grid :> IGrid) connections =
         trace |> List.map grid.ToPoint |> onlyTurningPoints
     let points2entities points =
         let polyline = new Polyline()
-        let addVertex point = polyline.AddVertexAt(polyline.NumberOfVertices, point, 0.0, Settings.ConnectionWidth, Settings.ConnectionWidth)
+        let addVertex point = polyline.AddVertexAt(polyline.NumberOfVertices, point, 0.0, Settings.Current.ConnectionWidth, Settings.Current.ConnectionWidth)
         List.iter addVertex points
         { yield (polyline :> Entity) }
     connections |> Array.map trace2points |> Seq.of_array |> Seq.map_concat points2entities

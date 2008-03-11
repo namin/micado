@@ -9,15 +9,16 @@ using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Geometry;
 using Autodesk.AutoCAD.DatabaseServices;
 
-namespace BioStreamCS
+namespace BioStream.Micado.User
 {
     public class Commands
     {
-        [CommandMethod("HelloWorldCs")]
-        static public void HelloWorldCs()
+        private static SettingsUI settingsUI = new SettingsUI();
+
+        [CommandMethod("MicadoSettings")]
+        static public void MicadoSettings()
         {
-            Editor editor = Application.DocumentManager.MdiActiveDocument.Editor;
-            editor.WriteMessage("Hello World!");
+            settingsUI.ShowDialog();
         }
     }
 }
