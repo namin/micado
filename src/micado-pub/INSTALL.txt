@@ -1,0 +1,18 @@
+==================
+Installation Steps
+==================
+
+1. Move this directory to C:\micado.
+2. Double-Click on the micado shortcut to the AutoCAD 2008 Application.
+3. At the AutoCAD prompt, type CUILOAD. Select the file c:\micado\micado.cui. 
+  (You should now have a micado toolbar with four buttons: Valve, Punch, Connect, Settings. Try them!)
+
+That's all. If you want to use the micado-specific commands, you'll have to use the micado shortcut to open the AutoCAD applications from now on.
+
+============================
+Possible Installation Issues
+============================
+
+* If you choose to install micado in a directory other than C:\micado, you'll have to change the references to this path in micado.cui, micado.scr, and the command-line arguments in the shortcut micado.lnk.
+
+* If your AutoCAD 2008 application is not "C:\Program Files\Autodesk\Acade 2008\acad.exe", change the shortcut micado.lnk accordingly.

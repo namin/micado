@@ -36,7 +36,9 @@ namespace BioStream.Micado.User
 
         private void UpdateOutEnabled()
         {
-            if (errorProvider.GetError(textBoxPunchBarNumber).Equals("") &&
+            if (errorProvider.GetError(checkedListBoxControlLayers).Equals("") &&
+                errorProvider.GetError(checkedListBoxFlowLayers).Equals("") &&
+                errorProvider.GetError(textBoxPunchBarNumber).Equals("") &&
                 errorProvider.GetError(textBoxPunchBarWidth).Equals("") &&
                 errorProvider.GetError(textBoxPunchRadius).Equals("") &&
                 errorProvider.GetError(textBoxValveRelativeWidth).Equals("") &&
@@ -118,6 +120,49 @@ namespace BioStream.Micado.User
                 errorProvider.SetError(textBox, "not a number");
             }
             UpdateOutEnabled();
+        }
+
+        private void CheckLayers()
+        {
+            bool valid = true;
+            foreach (object item in checkedListBoxControlLayers.CheckedItems)
+            {
+                if (checkedListBoxFlowLayers.CheckedItems.Contains(item))
+                {
+                    valid = false;
+                    break;
+                }
+            }
+            if (!valid)
+            {
+                errorProvider.SetError(checkedListBoxControlLayers, "must not overlap with flow layers");
+                errorProvider.SetError(checkedListBoxFlowLayers, "must not overlap with control layers");
+            }
+            else
+            {
+                errorProvider.SetError(checkedListBoxControlLayers, "");
+                errorProvider.SetError(checkedListBoxFlowLayers, "");
+            }
+            UpdateOutEnabled();
+        }
+
+        private void AddToLayers(CheckedListBox listBox, TextBox textBox)
+        {
+            AddToLayers(listBox, textBox.Text);
+        }
+
+        private void AddToLayers(CheckedListBox listBox, string text)
+        {
+            if (listBox.Items.Contains(text))
+            {
+                int i = listBox.Items.IndexOf(text);
+                listBox.SetItemChecked(i, true);
+            }
+            else
+            {
+                listBox.Items.Add(text, true);
+            }
+            CheckLayers();
         }
 
         private void LoadSettings(Settings settings)
@@ -273,6 +318,26 @@ namespace BioStream.Micado.User
 
             Settings settings = Settings.ImportSettings(filepath);
             LoadSettings(settings);
+        }
+
+        private void buttonAddToFlowLayers_Click(object sender, EventArgs e)
+        {
+            AddToLayers(checkedListBoxFlowLayers, textBoxFlowLayer);
+        }
+
+        private void buttonAddToControlLayers_Click(object sender, EventArgs e)
+        {
+            AddToLayers(checkedListBoxControlLayers, textBoxControlLayer);
+        }
+
+        private void checkedListBoxFlowLayers_Validating(object sender, CancelEventArgs e)
+        {
+            CheckLayers();
+        }
+
+        private void checkedListBoxControlLayers_Validating(object sender, CancelEventArgs e)
+        {
+            CheckLayers();
         }
     }
 }

@@ -45,11 +45,11 @@ namespace BioStream.Micado.User
             this.labelPunchRadius = new System.Windows.Forms.Label();
             this.tabPageLayers = new System.Windows.Forms.TabPage();
             this.groupBoxControlLayers = new System.Windows.Forms.GroupBox();
-            this.buttonControlLayerAdd = new System.Windows.Forms.Button();
+            this.buttonAddToControlLayers = new System.Windows.Forms.Button();
             this.textBoxControlLayer = new System.Windows.Forms.TextBox();
             this.checkedListBoxControlLayers = new System.Windows.Forms.CheckedListBox();
             this.groupBoxFlowLayers = new System.Windows.Forms.GroupBox();
-            this.button1 = new System.Windows.Forms.Button();
+            this.buttonAddToFlowLayers = new System.Windows.Forms.Button();
             this.textBoxFlowLayer = new System.Windows.Forms.TextBox();
             this.checkedListBoxFlowLayers = new System.Windows.Forms.CheckedListBox();
             this.tabPageRouting = new System.Windows.Forms.TabPage();
@@ -132,7 +132,7 @@ namespace BioStream.Micado.User
             // labelValveRelativeHeight
             // 
             this.labelValveRelativeHeight.AutoSize = true;
-            this.labelValveRelativeHeight.Location = new System.Drawing.Point(6, 44);
+            this.labelValveRelativeHeight.Location = new System.Drawing.Point(2, 44);
             this.labelValveRelativeHeight.Name = "labelValveRelativeHeight";
             this.labelValveRelativeHeight.Size = new System.Drawing.Size(186, 13);
             this.labelValveRelativeHeight.TabIndex = 2;
@@ -149,7 +149,7 @@ namespace BioStream.Micado.User
             // labelValveRelativeWidth
             // 
             this.labelValveRelativeWidth.AutoSize = true;
-            this.labelValveRelativeWidth.Location = new System.Drawing.Point(6, 16);
+            this.labelValveRelativeWidth.Location = new System.Drawing.Point(5, 16);
             this.labelValveRelativeWidth.Name = "labelValveRelativeWidth";
             this.labelValveRelativeWidth.Size = new System.Drawing.Size(183, 13);
             this.labelValveRelativeWidth.TabIndex = 0;
@@ -181,7 +181,7 @@ namespace BioStream.Micado.User
             // labelPunchBarWidth
             // 
             this.labelPunchBarWidth.AutoSize = true;
-            this.labelPunchBarWidth.Location = new System.Drawing.Point(90, 77);
+            this.labelPunchBarWidth.Location = new System.Drawing.Point(89, 77);
             this.labelPunchBarWidth.Name = "labelPunchBarWidth";
             this.labelPunchBarWidth.Size = new System.Drawing.Size(99, 13);
             this.labelPunchBarWidth.TabIndex = 4;
@@ -198,7 +198,7 @@ namespace BioStream.Micado.User
             // labelPunchBarNumber
             // 
             this.labelPunchBarNumber.AutoSize = true;
-            this.labelPunchBarNumber.Location = new System.Drawing.Point(103, 46);
+            this.labelPunchBarNumber.Location = new System.Drawing.Point(102, 46);
             this.labelPunchBarNumber.Name = "labelPunchBarNumber";
             this.labelPunchBarNumber.Size = new System.Drawing.Size(86, 13);
             this.labelPunchBarNumber.TabIndex = 2;
@@ -215,7 +215,7 @@ namespace BioStream.Micado.User
             // labelPunchRadius
             // 
             this.labelPunchRadius.AutoSize = true;
-            this.labelPunchRadius.Location = new System.Drawing.Point(109, 16);
+            this.labelPunchRadius.Location = new System.Drawing.Point(108, 16);
             this.labelPunchRadius.Name = "labelPunchRadius";
             this.labelPunchRadius.Size = new System.Drawing.Size(80, 13);
             this.labelPunchRadius.TabIndex = 0;
@@ -235,7 +235,7 @@ namespace BioStream.Micado.User
             // 
             // groupBoxControlLayers
             // 
-            this.groupBoxControlLayers.Controls.Add(this.buttonControlLayerAdd);
+            this.groupBoxControlLayers.Controls.Add(this.buttonAddToControlLayers);
             this.groupBoxControlLayers.Controls.Add(this.textBoxControlLayer);
             this.groupBoxControlLayers.Controls.Add(this.checkedListBoxControlLayers);
             this.groupBoxControlLayers.Location = new System.Drawing.Point(3, 96);
@@ -245,14 +245,15 @@ namespace BioStream.Micado.User
             this.groupBoxControlLayers.TabStop = false;
             this.groupBoxControlLayers.Text = "Control Layers";
             // 
-            // buttonControlLayerAdd
+            // buttonAddToControlLayers
             // 
-            this.buttonControlLayerAdd.Location = new System.Drawing.Point(6, 41);
-            this.buttonControlLayerAdd.Name = "buttonControlLayerAdd";
-            this.buttonControlLayerAdd.Size = new System.Drawing.Size(144, 23);
-            this.buttonControlLayerAdd.TabIndex = 4;
-            this.buttonControlLayerAdd.Text = "Add";
-            this.buttonControlLayerAdd.UseVisualStyleBackColor = true;
+            this.buttonAddToControlLayers.Location = new System.Drawing.Point(6, 41);
+            this.buttonAddToControlLayers.Name = "buttonAddToControlLayers";
+            this.buttonAddToControlLayers.Size = new System.Drawing.Size(144, 23);
+            this.buttonAddToControlLayers.TabIndex = 4;
+            this.buttonAddToControlLayers.Text = "Add";
+            this.buttonAddToControlLayers.UseVisualStyleBackColor = true;
+            this.buttonAddToControlLayers.Click += new System.EventHandler(this.buttonAddToControlLayers_Click);
             // 
             // textBoxControlLayer
             // 
@@ -266,12 +267,13 @@ namespace BioStream.Micado.User
             this.checkedListBoxControlLayers.FormattingEnabled = true;
             this.checkedListBoxControlLayers.Location = new System.Drawing.Point(156, 15);
             this.checkedListBoxControlLayers.Name = "checkedListBoxControlLayers";
-            this.checkedListBoxControlLayers.Size = new System.Drawing.Size(145, 79);
+            this.checkedListBoxControlLayers.Size = new System.Drawing.Size(129, 79);
             this.checkedListBoxControlLayers.TabIndex = 5;
+            this.checkedListBoxControlLayers.Validating += new System.ComponentModel.CancelEventHandler(this.checkedListBoxControlLayers_Validating);
             // 
             // groupBoxFlowLayers
             // 
-            this.groupBoxFlowLayers.Controls.Add(this.button1);
+            this.groupBoxFlowLayers.Controls.Add(this.buttonAddToFlowLayers);
             this.groupBoxFlowLayers.Controls.Add(this.textBoxFlowLayer);
             this.groupBoxFlowLayers.Controls.Add(this.checkedListBoxFlowLayers);
             this.groupBoxFlowLayers.Location = new System.Drawing.Point(3, 3);
@@ -281,14 +283,15 @@ namespace BioStream.Micado.User
             this.groupBoxFlowLayers.TabStop = false;
             this.groupBoxFlowLayers.Text = "Flow Layers";
             // 
-            // button1
+            // buttonAddToFlowLayers
             // 
-            this.button1.Location = new System.Drawing.Point(6, 41);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(144, 23);
-            this.button1.TabIndex = 1;
-            this.button1.Text = "Add";
-            this.button1.UseVisualStyleBackColor = true;
+            this.buttonAddToFlowLayers.Location = new System.Drawing.Point(6, 41);
+            this.buttonAddToFlowLayers.Name = "buttonAddToFlowLayers";
+            this.buttonAddToFlowLayers.Size = new System.Drawing.Size(144, 23);
+            this.buttonAddToFlowLayers.TabIndex = 1;
+            this.buttonAddToFlowLayers.Text = "Add";
+            this.buttonAddToFlowLayers.UseVisualStyleBackColor = true;
+            this.buttonAddToFlowLayers.Click += new System.EventHandler(this.buttonAddToFlowLayers_Click);
             // 
             // textBoxFlowLayer
             // 
@@ -302,8 +305,9 @@ namespace BioStream.Micado.User
             this.checkedListBoxFlowLayers.FormattingEnabled = true;
             this.checkedListBoxFlowLayers.Location = new System.Drawing.Point(156, 15);
             this.checkedListBoxFlowLayers.Name = "checkedListBoxFlowLayers";
-            this.checkedListBoxFlowLayers.Size = new System.Drawing.Size(145, 64);
+            this.checkedListBoxFlowLayers.Size = new System.Drawing.Size(129, 64);
             this.checkedListBoxFlowLayers.TabIndex = 2;
+            this.checkedListBoxFlowLayers.Validating += new System.ComponentModel.CancelEventHandler(this.checkedListBoxFlowLayers_Validating);
             // 
             // tabPageRouting
             // 
@@ -330,7 +334,7 @@ namespace BioStream.Micado.User
             // labelConnectionWidth
             // 
             this.labelConnectionWidth.AutoSize = true;
-            this.labelConnectionWidth.Location = new System.Drawing.Point(74, 178);
+            this.labelConnectionWidth.Location = new System.Drawing.Point(69, 178);
             this.labelConnectionWidth.Name = "labelConnectionWidth";
             this.labelConnectionWidth.Size = new System.Drawing.Size(121, 13);
             this.labelConnectionWidth.TabIndex = 10;
@@ -362,7 +366,7 @@ namespace BioStream.Micado.User
             // labelControlLineExtraWidth
             // 
             this.labelControlLineExtraWidth.AutoSize = true;
-            this.labelControlLineExtraWidth.Location = new System.Drawing.Point(75, 68);
+            this.labelControlLineExtraWidth.Location = new System.Drawing.Point(70, 68);
             this.labelControlLineExtraWidth.Name = "labelControlLineExtraWidth";
             this.labelControlLineExtraWidth.Size = new System.Drawing.Size(114, 13);
             this.labelControlLineExtraWidth.TabIndex = 8;
@@ -379,7 +383,7 @@ namespace BioStream.Micado.User
             // labelValveExtraWidth
             // 
             this.labelValveExtraWidth.AutoSize = true;
-            this.labelValveExtraWidth.Location = new System.Drawing.Point(104, 42);
+            this.labelValveExtraWidth.Location = new System.Drawing.Point(99, 42);
             this.labelValveExtraWidth.Name = "labelValveExtraWidth";
             this.labelValveExtraWidth.Size = new System.Drawing.Size(85, 13);
             this.labelValveExtraWidth.TabIndex = 6;
@@ -396,7 +400,7 @@ namespace BioStream.Micado.User
             // labelFlowExtraWidth
             // 
             this.labelFlowExtraWidth.AutoSize = true;
-            this.labelFlowExtraWidth.Location = new System.Drawing.Point(93, 16);
+            this.labelFlowExtraWidth.Location = new System.Drawing.Point(88, 16);
             this.labelFlowExtraWidth.Name = "labelFlowExtraWidth";
             this.labelFlowExtraWidth.Size = new System.Drawing.Size(96, 13);
             this.labelFlowExtraWidth.TabIndex = 4;
@@ -426,7 +430,7 @@ namespace BioStream.Micado.User
             // labelPunch2Line
             // 
             this.labelPunch2Line.AutoSize = true;
-            this.labelPunch2Line.Location = new System.Drawing.Point(6, 43);
+            this.labelPunch2Line.Location = new System.Drawing.Point(1, 43);
             this.labelPunch2Line.Name = "labelPunch2Line";
             this.labelPunch2Line.Size = new System.Drawing.Size(183, 13);
             this.labelPunch2Line.TabIndex = 2;
@@ -443,7 +447,7 @@ namespace BioStream.Micado.User
             // labelResolution
             // 
             this.labelResolution.AutoSize = true;
-            this.labelResolution.Location = new System.Drawing.Point(50, 16);
+            this.labelResolution.Location = new System.Drawing.Point(45, 16);
             this.labelResolution.Name = "labelResolution";
             this.labelResolution.Size = new System.Drawing.Size(139, 13);
             this.labelResolution.TabIndex = 0;
@@ -559,7 +563,7 @@ namespace BioStream.Micado.User
         private System.Windows.Forms.CheckedListBox checkedListBoxFlowLayers;
         private System.Windows.Forms.TextBox textBoxFlowLayer;
         private System.Windows.Forms.GroupBox groupBoxControlLayers;
-        private System.Windows.Forms.Button buttonControlLayerAdd;
+        private System.Windows.Forms.Button buttonAddToControlLayers;
         private System.Windows.Forms.TextBox textBoxControlLayer;
         private System.Windows.Forms.CheckedListBox checkedListBoxControlLayers;
         private System.Windows.Forms.GroupBox groupBoxMinimumDistance;
@@ -580,7 +584,7 @@ namespace BioStream.Micado.User
         private System.Windows.Forms.Button buttonExport;
         private System.Windows.Forms.Button buttonOK;
         private System.Windows.Forms.Button buttonCancel;
-        private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.Button buttonAddToFlowLayers;
         private System.Windows.Forms.ErrorProvider errorProvider;
     }
 }
