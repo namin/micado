@@ -78,7 +78,7 @@ let connectionSegment startPoint endPoint = segmentPolyline (Settings.Current.Co
 /// of the segment from the second given point to the third given:
 /// returns None if the point is on the segment
 let onLeftSide (p : Point2d) (a : Point2d) (b : Point2d) =
-    /// constructs a 3D vector from f to t
+    /// constructs a vector from f to t
     let vector (f : Point2d) (t : Point2d) = new Vector2d(t.X - f.X, t.Y - f.Y)//, 0.0)
     let vAB = vector a b
     let vAP = vector a p
