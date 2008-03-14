@@ -79,16 +79,58 @@ let connectionSegment startPoint endPoint = segmentPolyline (Settings.Current.Co
 /// returns None if the point is on the segment
 let onLeftSide (p : Point2d) (a : Point2d) (b : Point2d) =
     /// constructs a 3D vector from f to t
-    let vector (f : Point2d) (t : Point2d) = new Vector3d(t.X - f.X, t.Y - f.Y, 0.0)
+    let vector (f : Point2d) (t : Point2d) = new Vector2d(t.X - f.X, t.Y - f.Y)//, 0.0)
     let vAB = vector a b
     let vAP = vector a p
-    let vCross = vAB.CrossProduct(vAP)
-    if vCross.Z = 0.0
+    //let vCross = vAB.CrossProduct(vAP)
+    let vCrossZ = vAB.X*vAP.Y - vAB.Y*vAP.X
+    if vCrossZ = 0.0
     then None
-    else Some (vCross.Z > 0.0)
+    else Some (vCrossZ > 0.0)
+
+let polylinePoints (polyline :> Polyline) = 
+    Array.map (fun (i) -> polyline.GetPoint2dAt(i)) [|0..polyline.NumberOfVertices-1|]
+
+let polylineSegments (polyline :> Polyline) =
+    Array.map (fun (i) -> polyline.GetLineSegment2dAt(i)) 
+              [|0..polyline.NumberOfVertices-(if polyline.Closed then 1 else 2)|]
+    
+let pointOnPolyline (p : Point2d) (polyline :> Polyline) =
+    let pointOnLeftSide = onLeftSide p
+    let within ac bc pc = (min ac bc) <= pc && pc <= (max ac bc)
+    let onSegment (segment : LineSegment2d) =
+        let a = segment.StartPoint
+        let b = segment.EndPoint
+        match pointOnLeftSide a b with
+        | None -> let isOnSegment = within a.X b.X p.X && within a.Y b.Y p.Y
+                  isOnSegment
+        | _ -> false
+    Seq.exists onSegment (polylineSegments polyline)
+
 
 /// whether the given point is inside the area delimited by the given polyline
+/// also returns true if the given point is on the polyline
+/// always returns false if polyline is not closed
 let interiorPoint (polyline :> Polyline) (p : Point2d) =
+    if not polyline.Closed
+    then false
+    else
+    if pointOnPolyline p polyline
+    then true
+    else
+    let rayIntersectsSegment (segment : LineSegment2d) =
+        let a = segment.StartPoint
+        let b = segment.EndPoint
+        (((b.Y <= p.Y) && (p.Y < a.Y)) ||
+         ((a.Y <= p.Y) && (p.Y < b.Y))) &&
+        (p.X < (a.X - b.X) * (p.Y - b.Y) / (a.Y - b.Y) + b.X)
+    let count = Seq.length (Seq.filter rayIntersectsSegment (polylineSegments polyline))
+    count % 2 = 1
+
+/// whether the given point is inside the area delimited by the given polyline
+/// only works for convex polygons
+(*
+let interiorPointConvex (polyline :> Polyline) (p : Point2d) =
     if not polyline.Closed
     then false
     else
@@ -112,6 +154,7 @@ let interiorPoint (polyline :> Polyline) (p : Point2d) =
              then false
              else checkSides (fromSide+1) prevLeft b
     checkSides 0 None (polylinePoint 0)
+*)
 
 /// converts the given polyline to a sequence of equivalent polylines:
 /// if the polyline is closed, just return a singleton polyline which is expanded by the extra width;
