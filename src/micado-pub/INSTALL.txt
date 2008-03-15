@@ -1,3 +1,13 @@
+============
+Requirements
+============
+
+In addition to AutoCAD and the .NET framework, you need to have F# installed on your machine in order to run micado.
+F# is available from Microsoft Research: http://research.microsoft.com/fsharp/fsharp.aspx
+
+For this release of micado, download the F# release 1.9.3.14 of January 2008, which you can get from:
+http://research.microsoft.com/research/downloads/Details/7ac148a7-149b-4056-aa06-1e6754efd36f/Details.aspx
+
 ==================
 Installation Steps
 ==================
