@@ -61,3 +61,25 @@ let rectangleCorners width (segment : LineSegment2d) =
     let s1,s2 = midSegmentEnds width normal segment.StartPoint
     let e1,e2 = midSegmentEnds width normal segment.EndPoint
     [s1;s2;e2;e1]
+
+/// whether the first given point is on the left side 
+/// of the segment from the second given point to the third given:
+/// returns None if the point is on the segment
+let pointOnLeftSide (p : Point2d) (a : Point2d) (b : Point2d) =
+    /// constructs a vector from f to t
+    let vector (f : Point2d) (t : Point2d) = new Vector2d(t.X - f.X, t.Y - f.Y)//, 0.0)
+    let vAB = vector a b
+    let vAP = vector a p
+    //let vCross = vAB.CrossProduct(vAP)
+    let vCrossZ = vAB.X*vAP.Y - vAB.Y*vAP.X
+    if vCrossZ = 0.0
+    then None
+    else Some (vCrossZ > 0.0)
+
+/// whether the given point lies 
+/// on the segment from the second given point to the third given
+let pointOnSegment (p : Point2d) (a : Point2d) (b : Point2d) =
+    let within ac bc pc = (min ac bc) <= pc && pc <= (max ac bc)
+    (pointOnLeftSide p a b) = None
+ && within a.X b.X p.X
+ && within a.Y b.Y p.Y 

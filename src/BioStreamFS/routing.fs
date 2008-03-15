@@ -73,20 +73,6 @@ type SimpleGrid ( resolution, boundingBox : Point2d * Point2d ) =
         member v.ToPoint index = index |> index2coordinates |> coordinates2point
 
 let connectionSegment startPoint endPoint = segmentPolyline (Settings.Current.ConnectionWidth) startPoint endPoint
-    
-/// whether the first given point is on the left side 
-/// of the segment from the second given point to the third given:
-/// returns None if the point is on the segment
-let onLeftSide (p : Point2d) (a : Point2d) (b : Point2d) =
-    /// constructs a vector from f to t
-    let vector (f : Point2d) (t : Point2d) = new Vector2d(t.X - f.X, t.Y - f.Y)//, 0.0)
-    let vAB = vector a b
-    let vAP = vector a p
-    //let vCross = vAB.CrossProduct(vAP)
-    let vCrossZ = vAB.X*vAP.Y - vAB.Y*vAP.X
-    if vCrossZ = 0.0
-    then None
-    else Some (vCrossZ > 0.0)
 
 let polylinePoints (polyline :> Polyline) = 
     Array.map (fun (i) -> polyline.GetPoint2dAt(i)) [|0..polyline.NumberOfVertices-1|]
@@ -94,19 +80,11 @@ let polylinePoints (polyline :> Polyline) =
 let polylineSegments (polyline :> Polyline) =
     Array.map (fun (i) -> polyline.GetLineSegment2dAt(i)) 
               [|0..polyline.NumberOfVertices-(if polyline.Closed then 1 else 2)|]
-    
-let pointOnPolyline (p : Point2d) (polyline :> Polyline) =
-    let pointOnLeftSide = onLeftSide p
-    let within ac bc pc = (min ac bc) <= pc && pc <= (max ac bc)
-    let onSegment (segment : LineSegment2d) =
-        let a = segment.StartPoint
-        let b = segment.EndPoint
-        match pointOnLeftSide a b with
-        | None -> let isOnSegment = within a.X b.X p.X && within a.Y b.Y p.Y
-                  isOnSegment
-        | _ -> false
-    Seq.exists onSegment (polylineSegments polyline)
 
+/// whether the given point lies on a segment of the polyline    
+let pointOnPolyline (p : Point2d) (polyline :> Polyline) =
+    Seq.exists (fun (seg : LineSegment2d) -> Geometry.pointOnSegment p seg.StartPoint seg.EndPoint) 
+               (polylineSegments polyline)
 
 /// whether the given point is inside the area delimited by the given polyline
 /// also returns true if the given point is on the polyline
@@ -128,19 +106,19 @@ let interiorPoint (polyline :> Polyline) (p : Point2d) =
     count % 2 = 1
 
 /// whether the given point is inside the area delimited by the given polyline
-/// only works for convex polygons
-(*
+/// also returns true if the given point is on the polyline
+/// always returns false if polyline is not closed
+/// assumes polygon is convex
 let interiorPointConvex (polyline :> Polyline) (p : Point2d) =
     if not polyline.Closed
     then false
     else
-    let pointOnLeftSide = onLeftSide p
+    let pointOnLeftSide = Geometry.pointOnLeftSide p
+    let pointOnSegment = Geometry.pointOnSegment p
     let pointOnInnerSide prevLeft a b =
         let curLeft = pointOnLeftSide a b
         match prevLeft, curLeft with
-        | _, None -> let within ac bc pc = (min ac bc) <= pc && pc <= (max ac bc)
-                     let onSegment = within a.X b.X p.X && within a.Y b.Y p.Y
-                     (onSegment, prevLeft)
+        | _, None -> (pointOnSegment a b, prevLeft)
         | Some prevLeft', Some curLeft' when prevLeft' <> curLeft' -> (false, prevLeft)
         | _ -> (true, curLeft)
     let n = polyline.NumberOfVertices - (if polyline.Closed then 0 else 1)
@@ -154,7 +132,6 @@ let interiorPointConvex (polyline :> Polyline) (p : Point2d) =
              then false
              else checkSides (fromSide+1) prevLeft b
     checkSides 0 None (polylinePoint 0)
-*)
 
 /// converts the given polyline to a sequence of equivalent polylines:
 /// if the polyline is closed, just return a singleton polyline which is expanded by the extra width;
