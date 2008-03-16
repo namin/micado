@@ -12,6 +12,8 @@ open BioStream
 open Autodesk.AutoCAD.Geometry
 open Autodesk.AutoCAD.DatabaseServices
 
+open System.Collections.Generic
+
 /// returns the index of the segment from the given array
 /// that is closest to the given punch
 let private compute_punch2segmentIndex (segments : FlowSegment array) (punch : Punch) =
@@ -43,24 +45,34 @@ let private computeFlowIntersectionPoints (segments : FlowSegment array) =
             table.[j,i] <- p
     table
 
-let map2array (n,map) =
+/// given an array size and a map from a 'key to an index
+/// creates an indexed array of the keys
+/// assumes each index appears exactly once as a value in the map
+let mapOfIndexValues2arrayOfKeys (n,map) =
     let a = Array.zero_create n
     Map.iter (fun k i -> a.[i] <- k) map
     a
-     
+
+let dictionaryOfIndexValues2arrayOfKeys (n,(map : Dictionary<'a,int>)) =
+    let a = Array.zero_create n
+    for kv in map do
+        a.[kv.Value] <- kv.Key
+    a
+         
 let private computeAllNodes (punches : Punch array) table =
-    let addNode (n, map) p =
-        match Map.tryfind p map with
-        | Some _ -> (n, map)
-        | None -> (n+1, Map.add p n map)
-    let map = punches |> Array.mapi (fun i punch -> punch.Center, i) |> Map.of_array
-    let n = punches.Length
+    let map = new Dictionary<Point2d, int>()
+    let addNode n p =
+        if map.ContainsKey(p)
+        then n
+        else map.Add(p, n)
+             n+1
+    punches |> Array.iteri (fun i punch -> map.Add(punch.Center, i))
     let nodes = seq { for i in [0..(Array2.length1 table)-1] do
                         for j in [i..(Array2.length2 table)-1] do
                           for Some p in [table.[i,j]] do
                             yield p }
-    let n,map = Seq.fold addNode (n,map) nodes
-    map2array (n,map), map
+    let n = Seq.fold addNode punches.Length nodes
+    dictionaryOfIndexValues2arrayOfKeys (n,map), map
     
 let private computeAllEdges (segments : FlowSegment array) (punches : Punch array) table =
     let addPunch si =
@@ -90,9 +102,50 @@ let private computeAllEdges (segments : FlowSegment array) (punches : Punch arra
      |> Seq.map edgesOfSegment
      |> Seq.concat
     allEdges |> Array.of_seq
+
+/// given a sequence of key,value pairs
+/// where each key may appear multiple times
+/// constructs a map from each key to all its values (as a list)
+let mapListOfSeq seq =
+    let addEntry map (key,value) =
+        match Map.tryfind key map with
+        | None -> Map.add key [value] map
+        | Some lst -> Map.add key (value::lst) map
+    seq |> Seq.fold addEntry Map.empty
+
+/// given a sequence of index,value pairs
+/// where each index may appear multiple times
+/// constructs an indexed array with all the values for each index (as a list)
+let arrayListOfSeq n seq =
+    let a = Array.create n []
+    let addEntry (index,value) =
+        a.[index] <- value::a.[index]
+    seq |> Seq.iter addEntry
+    a
+         
+let private compute_node2edges n edge2flowSegment point2node =
+    edge2flowSegment
+ |> Array.mapi (fun e f -> 
+                    let s = point2node.[f.Segment.StartPoint]
+                    let t = point2node.[f.Segment.EndPoint]
+                    [(s,e);(t,e)])
+ |> Seq.concat
+ |> arrayListOfSeq n
+
+let private compute_node2props propFun (edge2flowSegment : FlowSegment array) point2node node2edges =
+    let edge2prop s e =
+        let f = edge2flowSegment.[e]
+        let a,b = point2node.[f.Segment.StartPoint], point2node.[f.Segment.EndPoint]
+        let t = if a=s then b else a
+        propFun s t e
+    node2edges
+ |> Array.mapi (fun s es -> es |> List.map (edge2prop s))
+ 
+let private compute_node2neighbors edge2flowSegment point2node node2edges =
+    compute_node2props (fun s t e -> t) edge2flowSegment point2node node2edges
  
 type IFlowRepresentation =
-    //inherit Graph.IGraph
+    inherit IGrid
     abstract EdgeCount : int
     abstract ToFlowSegment : int -> FlowSegment
 
@@ -100,7 +153,12 @@ let flowRepresentation (flow : Flow) =
     let intersectionTable = computeFlowIntersectionPoints flow.Segments
     let node2point, point2node = computeAllNodes flow.Punches intersectionTable
     let edge2flowSegment = computeAllEdges flow.Segments flow.Punches intersectionTable
+    let node2edges = compute_node2edges node2point.Length edge2flowSegment point2node
+    let node2neighbors = compute_node2neighbors edge2flowSegment point2node node2edges
     { new IFlowRepresentation with
+        member v.NodeCount = node2point.Length
+        member v.Neighbors node = Seq.of_list node2neighbors.[node]
+        member v.ToPoint node = node2point.[node]
         member v.EdgeCount = edge2flowSegment.Length
         member v.ToFlowSegment edge = edge2flowSegment.[edge] }
     
