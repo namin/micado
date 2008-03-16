@@ -20,7 +20,17 @@ let private compute_punch2segmentIndex (segments : FlowSegment array) (punch : P
  |> Array.mapi (fun i f -> (f.getDistanceTo point), i )
  |> Array.fold1_right min
  |> snd
- 
+
+/// returns an array indexed by the segments
+/// for each segment, the value is a list of indices of the punches closest to that segment
+let private compute_segment2punchIndices (segments : FlowSegment array) (punches : Punch array) =
+    let pi2si = compute_punch2segmentIndex segments << fun (pi) -> (punches.[pi])
+    let si2pis = Array.create segments.Length []
+    Seq.iter (fun (pi) -> let si = pi2si pi
+                          si2pis.[si] <- pi::si2pis.[si]) 
+             {0..(punches.Length-1)}
+    si2pis
+
 let private computeFlowIntersectionPoints (segments : FlowSegment array) =
     let n = segments.Length
     let table = Array2.create n n None
@@ -52,7 +62,7 @@ let private computeAllNodes (punches : Punch array) table =
     let n,map = Seq.fold addNode (n,map) nodes
     map2array (n,map), map
     
-let private computeAllEdges (segments : FlowSegment array) (punches : Punch array) table punch2segmentIndex =
+let private computeAllEdges (segments : FlowSegment array) (punches : Punch array) table =
     let addPunch si =
         let f = segments.[si]
         fun nodes pi ->
@@ -61,9 +71,8 @@ let private computeAllEdges (segments : FlowSegment array) (punches : Punch arra
             then center :: nodes
             else List.append nodes [center]
     let punchesOfSegment =
-        let pisi = punch2segmentIndex |> Array.mapi (fun pi si -> pi,si) |> List.of_array
-        fun (si) ->
-            pisi |> List.filter (fun (_,si') -> si' = si) |> List.map fst
+        let segment2punchIndices = compute_segment2punchIndices segments punches
+        fun (si) -> segment2punchIndices.[si]
     let pointsOfSegment si =
         [ for sj in [0..(Array2.length2 table)-1] do 
             for Some p in [table.[si,sj]] do
@@ -88,10 +97,9 @@ type IFlowRepresentation =
     abstract ToFlowSegment : int -> FlowSegment
 
 let flowRepresentation (flow : Flow) =
-    let punch2segmentIndex = flow.Punches |> Array.map (compute_punch2segmentIndex flow.Segments)
     let intersectionTable = computeFlowIntersectionPoints flow.Segments
     let node2point, point2node = computeAllNodes flow.Punches intersectionTable
-    let edge2flowSegment = computeAllEdges flow.Segments flow.Punches intersectionTable punch2segmentIndex
+    let edge2flowSegment = computeAllEdges flow.Segments flow.Punches intersectionTable
     { new IFlowRepresentation with
         member v.EdgeCount = edge2flowSegment.Length
         member v.ToFlowSegment edge = edge2flowSegment.[edge] }
