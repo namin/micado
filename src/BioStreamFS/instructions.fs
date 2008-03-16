@@ -14,14 +14,14 @@ open Autodesk.AutoCAD.DatabaseServices
 
 /// returns the index of the segment from the given array
 /// that is closest to the given punch
-let compute_punch2segmentIndex (segments : FlowSegment array) (punch : Punch) =
+let private compute_punch2segmentIndex (segments : FlowSegment array) (punch : Punch) =
     let point = punch.Center
     segments 
  |> Array.mapi (fun i f -> (f.getDistanceTo point), i )
  |> Array.fold1_right min
  |> snd
  
-let computeFlowIntersectionPoints (segments : FlowSegment array) =
+let private computeFlowIntersectionPoints (segments : FlowSegment array) =
     let n = segments.Length
     let table = Array2.create n n None
     for i in [0..n-1] do
@@ -38,7 +38,7 @@ let map2array (n,map) =
     Map.iter (fun k i -> a.[i] <- k) map
     a
      
-let computeAllNodes (punches : Punch array) table =
+let private computeAllNodes (punches : Punch array) table =
     let addNode (n, map) p =
         match Map.tryfind p map with
         | Some _ -> (n, map)
@@ -52,7 +52,7 @@ let computeAllNodes (punches : Punch array) table =
     let n,map = Seq.fold addNode (n,map) nodes
     map2array (n,map), map
     
-let computeAllEdges (segments : FlowSegment array) (punches : Punch array) table punch2segmentIndex =
+let private computeAllEdges (segments : FlowSegment array) (punches : Punch array) table punch2segmentIndex =
     let addPunch si =
         let f = segments.[si]
         fun nodes pi ->
