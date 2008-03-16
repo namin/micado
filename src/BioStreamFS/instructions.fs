@@ -15,14 +15,18 @@ open Autodesk.AutoCAD.DatabaseServices
 open System.Collections.Generic
 
 /// returns the index of the segment from the given array
-/// that is closest to the given punch
-let private compute_punch2segmentIndex (segments : FlowSegment array) (punch : Punch) =
-    let point = punch.Center
+/// that is closest to the given point
+let private computeClosestSegmentIndex (segments : FlowSegment array) (point : Point2d) =
     segments 
  |> Array.mapi (fun i f -> (f.getDistanceTo point), i )
  |> Array.fold1_right min
  |> snd
-
+ 
+/// returns the index of the segment from the given array
+/// that is closest to the given punch
+let private compute_punch2segmentIndex (segments : FlowSegment array) (punch : Punch) =
+    computeClosestSegmentIndex segments punch.Center
+    
 /// returns an array indexed by the segments
 /// for each segment, the value is a list of indices of the punches closest to that segment
 let private compute_segment2punchIndices (segments : FlowSegment array) (punches : Punch array) =
@@ -148,6 +152,7 @@ type IFlowRepresentation =
     inherit IGrid
     abstract EdgeCount : int
     abstract ToFlowSegment : int -> FlowSegment
+    abstract ClosestEdge : Point2d -> int
 
 let flowRepresentation (flow : Flow) =
     let intersectionTable = computeFlowIntersectionPoints flow.Segments
@@ -160,6 +165,8 @@ let flowRepresentation (flow : Flow) =
         member v.Neighbors node = Seq.of_list node2neighbors.[node]
         member v.ToPoint node = node2point.[node]
         member v.EdgeCount = edge2flowSegment.Length
-        member v.ToFlowSegment edge = edge2flowSegment.[edge] }
+        member v.ToFlowSegment edge = edge2flowSegment.[edge] 
+        member v.ClosestEdge point = computeClosestSegmentIndex edge2flowSegment point // could be optimized
+    }
     
     

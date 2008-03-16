@@ -146,3 +146,21 @@ let test_flow_representation() =
     {0..flowRep.EdgeCount-1}
  |> Seq.map flowRep.ToFlowSegment
  |> Seq.iter Debug.drawFlowSegment
+
+[<CommandMethod("micado_test_flow_click")>]
+/// test mapping between points and edges of flow representation
+let test_flow_click() =
+    let point = Editor.promptPoint "Select a point near some flow: "
+             |> Option.map Geometry.to2d
+    match point with
+    | None -> ()
+    | Some point ->
+        let chip = Chip.create (Database.collectChipEntities())
+        let flowRep = Instructions.flowRepresentation chip.FlowLayer
+        let edge = flowRep.ClosestEdge point
+        let segment = flowRep.ToFlowSegment edge
+        Editor.setColor 3 // Green
+        Editor.setHighlight true
+        Debug.drawFlowSegment segment
+        Editor.resetColor()
+        Editor.resetHighlight()

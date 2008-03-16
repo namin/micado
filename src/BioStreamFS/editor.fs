@@ -16,12 +16,30 @@ open BioStream.Micado.Core
 let editor() =
     Application.DocumentManager.MdiActiveDocument.Editor
 
+let private defaultColor = 7 // white
+let private defaultHighlight = false // no highlighting
+let mutable private color = defaultColor
+let mutable private highlight = defaultHighlight
+
+/// 1 Red
+/// 2 Yellow
+/// 3 Green
+/// 4 Cyan
+/// 5 Blue
+/// 6 Magenta
+/// 7 White or Black
+let setColor c = color <- c
+let setHighlight h = highlight <- h
+
+let resetColor () = color <- defaultColor
+let resetHighlight () = highlight <- defaultHighlight
+
 /// draw the given points in white, without highlighting
 let drawVector (pointA : Point3d) (pointB : Point3d) =
     editor().DrawVector( pointA, 
                          pointB, 
-                         7, // white
-                         false ) // no highlighting
+                         color,
+                         highlight )
                           
 /// writes the given message to the active command line
 let writeLine message =
