@@ -4,7 +4,7 @@
 #r "acdbmgd.dll"
 #r "acmgd.dll"
 
-#I @"..\debug\"
+#I @"..\debug"
 #r "biostreamfs.dll"
 
 open Autodesk.AutoCAD.Runtime
@@ -123,3 +123,26 @@ let test_routing_stable() =
         iterativeSolver.Solution |> presenter |> Database.writeEntities |> ignore
         Editor.writeLine ("iterative routing ran for " ^ n.ToString() ^ " iterations")
  |> ignore
+ 
+[<CommandMethod("micado_test_flow_intersections")>]
+/// test detection of flow intersections
+let test_flow_intersections() =
+    let chip = Chip.create (Database.collectChipEntities())
+    let segments = chip.FlowLayer.Segments
+    let length = if segments.Length > 0 then (segments.[0].Width/2.0) else 1.0
+    let points =
+        seq { for i in [|0..segments.Length-1|] do
+                for j in [|i..segments.Length-1|] do
+                   for Some point in [segments.[i].intersectWith(segments.[j])] do
+                    yield point
+            }
+    Seq.iter (Debug.drawPoint length) points
+    
+[<CommandMethod("micado_test_flow_representation")>]
+/// test representation of flow
+let test_flow_representation() =
+    let chip = Chip.create (Database.collectChipEntities())
+    let flowRep = Instructions.flowRepresentation chip.FlowLayer
+    {0..flowRep.EdgeCount-1}
+ |> Seq.map flowRep.ToFlowSegment
+ |> Seq.iter Debug.drawFlowSegment

@@ -10,6 +10,10 @@ open BioStream.Micado.Core
 open Autodesk.AutoCAD.DatabaseServices
 open Autodesk.AutoCAD.Geometry
 
+type IGrid =
+    inherit Graph.IGraph
+    abstract ToPoint : int -> Point2d
+    
 /// implements the lazy property idiom
 /// if optionValue is none, run computeValue and saving the returned value in optionValue and returning it
 /// if optionValue is something, returns it
@@ -37,7 +41,7 @@ let segmentPolyline width (startPoint : Point2d) (endPoint : Point2d) =
     polyline
 
 let segmentPolyline0 = segmentPolyline 0.0
-
+    
 /// chip entities are just straight out of the database
 type ChipEntities = 
     { FlowEntities : Entity list
@@ -49,6 +53,49 @@ type SegmentSlope = Horizontal | Vertical | Tilted
 type FlowSegment = 
     { Segment : LineSegment2d
       Width : double }
+    member private v.pointComparisonFunction = ref None : (Point2d -> Point2d -> int) option ref
+    member private v.computePointComparisonFunction() =
+        let angle = v.Segment.Direction.Angle
+        let rotation = Matrix2d.Rotation(-angle, Geometry.origin2d)
+        fun (p1 : Point2d) (p2 : Point2d) ->
+            let p1' = p1.TransformBy(rotation)
+            let p2' = p2.TransformBy(rotation)
+            (if (p1'.X = p2'.X)
+             then p1'.Y - p2'.Y
+             else p1'.X - p2'.X)
+         |> fun (diff) -> compare diff 0.0
+    member v.PointComparisonFunction with get() = lazyGet v.computePointComparisonFunction v.pointComparisonFunction
+    member v.getDistanceTo (point : Point2d) =
+        let d = v.Segment.GetDistanceTo(point)
+        let ds = v.Segment.StartPoint.GetDistanceTo(point)
+        let de = v.Segment.EndPoint.GetDistanceTo(point)
+        (if ds>d && de>d
+         then d-v.Width/2.0
+         else let endpoint = if ds<=d then v.Segment.StartPoint else v.Segment.EndPoint
+              let pointVec = (point - endpoint).GetNormal()
+              let segmentVec = v.Segment.Direction.GetPerpendicularVector()
+              if pointVec = segmentVec || pointVec = segmentVec.Negate()
+              then d-v.Width/2.0
+              else d)
+     |> max 0.0
+    member f1.intersectWith (f2 : FlowSegment) =
+        let fe1 = Geometry.extendSegment (f2.Width/2.0) f1.Segment
+        let fe2 = Geometry.extendSegment (f1.Width/2.0) f2.Segment
+        let points = fe1.IntersectWith(fe2)
+        if points <> null && points.Length>0
+        then Some points.[0]
+        else // perhaps f1 and f2 are // flow segments that extend one another?
+        let fmin, fmax = if f1.Width < f2.Width then f1, f2 else f2, f1
+        match Array.map (fun (segment) -> fmin.Segment.IntersectWith(segment)) fmax.WidthIndicatorSegments with
+        | [|points;null|] when points <> null -> Some fmax.Segment.StartPoint
+        | [|null;points|] when points <> null -> Some fmax.Segment.EndPoint
+        | _ -> None // if all null ignore
+                    // if all intersects, 
+                    // then ignore fmax because fmin takes it into account
+                    // though, arguably, with perhaps a smaller width
+                    // this limitation means that the user shouldn't draw a flow segment 
+                    // with a greater width within a flow line with a smaller width
+                    // removing this limitation would require fundamentally changing how intersections are dealt with
     member v.to_polyline extraWidth = segmentPolyline (v.Width/2.0+extraWidth) (v.Segment.StartPoint) (v.Segment.EndPoint)
     member private v.slope= ref None : SegmentSlope option ref
     member private v.computeSlope() = 
@@ -60,12 +107,19 @@ type FlowSegment =
         | _ when (near 0) -> Horizontal
         | _ when (near 90) -> Vertical
         | _ -> Tilted         
-    member v.Slope = lazyGet v.computeSlope v.slope
+    member v.Slope with get() = lazyGet v.computeSlope v.slope
+    member private v.widthIndicatorSegments = ref None : LineSegment2d array option ref
+    member private flow.computeWidthIndicatorSegments() =
+        let normal = flow.Segment.Direction.GetPerpendicularVector()
+        Array.map (Geometry.midSegmentEnds (flow.Width/2.0) normal)
+                  [|flow.Segment.StartPoint; flow.Segment.EndPoint|]
+     |> Array.map (fun (s,e) -> new LineSegment2d(s,e))
+    member v.WidthIndicatorSegments with get() = lazyGet v.computeWidthIndicatorSegments v.widthIndicatorSegments
     
 /// flow layer of a chip
 type Flow ( segments : FlowSegment list, punches : Punch list) =
-    member v.Segments = segments
-    member v.Punches = punches
+    member v.Segments = Array.of_list segments
+    member v.Punches = Array.of_list punches
 
 /// acceptable entity type for any control entity other than valve and punch
 type RestrictedEntity = Polyline

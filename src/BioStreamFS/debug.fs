@@ -20,12 +20,9 @@ let drawSegment (segment : LineSegment2d) =
 
 /// draws a flow segment as a line with the end tips indicating the width
 let drawFlowSegment (flow : FlowSegment) =
-    let normal = flow.Segment.Direction.GetPerpendicularVector()
-    let mainSegment = flow.Segment.StartPoint, flow.Segment.EndPoint
-    let widthIndicatorSegments = 
-        (List.map (Geometry.midSegmentEnds (flow.Width/2.0) normal)
-                  [flow.Segment.StartPoint; flow.Segment.EndPoint])
-    List.iter drawSegmentEnds (mainSegment::widthIndicatorSegments)
+    let mainSegment = flow.Segment
+    let widthIndicatorSegments = List.of_array flow.WidthIndicatorSegments
+    List.iter drawSegment (mainSegment::widthIndicatorSegments)
 
 /// draws an arrow as a line from the first given point to the second point
 /// with a little head (proportional to the length of the arrow) 
@@ -41,8 +38,14 @@ let drawArrow (startPoint : Point2d) (endPoint : Point2d) =
     drawHeadTip (-1)
     
 /// draws the grid as arrows connecting each pair of neighbors
-let drawGrid ( grid :> Routing.IGrid ) =
+let drawGrid ( grid :> IGrid ) =
     for i in {0..grid.NodeCount-1} do
         let drawTo = drawArrow (grid.ToPoint i)
         for j in grid.Neighbors i do
             drawTo (grid.ToPoint j)
+
+/// draws the point as a cross where each bar has the given length            
+let drawPoint length ( point : Point2d ) =
+    drawSegmentEnds (Geometry.midSegmentEnds length Geometry.upVector point)
+    drawSegmentEnds (Geometry.midSegmentEnds length Geometry.rightVector point)
+    

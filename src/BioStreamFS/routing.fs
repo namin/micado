@@ -13,11 +13,7 @@ open Autodesk.AutoCAD.Geometry
 open Autodesk.AutoCAD.DatabaseServices
 
 open MgCS2
-
-type IGrid =
-    inherit Graph.IGraph
-    abstract ToPoint : int -> Point2d
-
+    
 type IRoutingGrid =
     inherit IGrid
     abstract Sources : int array
@@ -324,7 +320,7 @@ type ChipGrid ( chip : Chip ) =
         punch
      |> c.outerEdges
      |> Seq.fold f removedEdges
-    let removeOfPunches f (punches : Punch list) removedEdges =
+    let removeOfPunches f punches removedEdges =
         Seq.fold (removeOfPunch f) removedEdges punches
     let removeEdgesOfLine removedEdges (line : ControlLine) =
         let valvePolylines (valves : Valve list) =
@@ -334,17 +330,17 @@ type ChipGrid ( chip : Chip ) =
         removedEdges
      |> removeOfPolylines incomingEdges (valvePolylines line.Valves)
      |> removeOfPolylines incomingEdges (otherPolylines line.Others)
-     |> removeOfPunches   incomingEdges line.Punches
+     |> removeOfPunches   incomingEdges (line.Punches :> Punch seq)
     let removedEdges = 
-        List.fold_left addFlowSegment Map.empty chip.FlowLayer.Segments
+        Array.fold_left addFlowSegment Map.empty chip.FlowLayer.Segments
      |> (chip.ControlLayer.Obstacles
          |> Seq.map_concat (to_polylines 0.0)
          |> removeOfPolylines doubleEdges)
      |> fun removedEdges ->
             chip.ControlLayer.Lines
          |> Array.fold_left removeEdgesOfLine removedEdges
-     |> removeOfPunches outgoingEdges (List.of_array chip.ControlLayer.UnconnectedPunches)
-     |> removeOfPunches incomingEdges chip.FlowLayer.Punches
+     |> removeOfPunches outgoingEdges (chip.ControlLayer.UnconnectedPunches :> Punch seq)
+     |> removeOfPunches incomingEdges (chip.FlowLayer.Punches :> Punch seq)
     let toPoint index =
         if index < ig.NodeCount
         then ig.ToPoint index

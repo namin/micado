@@ -80,6 +80,12 @@ let pointOnLeftSide (p : Point2d) (a : Point2d) (b : Point2d) =
 /// on the segment from the second given point to the third given
 let pointOnSegment (p : Point2d) (a : Point2d) (b : Point2d) =
     let within ac bc pc = (min ac bc) <= pc && pc <= (max ac bc)
-    (pointOnLeftSide p a b) = None
- && within a.X b.X p.X
- && within a.Y b.Y p.Y 
+    (pointOnLeftSide p a b) = None &&
+    within a.X b.X p.X &&
+    within a.Y b.Y p.Y
+ 
+/// extends the segment by the given length on both sides
+let extendSegment length (segment : LineSegment2d) =
+    let vec = segment.Direction.MultiplyBy(length)
+    new LineSegment2d(segment.StartPoint.Subtract(vec), segment.EndPoint.Add(vec))
+    
