@@ -250,6 +250,15 @@ type CalculatorGrid (g : SimpleGrid) =
 
 let arrayOfRevList lst =
     lst |> List.rev |> Array.of_list
+
+let inverseMapList map =
+    let add value' map' key' =
+        match Map.tryfind key' map' with
+        | None -> Map.add key' [value'] map'
+        | Some lst -> Map.add key' (value'::lst) map'
+    let addEntry key values map' =
+        List.fold_left (add key) map' values
+    Map.fold addEntry map Map.empty
         
 type ChipGrid ( chip : Chip ) =
     let g = new SimpleGrid (Settings.Current.Resolution, chip.BoundingBox)
@@ -363,16 +372,8 @@ type ChipGrid ( chip : Chip ) =
           yield! filteredNeighbors removedEdges index
         }
     let neighbors = computeNeighbors edges removedEdges
-    let inverseMap map =
-        let add value' map' key' =
-            match Map.tryfind key' map' with
-            | None -> Map.add key' [value'] map'
-            | Some lst -> Map.add key' (value'::lst) map'
-        let addEntry key values map' =
-            List.fold_left (add key) map' values
-        Map.fold addEntry map Map.empty
-    let inverseEdges = inverseMap edges
-    let inverseRemovedEdges = inverseMap removedEdges
+    let inverseEdges = inverseMapList edges
+    let inverseRemovedEdges = inverseMapList removedEdges
     let inverseNeighbors = computeNeighbors inverseEdges inverseRemovedEdges
     interface IRoutingGrid with
         member v.NodeCount =  nodeCount
