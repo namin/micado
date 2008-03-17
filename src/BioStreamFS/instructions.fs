@@ -72,9 +72,9 @@ let private computeAllNodes (punches : Punch array) table =
              n+1
     punches |> Array.iteri (fun i punch -> map.Add(punch.Center, i))
     let nodes = seq { for i in [0..(Array2.length1 table)-1] do
-                        for j in [i..(Array2.length2 table)-1] do
-                          for Some p in [table.[i,j]] do
-                            yield p }
+                      for j in [i..(Array2.length2 table)-1] do
+                      let Some p = table.[i,j]
+                      yield p }
     let n = Seq.fold addNode punches.Length nodes
     dictionaryOfIndexValues2arrayOfKeys (n,map), map
     
@@ -90,9 +90,9 @@ let private computeAllEdges (segments : FlowSegment array) (punches : Punch arra
         let segment2punchIndices = compute_segment2punchIndices segments punches
         fun (si) -> segment2punchIndices.[si]
     let pointsOfSegment si =
-        [ for sj in [0..(Array2.length2 table)-1] do 
-            for Some p in [table.[si,sj]] do
-                yield p ]
+        [ for sj in [0..(Array2.length2 table)-1] do
+          let Some p = table.[si,sj]
+          yield p ]
      |> List.sort segments.[si].PointComparisonFunction
     let nodesOfSegment si =
         List.fold_left (addPunch si) (pointsOfSegment si) (punchesOfSegment si)
