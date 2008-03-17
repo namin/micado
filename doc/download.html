@@ -21,15 +21,37 @@
 
 <h1>Download Micado</h1>
 
-<p>All Micado releases are available from the <a href="../pub/">pub</a> directory.
-If you use Micado, <a href="about.html">we</a> would love to hear back from you.
+<p>Download <a href="../pub/micado-0.1.zip"><b>micado 0.1</b></a>.
+This release features drawing primitives for valves and punches, 
+and automatic routing of the control layer
 </p>
 
-<h2><code>F#</code></h2>
-<p>Because Micado is developed mostly in <a href="http://research.microsoft.com/fsharp/fsharp.aspx"><code>F#</code></a>, 
-you'll need to <a href="http://research.microsoft.com/fsharp/release.aspx">download <code>F#</code></a> and install it on your machine 
-in order to use Micado. Please see the <code>INSTALL.txt</code> file of your Micado release for the exact version of <code>F#</code> required for your release.
-</p>
+<p>If you use Micado, <a href="about.html">we</a> would love to hear back from you.</p>
+
+<h2>Installation Instructions</h2>
+<h3>Requirements</h3>
+
+<p>In addition to AutoCAD and the .NET framework, you need to have <a href="http://research.microsoft.com/fsharp/fsharp.aspx"><code>F#</code></a> installed on your machine in order to run Micado.</p>
+
+<p>For the Micado release 0.1, <a href="http://research.microsoft.com/research/downloads/Details/7ac148a7-149b-4056-aa06-1e6754efd36f/Details.aspx">download the <code>F#</code> release 1.9.3.14 of January 2008</a>.</p>
+
+<h3>Installation Steps</h3>
+
+<ol>
+ <li>Unzip the archive, and move the micado directory to <code>C:\micado</code>.</li>
+ <li>Double-Click on the micado shortcut to the AutoCAD 2008 Application.</li>
+ <li>At the AutoCAD prompt, type <code>CUILOAD</code>. Select the file  <code>c:\micado\micado.cui</code>. 
+   <br>
+  (You should now have a micado toolbar with four buttons: Valve, Punch, Connect, Settings. Try them!)</li>
+</ol>
+<p>That's all. If you want to use the micado-specific commands, you'll have to use the micado shortcut to open the AutoCAD applications from now on.</p>
+
+<h3>Possible Installation Issues</h3>
+
+<ul>
+<li>If you choose to install micado in a directory other than <code>C:\micado</code>, you'll have to change the references to this path in <code>micado.cui</code>, <code>micado.scr</code>, and the command-line arguments in the shortcut <code>micado.lnk</code>.</li>
+<li>If your AutoCAD 2008 application is not <code>"C:\Program Files\Autodesk\Acade 2008\acad.exe"</code>, change the shortcut <code>micado.lnk</code> accordingly.</li>
+</ul>
 
 </body>
 
