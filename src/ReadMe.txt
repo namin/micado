@@ -9,7 +9,7 @@ The solutions contain the following projects:
 - BioStreamFS
   This project in F# provides most higher-level functionality, including most user-end AutoCAD commands.
   
-  The BioStreamFS contains the scripts
+  The BioStreamFS directory contains the scripts
   
   * build.bat -- which generates the developer-level documentation 
                 (and incidentally, the .dll too, which is handy sometimes 
