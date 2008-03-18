@@ -9,6 +9,17 @@ The solutions contain the following projects:
 - BioStreamFS
   This project in F# provides most higher-level functionality, including most user-end AutoCAD commands.
   
+  The BioStreamFS contains the scripts
+  
+  * build.bat -- which generates the developer-level documentation 
+                (and incidentally, the .dll too, which is handy sometimes 
+                 when Visual Studio doesn't report certain errors or warnings.)
+                 
+  * UpdateBuild.py -- which is a very elementary script to update the list of source files in build.bat
+                in accordance with the BioStreamFS.fsharpp project.
+                (Remember that F# requires the source files to be listed in order of dependencies.)
+                Run it if you add files to the BioStreamFS project.
+                  
 - BioStreamCS
   This project in C# provides the user-end UIs & settings, and various internal helpers.
   
