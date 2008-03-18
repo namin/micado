@@ -20,6 +20,7 @@ GPL License v.2
 ===========
 Directories
 ===========
+
 * doc
   the user-end documentation of Micado
 
