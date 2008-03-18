@@ -19,7 +19,7 @@ let from_polyline (polyline : Polyline) =
         let lens = segs |> Array.map (fun (x : LineSegment2d) -> x.Length)
         let makeFlow ia ib =
               new FlowSegment (new LineSegment2d(segs.[ia].MidPoint, segs.[ib].MidPoint), 
-                              (max lens.[ia] lens.[ib]))
+                               (max lens.[ia] lens.[ib]))
         let minLen ia ib = min lens.[ia] lens.[ib]
         if minLen 0 2 < minLen 1 3
         then makeFlow 0 2 

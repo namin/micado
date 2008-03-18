@@ -47,6 +47,14 @@
     {
     "ProjRelPath" = "T"
     }
+    "field-converters.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+    "csv.fs"
+    {
+    "ProjRelPath" = "T"
+    }
     "geometry.fs"
     {
     "ProjRelPath" = "T"
@@ -83,6 +91,10 @@
     {
     "ProjRelPath" = "T"
     }
+    "instructions.fs"
+    {
+    "ProjRelPath" = "T"
+    }
     "commands.fs"
     {
     "ProjRelPath" = "T"
@@ -91,15 +103,7 @@
     {
     "ProjRelPath" = "T"
     }
-    "prototype.fs"
-    {
-    "ProjRelPath" = "T"
-    }
     "legacy.fs"
-    {
-    "ProjRelPath" = "T"
-    }
-    "instructions.fs"
     {
     "ProjRelPath" = "T"
     }
