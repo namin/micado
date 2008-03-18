@@ -1,12 +1,21 @@
-micado README
+micado src README
 
-micado is developed using Visual Studio. 
+=============
+Visual Studio
+=============
+
+Micado is developed using Visual Studio. 
 Open the solution BiostreamSolution.sln in Visual Studio to access all parts of the project.
 
-*** PROJECTS ***
+If your path to AutoCAD is not at C:\Program Files\Autodesk\Acade 2008,
+you might need to adjust the links to the acdbmgd.dll and acmgd.dll.
 
+------------
+VS Projects
+------------
 The solutions contain the following projects:
-- BioStreamFS
+
+- ***BioStreamFS***
   This project in F# provides most higher-level functionality, including most user-end AutoCAD commands.
   
   The BioStreamFS directory contains the scripts
@@ -19,28 +28,41 @@ The solutions contain the following projects:
                 in accordance with the BioStreamFS.fsharpp project.
                 (Remember that F# requires the source files to be listed in order of dependencies.)
                 Run it if you add files to the BioStreamFS project.
-                  
-- BioStreamCS
-  This project in C# provides the user-end UIs & settings, and various internal helpers.
+                
+  For F# Interactive, this is how I load the AutoCAD assemblies and the other Micado assemblies:
   
-- BioStreamDB
+  #I @"C:\Program Files\Autodesk\Acade 2008" // the path on your system may vary
+  #r "acdbmgd.dll"
+  #r "acmgd.dll"
+
+  #I @"C:\Documents and Settings\Nada AMIN\Mes documents\projects\micado\src\debug" // your path to MICADO_CHECKOUT\src\debug
+  #r "MgCS2.dll"
+  #r "BioStreamMg.dll"
+  #r "biostreamfs.dll"
+                
+- ***BioStreamCS***
+  This project in C# provides the user-end UIs & settings.
+  
+- ***BioStreamDB***
   This project in C++ provides custom AutoCAD objects for the microfluidics primitives valves and punches.
 
-- BioStreamMg
+- ***BioStreamMg***
   This project provides managed wrappers around the custom AutoCAD objects of BioStreamDB.
   
-- MgCS2  
+- ***MgCS2***  
   Min-Cost Flow Library
   The project provides a simple managed wrapper around 
   a (single-commodity) (linear) Min Cost Flow (MCF) problem solver, 
   implemented using an efficient Cost-Scaling, Push-Relabel algorithm,
   obtained from http://www.di.unipi.it/optimize/Software/MCF.html#CS2
   
-- PluginTesting
+- ***PluginTesting***
   This project provides additional AutoCAD commands for testing purposes.
+  The commands are very useful for debugging, but this assembly should typically not be part of a public release.
 
-*** RUNNING ***
-
+--------------------
+Running / Debugging
+--------------------
 You can run micado directly from the Visual Studio debugger by attaching AutoCAD as an external program.
 
 First, generate micado-debug.scr with the python script bin\GenerateScrLoader.py.
@@ -70,3 +92,18 @@ configure BioStreamCS as the default startup project and set the debugging optio
   where GENERATE_DIRECTORY is the directory in which you generated micado-debug.scr
   
 - For Working Directory, typically use GENERATE_DIRECTORY as well.
+
+------------------
+Creating a Release
+------------------
+(Note: this release process could be automated by a script.)
+
+The src\micado-pub directory contains the basis for a release.
+
+* Simply compile the source code in the Release configuration,
+  adding the produced assemblies to a copy of micado-pub.
+
+* You'll also need to generate the .src file
+  by running the python script bin\GenerateScrLoader.py.
+
+A release can be installed as documented in \src\micado-pub\INSTALL.txt
