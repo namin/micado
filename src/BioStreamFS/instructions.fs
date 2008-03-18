@@ -117,16 +117,23 @@ let mapListOfSeq seq =
         | Some lst -> Map.add key (value::lst) map
     seq |> Seq.fold addEntry Map.empty
 
-/// given a sequence of index,value pairs
+/// given a sequence, seq, of index,value pairs
 /// where each index may appear multiple times
-/// constructs an indexed array with all the values for each index (as a list)
-let arrayListOfSeq n seq =
-    let a = Array.create n []
+/// constructs an indexed array of size n with all the values for each index
+/// (generic operation in terms of the type of the value collection:
+/// the argument empty specifies the empty collection
+/// the argument add specifies how to cons a new value into a collection)
+let arrayCollectionOfSeq empty add n seq =
+    let a = Array.create n empty
     let addEntry (index,value) =
-        a.[index] <- value::a.[index]
+        a.[index] <- (add value a.[index])
     seq |> Seq.iter addEntry
     a
-         
+
+let arrayListOfSeq n seq = arrayCollectionOfSeq [] (fun el lst -> el::lst) n seq
+
+let arraySetOfSeq n seq = arrayCollectionOfSeq Set.empty Set.add n seq
+             
 let private compute_node2edges n edge2flowSegment point2node =
     edge2flowSegment
  |> Array.mapi (fun e f -> 
@@ -134,7 +141,7 @@ let private compute_node2edges n edge2flowSegment point2node =
                     let t = point2node.[f.Segment.EndPoint]
                     [(s,e);(t,e)])
  |> Seq.concat
- |> arrayListOfSeq n
+ |> arraySetOfSeq n
 
 let private compute_node2props propFun (edge2flowSegment : FlowSegment array) point2node node2edges =
     let edge2prop s e =
@@ -143,7 +150,7 @@ let private compute_node2props propFun (edge2flowSegment : FlowSegment array) po
         let t = if a=s then b else a
         propFun s t e
     node2edges
- |> Array.mapi (fun s es -> es |> List.map (edge2prop s))
+ |> Array.mapi (fun s es -> es |> Set.map (edge2prop s))
  
 let private compute_node2neighbors edge2flowSegment point2node node2edges =
     compute_node2props (fun s t e -> t) edge2flowSegment point2node node2edges
@@ -162,7 +169,7 @@ let flowRepresentation (flow : Flow) =
     let node2neighbors = compute_node2neighbors edge2flowSegment point2node node2edges
     { new IFlowRepresentation with
         member v.NodeCount = node2point.Length
-        member v.Neighbors node = Seq.of_list node2neighbors.[node]
+        member v.Neighbors node = Set.to_seq node2neighbors.[node]
         member v.ToPoint node = node2point.[node]
         member v.EdgeCount = edge2flowSegment.Length
         member v.ToFlowSegment edge = edge2flowSegment.[edge] 
