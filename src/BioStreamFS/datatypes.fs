@@ -50,12 +50,10 @@ type ChipEntities =
 type SegmentSlope = Horizontal | Vertical | Tilted
 
 /// a flow segment
-type FlowSegment = 
-    { Segment : LineSegment2d
-      Width : double }
-    member private v.pointComparisonFunction = ref None : (Point2d -> Point2d -> int) option ref
-    member private v.computePointComparisonFunction() =
-        let angle = v.Segment.Direction.Angle
+type FlowSegment (segment : LineSegment2d, width : double) =
+    let pointComparisonFunction = ref None : (Point2d -> Point2d -> int) option ref
+    let computePointComparisonFunction() =
+        let angle = segment.Direction.Angle
         let rotation = Matrix2d.Rotation(-angle, Geometry.origin2d)
         fun (p1 : Point2d) (p2 : Point2d) ->
             let p1' = p1.TransformBy(rotation)
@@ -64,7 +62,25 @@ type FlowSegment =
              then p1'.Y - p2'.Y
              else p1'.X - p2'.X)
          |> fun (diff) -> compare diff 0.0
-    member v.PointComparisonFunction with get() = lazyGet v.computePointComparisonFunction v.pointComparisonFunction
+    let slope = ref None : SegmentSlope option ref
+    let computeSlope() = 
+        let around delta base angle =
+            Geometry.angleWithin (base-delta) (base+delta) angle
+        let angle = Geometry.rad2deg (segment.Direction.Angle)
+        let near base = (around 30 base angle) || (around 30 (base+180) angle)
+        match angle with
+        | _ when (near 0) -> Horizontal
+        | _ when (near 90) -> Vertical
+        | _ -> Tilted
+    let widthIndicatorSegments = ref None : LineSegment2d array option ref
+    let computeWidthIndicatorSegments() =
+        let normal = segment.Direction.GetPerpendicularVector()
+        Array.map (Geometry.midSegmentEnds (width/2.0) normal)
+                  [|segment.StartPoint; segment.EndPoint|]
+     |> Array.map (fun (s,e) -> new LineSegment2d(s,e))          
+    member v.Segment = segment
+    member v.Width = width
+    member v.PointComparisonFunction with get() = lazyGet computePointComparisonFunction pointComparisonFunction
     member v.getDistanceTo (point : Point2d) =
         let d = v.Segment.GetDistanceTo(point)
         let ds = v.Segment.StartPoint.GetDistanceTo(point)
@@ -97,24 +113,8 @@ type FlowSegment =
                     // with a greater width within a flow line with a smaller width
                     // removing this limitation would require fundamentally changing how intersections are dealt with
     member v.to_polyline extraWidth = segmentPolyline (v.Width/2.0+extraWidth) (v.Segment.StartPoint) (v.Segment.EndPoint)
-    member private v.slope= ref None : SegmentSlope option ref
-    member private v.computeSlope() = 
-        let around delta base angle =
-            Geometry.angleWithin (base-delta) (base+delta) angle
-        let angle = Geometry.rad2deg (v.Segment.Direction.Angle)
-        let near base = (around 30 base angle) || (around 30 (base+180) angle)
-        match angle with
-        | _ when (near 0) -> Horizontal
-        | _ when (near 90) -> Vertical
-        | _ -> Tilted         
-    member v.Slope with get() = lazyGet v.computeSlope v.slope
-    member private v.widthIndicatorSegments = ref None : LineSegment2d array option ref
-    member private flow.computeWidthIndicatorSegments() =
-        let normal = flow.Segment.Direction.GetPerpendicularVector()
-        Array.map (Geometry.midSegmentEnds (flow.Width/2.0) normal)
-                  [|flow.Segment.StartPoint; flow.Segment.EndPoint|]
-     |> Array.map (fun (s,e) -> new LineSegment2d(s,e))
-    member v.WidthIndicatorSegments with get() = lazyGet v.computeWidthIndicatorSegments v.widthIndicatorSegments
+    member v.Slope with get() = lazyGet computeSlope slope
+    member v.WidthIndicatorSegments with get() = lazyGet computeWidthIndicatorSegments widthIndicatorSegments
     
 /// flow layer of a chip
 type Flow ( segments : FlowSegment list, punches : Punch list) =

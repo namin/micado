@@ -100,7 +100,7 @@ let private computeAllEdges (segments : FlowSegment array) (punches : Punch arra
         let f = segments.[si]
         nodesOfSegment si
      |> Seq.pairwise
-     |> Seq.map (fun (a,b) -> {Segment = new LineSegment2d(a,b); Width = f.Width})
+     |> Seq.map (fun (a,b) -> new FlowSegment(new LineSegment2d(a,b),f.Width))
     let allEdges =
         {0..(segments.Length-1)}
      |> Seq.map edgesOfSegment
@@ -136,7 +136,7 @@ let arraySetOfSeq n seq = arrayCollectionOfSeq Set.empty Set.add n seq
              
 let private compute_node2edges n edge2flowSegment point2node =
     edge2flowSegment
- |> Array.mapi (fun e f -> 
+ |> Array.mapi (fun e (f : FlowSegment) -> 
                     let s = point2node.[f.Segment.StartPoint]
                     let t = point2node.[f.Segment.EndPoint]
                     [(s,e);(t,e)])
