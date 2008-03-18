@@ -259,7 +259,16 @@ let inverseMapList map =
     let addEntry key values map' =
         List.fold_left (add key) map' values
     Map.fold addEntry map Map.empty
-        
+
+let inverseMapSet map =
+    let add value' key' map' =
+        match Map.tryfind key' map' with
+        | None -> Map.add key' (Set.Singleton value') map'
+        | Some set -> Map.add key' (Set.add value' set) map'
+    let addEntry key values map' =
+        Set.fold (add key) values map'
+    Map.fold addEntry map Map.empty
+            
 type ChipGrid ( chip : Chip ) =
     let g = new SimpleGrid (Settings.Current.Resolution, chip.BoundingBox)
     let ig = g :> IGrid
@@ -268,10 +277,10 @@ type ChipGrid ( chip : Chip ) =
     let punches = chip.ControlLayer.UnconnectedPunches
     let addEdge fromIndex toIndex edges =
         match Map.tryfind fromIndex edges with
-        | None -> Map.add fromIndex [toIndex] edges
-        | Some lst -> if List.mem toIndex lst
+        | None -> Map.add fromIndex (Set.Singleton toIndex) edges
+        | Some set -> if Set.mem toIndex set
                       then edges
-                      else Map.add fromIndex (toIndex::lst) edges
+                      else Map.add fromIndex (Set.add toIndex set) edges
     let addDoubleEdge fromIndex toIndex edges =
         addEdge fromIndex toIndex edges
      |> addEdge toIndex fromIndex
@@ -357,7 +366,7 @@ type ChipGrid ( chip : Chip ) =
     let extraNeighbors edges index =
         match Map.tryfind index edges with
         | None -> Seq.empty
-        | Some lst -> Seq.of_list lst
+        | Some set -> Set.to_seq set
     let filteredNeighbors removedEdges index =
         if index >= ig.NodeCount
         then Seq.empty
@@ -365,15 +374,15 @@ type ChipGrid ( chip : Chip ) =
           |> fun (seq) ->
                 match Map.tryfind index removedEdges with 
                 | None -> seq
-                | Some lst -> seq |> Seq.filter (fun (x) -> not (List.mem x lst)) 
+                | Some set -> seq |> Seq.filter (fun (x) -> not (Set.mem x set)) 
     let computeNeighbors edges removedEdges index =
         { 
           yield! extraNeighbors edges index
           yield! filteredNeighbors removedEdges index
         }
     let neighbors = computeNeighbors edges removedEdges
-    let inverseEdges = inverseMapList edges
-    let inverseRemovedEdges = inverseMapList removedEdges
+    let inverseEdges = inverseMapSet edges
+    let inverseRemovedEdges = inverseMapSet removedEdges
     let inverseNeighbors = computeNeighbors inverseEdges inverseRemovedEdges
     interface IRoutingGrid with
         member v.NodeCount =  nodeCount
