@@ -31,7 +31,7 @@ In addition:
 * pub
   contains the public releases of Micado
 
-* src
+* trunk
   contains the source code of Micado
 
 ============

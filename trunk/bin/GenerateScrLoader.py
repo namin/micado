@@ -10,21 +10,21 @@ See ..\\ReadMe.txt for more information on running micado.
 
 generateDirectory: the directory in which the .scr file is generated
 for micado-debug.scr, defaults to C:\\Program Files\\Autodesk\\Acade 2008\\UserDataCache\\
-for micado.scr, defaults to $MICADO_DIR\\src\\micado-pub\\
+for micado.scr, defaults to $MICADO_DIR\\trunk\\micado-pub\\
 
 pluginDirectory: the directory where the micado libraries are located
-for micado-debug.scr, defaults to $MICADO_DIR\\src\\debug\\
+for micado-debug.scr, defaults to $MICADO_DIR\\trunk\\debug\\
 for micado.scr, defaults to C:\\micado\\
 """
 
 generateDirectoryDebug = "C:\\Program Files\\Autodesk\\Acade 2008\\UserDataCache\\"
-generateDirectoryRelease = "$MICADO_DIR\\src\\micado-pub\\"
+generateDirectoryRelease = "$MICADO_DIR\\trunk\\micado-pub\\"
 
-pluginDirectoryDebug = "$MICADO_DIR\\src\\debug\\"
+pluginDirectoryDebug = "$MICADO_DIR\\trunk\\debug\\"
 pluginDirectoryRelease = "C:\\micado\\"
 
-srcFilenameDebug = "micado-debug.scr"
-srcFilenameRelease = "micado.scr"
+scrFilenameDebug = "micado-debug.scr"
+scrFilenameRelease = "micado.scr"
 
 arxloadFilenames = ["BioStreamDB.dbx"]
 netloadFilenames = ["BioStreamMg.dll", "BioStreamCS.dll", "biostreamfs.dll"]
@@ -40,8 +40,8 @@ import os.path
 import sys
 import getopt
 
-def srcLines(pluginDirectory):
-    """returns a list of the lines of the .src file"""
+def scrLines(pluginDirectory):
+    """returns a list of the lines of the .scr file"""
     lines = []
     lines.extend([arxloadCommand % (pluginDirectory, filename) for filename in arxloadFilenames])
     lines.extend([netloadCommand % (pluginDirectory, filename) for filename in netloadFilenames])
@@ -49,18 +49,18 @@ def srcLines(pluginDirectory):
 
 def getMicadoDir():
     """returns the micado top-level directory, inferred from the location of this script"""
-    micadoSrc, _ = os.path.split(os.getcwd())
-    micadoDir, _ = os.path.split(micadoSrc)
+    micadoTrunk, _ = os.path.split(os.getcwd())
+    micadoDir, _ = os.path.split(micadoTrunk)
     return micadoDir
 
-def generateScrLoader(srcFilename, generateDirectory, pluginDirectory):
-    """generates the .src file as scrFilename in generateDirectory
+def generateScrLoader(scrFilename, generateDirectory, pluginDirectory):
+    """generates the .scr file as scrFilename in generateDirectory
     using pluginDirectory as the directory where the micado libraries are located"""
-    srcFilepath = os.path.join(generateDirectory, srcFilename)
-    f = open(srcFilepath, 'w')
-    f.writelines(srcLines(pluginDirectory))
+    scrFilepath = os.path.join(generateDirectory, scrFilename)
+    f = open(scrFilepath, 'w')
+    f.writelines(scrLines(pluginDirectory))
     f.close()
-    print "generated", srcFilepath
+    print "generated", scrFilepath
 
 def usage():
     print usageDoc
@@ -88,11 +88,11 @@ def main():
             assert False, "unhandled option"
 
     if release:
-        srcFilename = "micado.scr"
+        scrFilename = "micado.scr"
         generateDirectory = generateDirectoryRelease
         pluginDirectory = pluginDirectoryRelease
     else:
-        srcFilename = "micado-debug.scr"
+        scrFilename = "micado-debug.scr"
         generateDirectory = generateDirectoryDebug
         pluginDirectory = pluginDirectoryDebug
         netloadFilenames.extend(debugExtraNetloadFilenames)
@@ -106,8 +106,8 @@ def main():
     generateDirectory = generateDirectory.replace(micadoDirSymbol, micadoDir)
     pluginDirectory = pluginDirectory.replace(micadoDirSymbol, micadoDir)
 
-    print "generateScrLoader(%s, %s, %s)" % (srcFilename, generateDirectory, pluginDirectory)    
-    generateScrLoader(srcFilename, generateDirectory, pluginDirectory)
+    print "generateScrLoader(%s, %s, %s)" % (scrFilename, generateDirectory, pluginDirectory)    
+    generateScrLoader(scrFilename, generateDirectory, pluginDirectory)
     
 if __name__ == '__main__':
     main()
