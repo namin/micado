@@ -1,0 +1,26 @@
+TODO list
+
+Pressure
+- Catch-up with BioCAD in terms of instruction generations
+  * export image
+  * export basic instructions (in terms of open/closed valves)
+
+Research
+- Specifying instructions by the flow layer
+  
+Automation
+- Installation Script (must have for next release)
+  the script should
+  * ask for an installation directory
+  * figure out autocad's directory
+  * just take care of all the path renamings
+  
+- Release Building Script (nice to have for next release)
+  given a release number $n$, the script should automatically generate the micado-$n$ directory and the micado-$n$.zip archive in $MICADO/pub/
+  it should also
+  * put the right release number in the $MICADO/pub/micado-$n$/README.txt
+  * warn if a release with the same name already exists
+  
+Thoughts
+- OK for dev scripts to be in Python
+  Perhaps better for user scripts to be in F# (so as to limit dependencies)
