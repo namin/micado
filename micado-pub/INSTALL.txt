@@ -1,0 +1,28 @@
+============
+Requirements
+============
+
+In addition to AutoCAD and the .NET framework, you need to have F# installed on your machine in order to run micado.
+F# is available from Microsoft Research: http://research.microsoft.com/fsharp/fsharp.aspx
+
+For this release of micado, download the F# release 1.9.3.14 of January 2008, which you can get from:
+http://research.microsoft.com/research/downloads/Details/7ac148a7-149b-4056-aa06-1e6754efd36f/Details.aspx
+
+==================
+Installation Steps
+==================
+
+1. Move this directory to C:\micado.
+2. Double-Click on the micado shortcut to the AutoCAD 2008 Application.
+3. At the AutoCAD prompt, type CUILOAD. Select the file c:\micado\micado.cui. 
+  (You should now have a micado toolbar with four buttons: Valve, Punch, Connect, Settings. Try them!)
+
+That's all. If you want to use the micado-specific commands, you'll have to use the micado shortcut to open the AutoCAD application from now on.
+
+============================
+Possible Installation Issues
+============================
+
+* If you choose to install micado in a directory other than C:\micado, you'll have to change the references to this path in micado.cui, micado.scr, and the command-line arguments in the shortcut micado.lnk.
+
+* If your AutoCAD 2008 application is not "C:\Program Files\Autodesk\Acade 2008\acad.exe", change the shortcut micado.lnk accordingly.

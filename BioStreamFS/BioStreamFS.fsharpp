@@ -1,0 +1,116 @@
+"General"
+{
+"ProjectIdGuid" = "{AA78FA7E-8AD6-45C6-A864-80831A418942}"
+}
+"Configurations"
+{
+    "Debug|Win32"
+    {
+    "ProjectType" = "DLL"
+    "OptLevel" = "Off"
+    "StrongNamingLevel" = "None"
+    "OutputPath" = "..\\debug"
+    "SearchPath" = "-I \"C:\\Program Files\\Autodesk\\Acade 2008\" -r acdbmgd.dll -r \"acmgd.dll\" -I \"..\\debug\" -r \"MgCS2.dll\" -r \"BioStreamMg.dll\" -r \"BioStreamCS.dll\""
+    "StrongNameFile" = ""
+    "OutputBase" = ""
+    "CustomCommandLine" = ""
+    "CustomCompiler" = ""
+    "DebugCheck" = "TRUE"
+    "CustomCompilationCheck" = "FALSE"
+    "DebugStartMode" = "0"
+    "StartApp" = "C:\\Program Files\\Autodesk\\Acade 2008\\acad.exe"
+    "StartAppPath" = "C:\\Program Files\\Autodesk\\Acade 2008\\UserDataCache\\"
+    "CustomStartupArguments" = "/b \"C:\\Program Files\\Autodesk\\Acade 2008\\UserDataCache\\micado-debug\""
+    }
+    "Release|Win32"
+    {
+    "ProjectType" = "DLL"
+    "OptLevel" = "3"
+    "StrongNamingLevel" = "None"
+    "OutputPath" = "..\\release"
+    "SearchPath" = "-I \"C:\\Program Files\\Autodesk\\Acade 2008\" -r acdbmgd.dll -r \"acmgd.dll\" -I \"..\\release\" -r \"MgCS2.dll\" -r \"BioStreamMg.dll\" -r \"BioStreamCS.dll\""
+    "StrongNameFile" = ""
+    "OutputBase" = ""
+    "CustomCommandLine" = ""
+    "CustomCompiler" = ""
+    "DebugCheck" = "FALSE"
+    "CustomCompilationCheck" = "FALSE"
+    "DebugStartMode" = "0"
+    "StartApp" = ""
+    "StartAppPath" = ""
+    "CustomStartupArguments" = ""
+    }
+}
+"Files"
+{
+    "graph.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+    "field-converters.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+    "csv.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+    "geometry.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+    "datatypes.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+    "flow.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+    "creation.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+    "database.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+    "editor.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+    "bridge.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+    "chip.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+    "routing.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+    "instructions.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+    "commands.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+    "debug.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+    "legacy.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+}
+"ProjStartupServices"
+{
+}
+"Globals"
+{
+}

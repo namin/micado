@@ -1,0 +1,29 @@
+TODO list
+
+Pressure (ASAP)
+- Catch-up with BioCAD in terms of instruction generations
+  * export image
+  * export basic instructions (in terms of open/closed valves/lines)
+  (design-wise, try to look ahead by imagining that valves could be inferred as opposed to imposed)
+  * perhaps, generate the gui already from AutoCAD (as opposed to having to call the python script in addition)
+  * tease out the essential components of the java GUI and organize it within micado-pub
+  
+Research
+- Specifying instructions by the flow layer
+  
+Admin Automation
+- Installation Script (must have for next release)
+  there should be a program, say CreateMicadoShortcut, in the release directory which
+  creates the .scr file (maybe from a template) and the micado shortcut to autocad
+  by inferring the current directory and asking for or figuring out the autocad paths
+  (i.e. the path to the autocad program and autocad's user cache dir)
+  
+- Release Building Script (nice to have for next release)
+  given a release number $n$, the script should automatically generate the micado-$n$ directory and the micado-$n$.zip archive in $MICADO/pub/
+  it should also
+  * put the right release number in the $MICADO/pub/micado-$n$/README.txt
+  * warn if a release with the same name already exists
+  
+Thoughts
+- OK for dev scripts to be in Python
+  Perhaps better for user scripts to be Windows executables (so as to limit dependencies)
