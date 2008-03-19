@@ -21,14 +21,18 @@ GPL License v.2
 Directories
 ===========
 
-* doc
-  the user-end documentation of Micado
+The top directory contains the user-end documentation.
 
+In addition:
+
+* doc
+  contains the hidden documentation (not immediately bookmarkable).
+  
 * pub
-  the public releases of Micado
+  contains the public releases of Micado
 
 * src
-  the source code of Micado
+  contains the source code of Micado
 
 ============
 Availability

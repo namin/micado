@@ -5,7 +5,7 @@
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <title>Micado Documentation</title>
-<link rel="stylesheet" type="text/css" href="micado.css" /> 
+<link rel="stylesheet" type="text/css" href="doc/micado.css" /> 
 </head>
 
 <body>
@@ -35,21 +35,21 @@
 </ul></p>
 
 <h3>Drawing Commands</h3>
-<h4><img src="images/tool-punch.png"></img><a name="PlacePunch"></a><code>PlacePunch</code></h4>
+<h4><img src="doc/images/tool-punch.png"></img><a name="PlacePunch"></a><code>PlacePunch</code></h4>
 <p>
-The <code>PlacePunch</code> command is accessed by the Micado toolbar button <img src="images/tool-punch.png"></img>. It prompts the user for a point and draws a punch with the given point as center. The <a href="#SettingsDrawing">Drawing Settings</a> defines how the punch will be drawn.
+The <code>PlacePunch</code> command is accessed by the Micado toolbar button <img src="doc/images/tool-punch.png"></img>. It prompts the user for a point and draws a punch with the given point as center. The <a href="#SettingsDrawing">Drawing Settings</a> defines how the punch will be drawn.
 </p>
 
-<h4><img src="images/tool-valve.png"></img><a name="PlaceValve"></a><code>PlaceValve</code></h4>
+<h4><img src="doc/images/tool-valve.png"></img><a name="PlaceValve"></a><code>PlaceValve</code></h4>
 <p>
-The <code>PlaceValve</code> command is accessed by the Micado toolbar button <img src="images/tool-valve.png"></img>. It prompts the user to select a point on a flow segment and draws a valve centered on the flow segment near the chosen point. The width and height of the valve are proportional to the width of the flow segment, the exact ratios being defined in the <a href="#SettingsDrawing">Drawing Settings</a>.
+The <code>PlaceValve</code> command is accessed by the Micado toolbar button <img src="doc/images/tool-valve.png"></img>. It prompts the user to select a point on a flow segment and draws a valve centered on the flow segment near the chosen point. The width and height of the valve are proportional to the width of the flow segment, the exact ratios being defined in the <a href="#SettingsDrawing">Drawing Settings</a>.
 </p>
 
-<h3><img src="images/tool-settings.png"></img><a name="SettingsDrawing"></a>Drawing Settings</h3>
+<h3><img src="doc/images/tool-settings.png"></img><a name="SettingsDrawing"></a>Drawing Settings</h3>
 <p>
 The Drawing Settings are in the Drawing tab of the <a href="#Settings">Micado Settings</a>.
 </p>
-<div class="screenshot"><img src="images/settings-drawing.png"></img>
+<div class="screenshot"><img src="doc/images/settings-drawing.png"></img>
 <br></br>
 Drawing tab (<a href="#units">*</a>)
 </div>
@@ -57,19 +57,19 @@ Drawing tab (<a href="#units">*</a>)
 <h2><a name="layers"></a>Layers</h2>
 <p>Micado must be told which AutoCAD layers are flow layers and which are control layers. Notably, this is important for <a href="#routing">routing</a>.
 </p>
-<h3><img src="images/tool-settings.png"></img><a name="SettingsLayers"></a>Layers Settings</h3>
+<h3><img src="doc/images/tool-settings.png"></img><a name="SettingsLayers"></a>Layers Settings</h3>
 <p>
 The Layers Settings are in the Layer tab of the <a href="#Settings">Micado Settings</a>.
 A layer is identified by its name. You can add a layer as a Flow layer or Control layer by adding its named, checked, to the corresponding checked box list. To delete a layer from the list of Flow layers or Control Layers, simply uncheck its name in the corresponding checked box list.
 Note that it's not permitted to have a layer be both a flow and a control layer.
 </p>
-<div class="screenshot"><img src="images/settings-layers.png"></img>
+<div class="screenshot"><img src="doc/images/settings-layers.png"></img>
 <br></br>
 Layers tab
 </div>
 
-<h2><a name="routing"></a><img src="images/tool-connect.png"></img>Routing</h2>
-<p>Micado automatically routes valves to punches with the <code>ConnectValvesToPunches</code> command, accessible by the Micado toolbar button <img src="images/tool-connect.png"></img>.</p>
+<h2><a name="routing"></a><img src="doc/images/tool-connect.png"></img>Routing</h2>
+<p>Micado automatically routes valves to punches with the <code>ConnectValvesToPunches</code> command, accessible by the Micado toolbar button <img src="doc/images/tool-connect.png"></img>.</p>
 
 <p>Micado collects entities in the flow and control <a href="#layers">layers</a>. It groups the control entities into control lines: a control line consists of at least one valve, together with all other entities (valves, punches or polylines) that are connected, directory or indirectly, to that valve. If a control line already has a punch, then it is considered already connected, and will be left alone. The routing command simply attempts to connect each unconnected control line to an unconnected control punch (so the number of unconnected control punches must be at least equal to the number of unconnected control lines). This way, the routing command can be invoked iteratively to connect an already partially connected chip.
 </p>
@@ -85,12 +85,12 @@ In particular,
 </ul>
 </p>
 
-<h3><img src="images/tool-settings.png"></img><a name="SettingsRouting">Routing Settings</h3>
+<h3><img src="doc/images/tool-settings.png"></img><a name="SettingsRouting">Routing Settings</h3>
 <p>
 The Routing Settings are in the Routing tab of the <a href="#Settings">Micado Settings</a>.
 Perhaps, the most important setting is the <em>Minimum Distance from a Line to another Line</em>, as it specifies the resolution of the manhattan grid used for routing. The <em>Extra Space</em> settings are to extend the constraints around the entity boundaries. For example, if <em>extra space around a Flowline</em> is specified, then the constraint of not following or crossing a flowline in a parallel direction is extended to include the extra space around a flowline. Similarly, the <em>extra space around a Valve</em> forbids a connection line from passing too close to another valve.
 </p>
-<div class="screenshot"><img src="images/settings-routing.png"></img>
+<div class="screenshot"><img src="doc/images/settings-routing.png"></img>
 <br></br>
 Routing tab (<a href="#units">*</a>)
 </div>
@@ -99,7 +99,7 @@ Routing tab (<a href="#units">*</a>)
 </p>
 
 <h2><a name="Settings"></a>Settings</h2>
-<p>All the Micado Settings are accessible with the command <code>MicadoSettings</code> or the Micado toolbar button <img src="images/tool-settings.png"></img>.</p>
+<p>All the Micado Settings are accessible with the command <code>MicadoSettings</code> or the Micado toolbar button <img src="doc/images/tool-settings.png"></img>.</p>
 
 <p>Each tab in the Micado Settings is discussed in details elsewhere:
 <ul>
