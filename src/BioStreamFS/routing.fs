@@ -1,5 +1,6 @@
 #light
 
+/// automatic routing of valves (as control lines) to punches
 module BioStream.Micado.Core.Routing
 
 open BioStream.Micado.Core
@@ -13,15 +14,24 @@ open Autodesk.AutoCAD.Geometry
 open Autodesk.AutoCAD.DatabaseServices
 
 open MgCS2
-    
+
+/// A routing grid
+/// specifies that a set of sources and a set of targets, with the goal of connecting each distinct source to a distinct target.
+/// In order to support Lee's algorithm, a routing grid should allow traceback.    
 type IRoutingGrid =
     inherit IGrid
     abstract Sources : int array
     abstract Targets : int array
-    abstract InverseNeighbors : int -> int seq // needed for traceback
+    /// Needed for traceback:
+    /// for all v & all w: w in v.Neighbors <=> v in w.InverseNeighbors
+    abstract InverseNeighbors : int -> int seq
 
 let deltas = [1;-1]
-    
+
+/// A simple grid
+/// is just a manhattan grid
+/// covering the given bounding box
+/// and where two adjacent // lines are separated by resolution.
 type SimpleGrid ( resolution, boundingBox : Point2d * Point2d ) =
     let lowerLeft, upperRight = boundingBox
     let sizeX = upperRight.X - lowerLeft.X
@@ -68,6 +78,7 @@ type SimpleGrid ( resolution, boundingBox : Point2d * Point2d ) =
         member v.Neighbors index = Seq.map coordinates2index (neighborCoordinates (index2coordinates index))
         member v.ToPoint index = index |> index2coordinates |> coordinates2point
 
+/// A connection segment is a line whose thickness is specified by user setting ConnectionWidth
 let connectionSegment startPoint endPoint = segmentPolyline (Settings.Current.ConnectionWidth) startPoint endPoint
 
 let polylinePoints (polyline :> Polyline) = 
@@ -157,7 +168,8 @@ let to_polylines extraWidth (polyline : Polyline) =
             segmentPolyline (width+extraWidth) a b
          let allSides = {for i in [0..polyline.NumberOfVertices-2] -> polyline.GetStartWidthAt i, polyline.GetLineSegment2dAt i}
          {for side in allSides -> to_segmentPolyline side}
-         
+
+/// A calculator grid provides some calculation methods on top of a simple grid         
 type CalculatorGrid (g : SimpleGrid) =
     let ig = g :> IGrid
     let closestCoordinates rounder (point : Point2d) =
@@ -268,7 +280,13 @@ let inverseMapSet map =
     let addEntry key values map' =
         Set.fold (add key) values map'
     Map.fold addEntry map Map.empty
-            
+
+/// A chip grid represents a routing grid that has the connectivity of the chip
+/// following the design rules:
+/// Obstacles cannot be crossed.
+/// Control lines cannot be entered.
+/// Flow lines cannot be followed in parallel.
+/// Foreign punches cannot be approached too closely, so their connectivity is like a black hole.
 type ChipGrid ( chip : Chip ) =
     let g = new SimpleGrid (Settings.Current.Resolution, chip.BoundingBox)
     let ig = g :> IGrid
@@ -492,7 +510,8 @@ let sameSlope slope slope' =
     | Vertical, Vertical -> true
     | Horizontal, Horizontal -> true
     | _, _ -> false
-    
+
+/// Improves a starting solution using Lee's algorithm iteratively
 type IterativeRouting (grid : IRoutingGrid, initialSolution) =
     let isTarget =
         let targets = 
@@ -619,7 +638,8 @@ type IterativeRouting (grid : IRoutingGrid, initialSolution) =
     member v.stabilize() = reTraceAllUntilStable 0
     /// the current solution
     member v.Solution with get() = Array.copy solution
-        
+
+/// Transforms a solution into a sequence of entities to be added to the drawing        
 let presentConnections (grid :> IGrid) connections =
     let trace2points trace =
         let onlyTurningPoints points =
