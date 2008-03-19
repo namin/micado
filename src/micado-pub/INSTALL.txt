@@ -17,7 +17,7 @@ Installation Steps
 3. At the AutoCAD prompt, type CUILOAD. Select the file c:\micado\micado.cui. 
   (You should now have a micado toolbar with four buttons: Valve, Punch, Connect, Settings. Try them!)
 
-That's all. If you want to use the micado-specific commands, you'll have to use the micado shortcut to open the AutoCAD applications from now on.
+That's all. If you want to use the micado-specific commands, you'll have to use the micado shortcut to open the AutoCAD application from now on.
 
 ============================
 Possible Installation Issues
