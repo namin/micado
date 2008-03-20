@@ -13,6 +13,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{F1E95641-9139-4477-989B-FDC107FEEBD8}"
 	ProjectSection(SolutionItems) = preProject
 		ReadMe.txt = ReadMe.txt
+		Todo.txt = Todo.txt
 	EndProjectSection
 EndProject
 Project("{94D665CA-D915-4DE1-AA53-913450A1AE2D}") = "BioStreamFS", "BioStreamFS\BioStreamFS.fsharpp", "{AA78FA7E-8AD6-45C6-A864-80831A418942}"

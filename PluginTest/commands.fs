@@ -164,3 +164,15 @@ let test_flow_click() =
         Debug.drawFlowSegment segment
         Editor.resetColor()
         Editor.resetHighlight()
+        
+[<CommandMethod("micado_test_flow_representation_with_valves")>]
+/// test representation of flow when valves are added
+let test_flow_representation_with_valves() =
+    let chip = Chip.create (Database.collectChipEntities())
+    let rawFlowRep = Instructions.flowRepresentation chip.FlowLayer
+    let flowRep = Instructions.addValvesToFlowRepresentation chip.ControlLayer.Valves rawFlowRep
+    {0..flowRep.EdgeCount-1}
+ |> Seq.map flowRep.ToFlowSegment
+ |> Seq.iter Debug.drawFlowSegment;
+    chip.ControlLayer.Valves
+ |> Array.iteri (fun vi valve -> Debug.drawPoint (Debug.maxSegmentLength valve) (flowRep.ToPoint (rawFlowRep.NodeCount+vi)))
