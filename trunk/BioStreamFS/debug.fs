@@ -38,7 +38,7 @@ let drawArrow (startPoint : Point2d) (endPoint : Point2d) =
     drawHeadTip (-1)
     
 /// draws the grid as arrows connecting each pair of neighbors
-let drawGrid ( grid :> IGrid ) =
+let drawGrid ( grid : #IGrid ) =
     for i in {0..grid.NodeCount-1} do
         let drawTo = drawArrow (grid.ToPoint i)
         for j in grid.Neighbors i do
@@ -50,7 +50,7 @@ let drawPoint length ( point : Point2d ) =
     drawSegmentEnds (Geometry.midSegmentEnds length Geometry.rightVector point)
 
 /// returns the length of the longest segment of the given polyline
-let maxSegmentLength (polyline :> Polyline) =
+let maxSegmentLength (polyline : #Polyline) =
     {0..polyline.NumberOfVertices-1-(if polyline.Closed then 0 else 1)}
  |> Seq.map (fun (i) -> polyline.GetLineSegment2dAt(i).Length)
  |> Seq.fold1 min 

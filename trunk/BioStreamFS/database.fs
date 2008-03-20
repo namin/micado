@@ -29,7 +29,7 @@ let readEntityFromId (entId : ObjectId) =
 
 /// writes the entity to the active database
 /// returns the given entity (for chaining)
-let writeEntity (entity :> Entity) =
+let writeEntity (entity : #Entity) =
     let db = database()
     let tm = db.TransactionManager
     use myT = tm.StartTransaction()
@@ -57,7 +57,7 @@ let writeEntities (entities : Entity seq) =
     objectIds |> Seq.map readEntityFromId
         
 /// erases an entity from the active database    
-let eraseEntity (entity :> Entity) =
+let eraseEntity (entity : #Entity) =
     let tm = database().TransactionManager
     use myT = tm.StartTransaction()
     let entity' = if entity.IsWriteEnabled 

@@ -21,6 +21,7 @@ let private defaultHighlight = false // no highlighting
 let mutable private color = defaultColor
 let mutable private highlight = defaultHighlight
 
+/// sets the color for ephemeral drawings
 /// 1 Red
 /// 2 Yellow
 /// 3 Green
@@ -29,12 +30,15 @@ let mutable private highlight = defaultHighlight
 /// 6 Magenta
 /// 7 White or Black
 let setColor c = color <- c
+/// sets whether ephemeral drawings should be highlighted (true) or not (false)
 let setHighlight h = highlight <- h
 
+/// resets the color for ephemeral drawings to the default (white)
 let resetColor () = color <- defaultColor
+/// resets whether ephemeral drawings should be highlighted to the default (no highlight)
 let resetHighlight () = highlight <- defaultHighlight
 
-/// draw the given points in white, without highlighting
+/// draws an ephemeral segment connecting the given points, in the active drawing,
 let drawVector (pointA : Point3d) (pointB : Point3d) =
     editor().DrawVector( pointA, 
                          pointB, 

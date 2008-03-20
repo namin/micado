@@ -81,22 +81,22 @@ type SimpleGrid ( resolution, boundingBox : Point2d * Point2d ) =
 /// A connection segment is a line whose thickness is specified by user setting ConnectionWidth
 let connectionSegment startPoint endPoint = segmentPolyline (Settings.Current.ConnectionWidth) startPoint endPoint
 
-let polylinePoints (polyline :> Polyline) = 
+let polylinePoints (polyline : #Polyline) = 
     Array.map (fun (i) -> polyline.GetPoint2dAt(i)) [|0..polyline.NumberOfVertices-1|]
 
-let polylineSegments (polyline :> Polyline) =
+let polylineSegments (polyline : #Polyline) =
     Array.map (fun (i) -> polyline.GetLineSegment2dAt(i)) 
               [|0..polyline.NumberOfVertices-(if polyline.Closed then 1 else 2)|]
 
 /// whether the given point lies on a segment of the polyline    
-let pointOnPolyline (p : Point2d) (polyline :> Polyline) =
+let pointOnPolyline (p : Point2d) (polyline : #Polyline) =
     Seq.exists (fun (seg : LineSegment2d) -> Geometry.pointOnSegment p seg.StartPoint seg.EndPoint) 
                (polylineSegments polyline)
 
 /// whether the given point is inside the area delimited by the given polyline
 /// also returns true if the given point is on the polyline
 /// always returns false if polyline is not closed
-let interiorPoint (polyline :> Polyline) (p : Point2d) =
+let interiorPoint (polyline : #Polyline) (p : Point2d) =
     if not polyline.Closed
     then false
     else
@@ -116,7 +116,7 @@ let interiorPoint (polyline :> Polyline) (p : Point2d) =
 /// also returns true if the given point is on the polyline
 /// always returns false if polyline is not closed
 /// assumes polygon is convex
-let interiorPointConvex (polyline :> Polyline) (p : Point2d) =
+let interiorPointConvex (polyline : #Polyline) (p : Point2d) =
     if not polyline.Closed
     then false
     else
@@ -221,7 +221,7 @@ type CalculatorGrid (g : SimpleGrid) =
         index |> g.index2coordinates |> neighborCoordinatesWithSlope slope |> Seq.map g.coordinates2index
     [<OverloadID("outerEdgesPolyline")>]
     member v.outerEdges (polyline : Polyline) =
-        let outerBoundingBoxIndices (entity :> Entity) =
+        let outerBoundingBoxIndices (entity : #Entity) =
             entity.GeometricExtents
          |> fun (e) -> outerBoundingBox (Geometry.to2d e.MinPoint) (Geometry.to2d e.MaxPoint)
          |> allCoordinatesInBoundingBox
@@ -419,7 +419,7 @@ let createChipGrid (chip : Chip) =
 /// but not, notably, the number of vias,
 /// based on the paper
 /// Hua Xiang, Xiaoping Tang, and Martin D. F. Wong. Min-cost Flow Based Algorithm for Simultaneous Pin Assignment and Routing, IEEE Transactions on Computer-Aided Design of Integrated Circuits and Systems, Vol. 22, No. 7, pp 870-878, July, 2003. 
-let minCostFlowRouting ( grid :> IRoutingGrid ) =
+let minCostFlowRouting ( grid : #IRoutingGrid ) =
     let sources = grid.Sources
     let targets = grid.Targets
     let nodeCount = grid.NodeCount
@@ -640,7 +640,7 @@ type IterativeRouting (grid : IRoutingGrid, initialSolution) =
     member v.Solution with get() = Array.copy solution
 
 /// Transforms a solution into a sequence of entities to be added to the drawing        
-let presentConnections (grid :> IGrid) connections =
+let presentConnections (grid : #IGrid) connections =
     let trace2points trace =
         let onlyTurningPoints points =
             let rec helper acc slope point rest =
