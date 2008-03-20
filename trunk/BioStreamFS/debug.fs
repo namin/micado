@@ -48,4 +48,9 @@ let drawGrid ( grid :> IGrid ) =
 let drawPoint length ( point : Point2d ) =
     drawSegmentEnds (Geometry.midSegmentEnds length Geometry.upVector point)
     drawSegmentEnds (Geometry.midSegmentEnds length Geometry.rightVector point)
-    
+
+/// returns the length of the longest segment of the given polyline
+let maxSegmentLength (polyline :> Polyline) =
+    {0..polyline.NumberOfVertices-1-(if polyline.Closed then 0 else 1)}
+ |> Seq.map (fun (i) -> polyline.GetLineSegment2dAt(i).Length)
+ |> Seq.fold1 min 

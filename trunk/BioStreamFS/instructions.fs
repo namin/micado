@@ -16,12 +16,22 @@ open System.Collections.Generic
 
 /// returns the index of the segment from the given array
 /// that is closest to the given point
-let private computeClosestSegmentIndex (segments : FlowSegment array) (point : Point2d) =
+/// considering only the first n segments
+let private computeClosestSegmentIndexUpTo n (segments : FlowSegment array) (point : Point2d) =
     segments 
- |> Array.mapi (fun i f -> (f.getDistanceTo point), i )
+ |> Array.mapi (fun i f -> if i<n then (f.getDistanceTo point), i else System.Double.MaxValue, i)
  |> Array.fold1_right min
  |> snd
- 
+
+/// returns the index of the segment from the given array
+/// that is closest to the given point
+let private computeClosestSegmentIndex (segments : FlowSegment array) (point : Point2d) =
+    computeClosestSegmentIndexUpTo segments.Length segments point
+ //   segments 
+ //|> Array.mapi (fun i f -> (f.getDistanceTo point), i )
+ //|> Array.fold1_right min
+ //|> snd
+  
 /// returns the index of the segment from the given array
 /// that is closest to the given punch
 let private compute_punch2segmentIndex (segments : FlowSegment array) (punch : Punch) =
@@ -154,12 +164,13 @@ let private compute_node2props propFun (edge2flowSegment : FlowSegment array) po
  
 let private compute_node2neighbors edge2flowSegment point2node node2edges =
     compute_node2props (fun s t e -> t) edge2flowSegment point2node node2edges
- 
+
 type IFlowRepresentation =
     inherit IGrid
     abstract EdgeCount : int
     abstract ToFlowSegment : int -> FlowSegment
     abstract ClosestEdge : Point2d -> int
+    abstract NodeEdges : int -> Set<int>
 
 let flowRepresentation (flow : Flow) =
     let intersectionTable = computeFlowIntersectionPoints flow.Segments
@@ -167,13 +178,61 @@ let flowRepresentation (flow : Flow) =
     let edge2flowSegment = computeAllEdges flow.Segments flow.Punches intersectionTable
     let node2edges = compute_node2edges node2point.Length edge2flowSegment point2node
     let node2neighbors = compute_node2neighbors edge2flowSegment point2node node2edges
+    let punchCount = flow.Punches.Length
     { new IFlowRepresentation with
+        /// the first flow.Punches.Length nodes are punch nodes, s.t.
+        /// the ith punch maps to the ith node
         member v.NodeCount = node2point.Length
         member v.Neighbors node = Set.to_seq node2neighbors.[node]
         member v.ToPoint node = node2point.[node]
         member v.EdgeCount = edge2flowSegment.Length
         member v.ToFlowSegment edge = edge2flowSegment.[edge] 
         member v.ClosestEdge point = computeClosestSegmentIndex edge2flowSegment point // could be optimized
+        member v.NodeEdges node = node2edges.[node]
     }
     
-    
+let addValvesToFlowRepresentation (valves : Valve array) (rep : IFlowRepresentation) =
+    let nodeCount = rep.NodeCount + valves.Length
+    let edgeCount = rep.EdgeCount + valves.Length
+    let node2point = Array.zero_create nodeCount
+    let point2node = new Dictionary<Point2d, int>()
+    let node2edges = Array.zero_create nodeCount
+    let addNode node point edges =
+        node2point.[node] <- point
+        node2edges.[node] <- edges
+        if not (point2node.ContainsKey point)
+        then point2node.Add(point, node)
+    for node = 0 to rep.NodeCount-1 do
+        addNode node (rep.ToPoint node) (rep.NodeEdges node)
+    let edge2flowSegment = Array.zero_create edgeCount
+    for edge = 0 to rep.EdgeCount-1 do
+        edge2flowSegment.[edge] <- rep.ToFlowSegment edge
+    let addValve vi (valve : Valve) =
+        let vc = valve.Center
+        let vn = rep.NodeCount + vi
+        let e' = rep.EdgeCount + vi
+        let e = computeClosestSegmentIndexUpTo e' edge2flowSegment vc
+        let f = edge2flowSegment.[e]
+        let vp = f.Segment.GetClosestPointTo(vc).Point
+        let sp, tp = f.Segment.StartPoint, f.Segment.EndPoint
+        let sn, tn = point2node.[sp], point2node.[tp]
+        let ef = new FlowSegment(new LineSegment2d(sp, vp), f.Width)
+        let ef' = new FlowSegment(new LineSegment2d(vp, tp), f.Width)
+        edge2flowSegment.[e] <- ef
+        edge2flowSegment.[e'] <- ef'
+        node2edges.[tn] <- (node2edges.[tn].Remove e).Add e'
+        addNode vn vp (Set.of_list [e;e'])
+    Array.iteri addValve valves
+    let node2neighbors = compute_node2neighbors edge2flowSegment point2node node2edges
+    { new IFlowRepresentation with
+        /// the last valves.Length nodes are the valve nodes, s.t.
+        /// the ith valve maps to the (NodeCount-1-i)th node
+        member v.NodeCount = nodeCount
+        member v.Neighbors node = Set.to_seq node2neighbors.[node]
+        member v.ToPoint node = node2point.[node]
+        member v.EdgeCount = edgeCount
+        member v.ToFlowSegment edge = edge2flowSegment.[edge] 
+        member v.ClosestEdge point = computeClosestSegmentIndex edge2flowSegment point // could be optimized
+        member v.NodeEdges node = node2edges.[node]
+    }
+        

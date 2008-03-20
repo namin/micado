@@ -5,7 +5,7 @@ fileFsharpp = "BioStreamFS.fsharpp"
 
 reLstRegexp = '"([\w\s\-\.\r\n])*GOTO DONE'
 def reLstSub(lst):
-	return '" '+' '.join(lst+['biostreamfs.fs'])+'\nGOTO CLEAN'
+	return '" '+' '.join(lst+['biostreamfs.fs'])+'\nGOTO DONE'
 	
 import shutil
 import sys

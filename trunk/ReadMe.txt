@@ -35,7 +35,7 @@ The solutions contain the following projects:
   #r "acdbmgd.dll"
   #r "acmgd.dll"
 
-  #I @"C:\Documents and Settings\Nada AMIN\Mes documents\projects\micado\src\debug" // your path to MICADO_CHECKOUT\src\debug
+  #I @"C:\Documents and Settings\Nada AMIN\Mes documents\projects\micado\trunk\debug" // your path to MICADO_CHECKOUT\trunk\debug
   #r "MgCS2.dll"
   #r "BioStreamMg.dll"
   #r "biostreamfs.dll"
