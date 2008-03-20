@@ -25,7 +25,7 @@ let lazyGet computeValue optionValue =
         optionValue := Some value
         value
 
-let addVertexTo (polyline :> Polyline) (point : Point2d) =
+let addVertexTo (polyline : #Polyline) (point : Point2d) =
     polyline.AddVertexAt(polyline.NumberOfVertices, point, 0.0, 0.0, 0.0)
             
 /// creates a hallow polyline with the given width, and starting and ending mid points
@@ -124,7 +124,7 @@ type Flow ( segments : FlowSegment list, punches : Punch list) =
 /// acceptable entity type for any control entity other than valve and punch
 type RestrictedEntity = Polyline
 
-let entitiesIntersect (entity1 :> Entity) (entity2 :> Entity) =
+let entitiesIntersect (entity1 : #Entity) (entity2 : #Entity) =
     let points = new Point3dCollection()
     entity1.IntersectWith(entity2, Intersect.OnBothOperands, points, 0, 0)
     points.Count > 0
@@ -137,8 +137,8 @@ type ControlLine =
       Punches : Punch list
       Others : RestrictedEntity list }
     member v.Connected = (v.Punches <> [])
-    member v.intersectWith (entity :> Entity) =
-        let intersectWithEntity (other :> Entity) = entitiesIntersect entity other
+    member v.intersectWith (entity : #Entity) =
+        let intersectWithEntity (other : #Entity) = entitiesIntersect entity other
         List.exists intersectWithEntity v.Valves 
      || List.exists intersectWithEntity v.Punches 
      || List.exists intersectWithEntity v.Others
@@ -160,7 +160,7 @@ let entityIntersectionGraph ( entities : Entity array ) =
     Graph.create table
 
 /// upcast an entity subtype to an entity
-let to_entity (entity :> Entity) =
+let to_entity (entity : #Entity) =
     entity :> Entity
 
 // upcast an entire array of subtypes to entities
@@ -220,8 +220,8 @@ type Control ( valves : Valve list, punches : Punch list, others : RestrictedEnt
     member v.otherLines (line : ControlLine ) =
         Array.filter (fun (otherLine) -> otherLine <> line) v.Lines
     /// whether the given entity intersect any control entity outside the given line
-    member v.intersectOutside (line : ControlLine) (entity :> Entity) =
-        let intersectWithEntity (other :> Entity) = entitiesIntersect entity other
+    member v.intersectOutside (line : ControlLine) (entity : #Entity) =
+        let intersectWithEntity (other : #Entity) = entitiesIntersect entity other
         Array.exists (fun (otherLine : ControlLine) -> otherLine.intersectWith entity) (v.otherLines line)
      || Array.exists intersectWithEntity v.Obstacles
      || Array.exists intersectWithEntity v.UnconnectedPunches
