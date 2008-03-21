@@ -1,6 +1,6 @@
 #light
 
-module BioStream.Micado.Core.Instructions
+module BioStream.Micado.Core.FlowRepresentation
 
 open BioStream.Micado.Core
 open BioStream.Micado.Common
@@ -172,7 +172,7 @@ type IFlowRepresentation =
     abstract ClosestEdge : Point2d -> int
     abstract NodeEdges : int -> Set<int>
 
-let flowRepresentation (flow : Flow) =
+let create (flow : Flow) =
     let intersectionTable = computeFlowIntersectionPoints flow.Segments
     let node2point, point2node = computeAllNodes flow.Punches intersectionTable
     let edge2flowSegment = computeAllEdges flow.Segments flow.Punches intersectionTable
@@ -191,7 +191,7 @@ let flowRepresentation (flow : Flow) =
         member v.NodeEdges node = node2edges.[node]
     }
     
-let addValvesToFlowRepresentation (valves : Valve array) (rep : IFlowRepresentation) =
+let addValves (valves : Valve array) (rep : IFlowRepresentation) =
     let nodeCount = rep.NodeCount + valves.Length
     let edgeCount = rep.EdgeCount + valves.Length
     let node2point = Array.zero_create nodeCount
