@@ -142,7 +142,7 @@ let test_flow_intersections() =
 /// test representation of flow
 let test_flow_representation() =
     let chip = Chip.create (Database.collectChipEntities())
-    let flowRep = Instructions.flowRepresentation chip.FlowLayer
+    let flowRep = FlowRepresentation.create chip.FlowLayer
     {0..flowRep.EdgeCount-1}
  |> Seq.map flowRep.ToFlowSegment
  |> Seq.iter Debug.drawFlowSegment
@@ -156,7 +156,7 @@ let test_flow_click() =
     | None -> ()
     | Some point ->
         let chip = Chip.create (Database.collectChipEntities())
-        let flowRep = Instructions.flowRepresentation chip.FlowLayer
+        let flowRep = FlowRepresentation.create chip.FlowLayer
         let edge = flowRep.ClosestEdge point
         let segment = flowRep.ToFlowSegment edge
         Editor.setColor 3 // Green
@@ -169,8 +169,8 @@ let test_flow_click() =
 /// test representation of flow when valves are added
 let test_flow_representation_with_valves() =
     let chip = Chip.create (Database.collectChipEntities())
-    let rawFlowRep = Instructions.flowRepresentation chip.FlowLayer
-    let flowRep = Instructions.addValvesToFlowRepresentation chip.ControlLayer.Valves rawFlowRep
+    let rawFlowRep = FlowRepresentation.create chip.FlowLayer
+    let flowRep = FlowRepresentation.addValves chip.ControlLayer.Valves rawFlowRep
     {0..flowRep.EdgeCount-1}
  |> Seq.map flowRep.ToFlowSegment
  |> Seq.iter Debug.drawFlowSegment;
