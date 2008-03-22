@@ -171,6 +171,7 @@ type IFlowRepresentation =
     abstract ToFlowSegment : int -> FlowSegment
     abstract ClosestEdge : Point2d -> int
     abstract NodeEdges : int -> Set<int>
+    abstract OfPoint : Point2d -> int
 
 let create (flow : Flow) =
     let intersectionTable = computeFlowIntersectionPoints flow.Segments
@@ -189,6 +190,7 @@ let create (flow : Flow) =
         member v.ToFlowSegment edge = edge2flowSegment.[edge] 
         member v.ClosestEdge point = computeClosestSegmentIndex edge2flowSegment point // could be optimized
         member v.NodeEdges node = node2edges.[node]
+        member v.OfPoint point = point2node.[point]
     }
     
 let addValves (valves : Valve array) (rep : IFlowRepresentation) =
@@ -234,5 +236,6 @@ let addValves (valves : Valve array) (rep : IFlowRepresentation) =
         member v.ToFlowSegment edge = edge2flowSegment.[edge] 
         member v.ClosestEdge point = computeClosestSegmentIndex edge2flowSegment point // could be optimized
         member v.NodeEdges node = node2edges.[node]
+        member v.OfPoint point = point2node.[point]
     }
         

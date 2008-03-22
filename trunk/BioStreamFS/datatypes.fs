@@ -10,6 +10,8 @@ open BioStream.Micado.Core
 open Autodesk.AutoCAD.DatabaseServices
 open Autodesk.AutoCAD.Geometry
 
+open System.Collections.Generic
+
 type IGrid =
     inherit Graph.IGraph
     abstract ToPoint : int -> Point2d
@@ -115,11 +117,27 @@ type FlowSegment (segment : LineSegment2d, width : double) =
     member v.to_polyline extraWidth = segmentPolyline (v.Width/2.0+extraWidth) (v.Segment.StartPoint) (v.Segment.EndPoint)
     member v.Slope with get() = lazyGet computeSlope slope
     member v.WidthIndicatorSegments with get() = lazyGet computeWidthIndicatorSegments widthIndicatorSegments
-    
+
+let dictionaryArray (s : #('a seq)) =
+    let d = new Dictionary<'a,int>()
+    let add i key =
+        if not (d.ContainsKey(key))
+        then d.Add(key, i)
+    Seq.iteri add s
+    d
+        
 /// flow layer of a chip
 type Flow ( segments : FlowSegment list, punches : Punch list) =
+    let punchDictionaryArray = ref None
+    let computePunchDictionaryArray() = dictionaryArray punches
+    let getPunchDictionaryArray() = lazyGet computePunchDictionaryArray punchDictionaryArray
+    let punch2index punch =
+        if getPunchDictionaryArray().ContainsKey(punch)
+        then Some (getPunchDictionaryArray().[punch])
+        else None
     member v.Segments = Array.of_list segments
     member v.Punches = Array.of_list punches
+    member v.Punch2Index punch = punch2index punch
 
 /// acceptable entity type for any control entity other than valve and punch
 type RestrictedEntity = Polyline

@@ -4,7 +4,7 @@ IF (%param%) == (clean) GOTO CLEAN
 
 :BUILD
 IF NOT EXIST biostreamfs mkdir biostreamfs
-fsc -o biostreamfs.dll -doc biostreamfs.xml --generate-html --html-css "msdn.css" --fullpaths --progress -a -Ooff -g -I "C:\Program Files\Autodesk\Acade 2008" -r acdbmgd.dll -r "acmgd.dll" -I "..\debug" -r "MgCS2.dll" -r "BioStreamMg.dll" -r "BioStreamCS.dll" graph.fs field-converters.fs csv.fs geometry.fs datatypes.fs flow.fs creation.fs database.fs editor.fs bridge.fs chip.fs routing.fs flow-representation.fs commands.fs debug.fs legacy.fs biostreamfs.fs
+fsc -o biostreamfs.dll -doc biostreamfs.xml --generate-html --html-css "msdn.css" --fullpaths --progress -a -Ooff -g -I "C:\Program Files\Autodesk\Acade 2008" -r acdbmgd.dll -r "acmgd.dll" -I "..\debug" -r "MgCS2.dll" -r "BioStreamMg.dll" -r "BioStreamCS.dll" graph.fs field-converters.fs csv.fs geometry.fs datatypes.fs flow.fs creation.fs database.fs editor.fs bridge.fs chip.fs routing.fs flow-representation.fs commands.fs debug.fs legacy.fs instructions.fs biostreamfs.fs
 GOTO DONE
 
 :CLEAN

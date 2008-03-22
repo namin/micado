@@ -13,6 +13,8 @@ open BioStream.Micado.Common
 open BioStream.Micado.Core
 open BioStream.Micado.Plugin
 
+open BioStream.Micado.Plugin.Editor.Extra
+
 [<CommandMethod("micado_test_polyline2flow")>]
 /// tests converting a polyline to a flow line
 let test_polyline2flow() =
@@ -176,3 +178,12 @@ let test_flow_representation_with_valves() =
  |> Seq.iter Debug.drawFlowSegment;
     chip.ControlLayer.Valves
  |> Array.iteri (fun vi valve -> Debug.drawPoint (Debug.maxSegmentLength valve) (flowRep.ToPoint (rawFlowRep.NodeCount+vi)))
+
+      
+[<CommandMethod("micado_test_prompt_flow_punch")>]
+/// test prompting the user for a flow punch
+let test_prompt_flow_punch() =
+    let chip = Chip.create (Database.collectChipEntities())
+    chip.FlowLayer.promptPunch "Select a flow punch: "
+ |> Option.map (fun (i : int) -> Editor.writeLine ("You selected punch #" ^ i.ToString()))
+ |> ignore
