@@ -149,14 +149,50 @@ type InstructionChip (chip : Chip) =
     member v.Representation = rep
     member v.ToNodeType node = node2type node
     member v.OfNodeType nt = type2node nt
-
-module Build =
-
+    
+module Augmentations =
+    let ifValve (ic : InstructionChip) node =
+        match ic.ToNodeType node with
+        | ValveNode vi -> Some vi
+        | _ -> None
+        
     let addIfValve (ic : InstructionChip) node set =
         match ic.ToNodeType node with
         | ValveNode vi -> Set.add vi set
         | _ -> set
         
+    type InstructionChip with
+        member ic.ifValve node = ifValve ic node
+        member ic.addIfValve node set = addIfValve ic node set
+
+module Search =    
+    let pair2set (a,b) = Set.empty |> Set.add a |> Set.add b    
+    let edgeToedge (ic : InstructionChip) inputEdge outputEdge =
+        let rep = ic.Representation
+        let boundaryEdges = Set.empty |> Set.add inputEdge |> Set.add outputEdge
+        let inputNodes = FlowRepresentation.edge2nodes rep inputEdge
+        let outputNodes = FlowRepresentation.edge2nodes rep outputEdge
+        let maybePath = 
+            FlowRepresentation.Search.findShortestPath rep boundaryEdges (pair2set inputNodes) (pair2set outputNodes)
+        match maybePath with
+        | None -> None
+        | Some path ->
+            // use sameAs instead of differentFrom
+            // to avoid including valves or turns that weren't consciously on path
+            let inputNode = FlowRepresentation.sameAs (path.StartNode) inputNodes
+            let outputNode = FlowRepresentation.sameAs (List.hd path.Nodes) outputNodes
+            let edges = path.Edges |> Set.of_list 
+                      // for the same reason, don't include the boundaryEdges
+                      // |> Set.union boundaryEdges
+            let valves = path.Nodes |> List.choose ic.ifValve |> Set.of_list
+                      // already in path.Nodes, since using sameAs: 
+                      // |> ic.addIfValve inputNode |> ic.addIfValve outputNode
+            Some (inputNode, outputNode, edges, valves)
+
+exception NoPathFound of string
+            
+module Build =
+    
     let inputBox (ic : InstructionChip) pi =
         let punchNode = ic.OfNodeType (PunchNode pi)
         FlowBox.Primitive (Attachments.create None (Some punchNode), 
@@ -176,12 +212,15 @@ module Build =
              let inputPoint,outputPoint = if ds<dt then s,t else t,s
              let inputNode,outputNode = ic.Representation.OfPoint inputPoint, ic.Representation.OfPoint outputPoint
              let edges = Set.singleton edge
-             let valves = Set.empty |> addIfValve ic inputNode |> addIfValve ic outputNode
+             let valves = Set.empty |> ic.addIfValve inputNode |> ic.addIfValve outputNode
              FlowBox.Primitive (Attachments.create (Some inputNode) (Some outputNode), 
                                 used edges valves)
         else
-        // todo
-        FlowBox.Primitive (Attachments.create None None, usedEmpty)     
+        match Search.edgeToedge ic inputEdge outputEdge with
+        | Some (inputNode, outputNode, edges, valves) ->
+            FlowBox.Primitive (Attachments.create (Some inputNode) (Some outputNode), 
+                               used edges valves)
+        | None -> raise(NoPathFound("cannot find path between input flow with output flow"))     
     
 module Interactive =
 
@@ -209,7 +248,13 @@ module Interactive =
         match promptInputEdge() with
         | Some inputEdge ->
             match promptOutputEdge() with
-            | Some outputEdge -> Some (Build.pathBox ic inputEdge outputEdge)
+            | Some outputEdge -> 
+               try
+                Some (Build.pathBox ic inputEdge outputEdge)
+               with 
+                | NoPathFound(msg) -> 
+                    Editor.writeLine ("Error: " ^ msg ^ ".")
+                    None
             | None -> None
         | None -> None
 
