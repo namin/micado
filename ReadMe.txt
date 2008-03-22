@@ -38,6 +38,7 @@ The solutions contain the following projects:
   #I @"C:\Documents and Settings\Nada AMIN\Mes documents\projects\micado\trunk\debug" // your path to MICADO_CHECKOUT\trunk\debug
   #r "MgCS2.dll"
   #r "BioStreamMg.dll"
+  #r "BioStreamCS.dll"
   #r "biostreamfs.dll"
                 
 - ***BioStreamCS***

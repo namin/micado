@@ -12,6 +12,8 @@ open Autodesk.AutoCAD.EditorInput
 open Autodesk.AutoCAD.Geometry
 open BioStream.Micado.Core
 
+open BioStream
+
 /// returns the active editor
 let editor() =
     Application.DocumentManager.MdiActiveDocument.Editor
@@ -95,7 +97,7 @@ let promptSelectEntity message =
     promptSelectEntityAndPoint message
  |> Option.map (function | (entity, point) -> entity)
 
-/// returns the entity as polyline if it's possible
+/// returns the entity as a polyline if it's possible
 let justPolyline (entity : Entity) =
     match entity with
     | :? Polyline as polyline -> Some polyline
@@ -113,6 +115,17 @@ let promptSelectPolylineAndPoint message =
 let promptSelectPolyline message =
     promptSelectEntity message |> Option.bind justPolyline
 
+/// returns the entity as a punch if it's possible
+let justPunch (entity : Entity) =
+    match entity with
+    | :? Punch as punch -> Some punch
+    | _ -> editor().WriteMessage("Selected entity is not a punch.")
+           None
+/// prompts the user to select a punch
+/// returns the selected punch if the user complies
+let promptSelectPunch message =
+    promptSelectEntity message |> Option.bind justPunch
+               
 /// converts the polyline to a flow segment if possible
 let justFlowSegment (polyline : Polyline) =
     Flow.from_polyline polyline
@@ -151,4 +164,20 @@ let promptPoint message =
         then None
         else Some res.Value
     promptForPoint |> pointIfValid
-    
+
+module Extra =
+    open BioStream.Micado.Common.Datatypes
+
+    module Augmentations =
+        let promptFlowPunch (flowLayer : Flow) =
+            let justFlowPunch punch =
+                match flowLayer.Punch2Index punch with
+                | None -> writeLine "The selected punch is not a flow punch."
+                          None    
+                | s -> s        
+            fun message ->
+                promptSelectPunch message
+             |> Option.bind justFlowPunch
+
+    type BioStream.Micado.Common.Datatypes.Flow with
+        member v.promptPunch message = Augmentations.promptFlowPunch v message
