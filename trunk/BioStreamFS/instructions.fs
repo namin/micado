@@ -28,10 +28,29 @@ type Used =
 let used edges valves = {Edges = edges; Valves = valves}
 let usedEmpty = used Set.empty Set.empty
 
-module FlowBox = begin
-    type Attachments = {InputAttachment : NodeIndex option; OutputAttachment : NodeIndex option }
-    let attachments inputAttachment outputAttachment = {InputAttachment = inputAttachment; OutputAttachment = outputAttachment}
+module Attachments =
+    type Kind =
+        Complete | Input of NodeIndex | Output of NodeIndex | Intermediary of NodeIndex * NodeIndex
         
+    type Attachments (inputAttachment : NodeIndex option, outputAttachment : NodeIndex option) =
+        
+        let kind =
+            match inputAttachment, outputAttachment with
+            | None, None -> Complete
+            | None, Some output -> Input output
+            | Some input, None -> Output input
+            | Some input, Some output -> Intermediary (input, output)
+                            
+        member v.InputAttachment = inputAttachment
+        member v.OutputAttachment = outputAttachment
+        member v.Kind = kind
+    
+    let create inputAttachment outputAttachment =
+        Attachments (inputAttachment, outputAttachment)
+            
+module FlowBox =
+    type Attachments = Attachments.Attachments
+    
     type FlowBox =
         Primitive of Attachments * Used
       | Extended of Attachments * Used * FlowBox
@@ -39,21 +58,31 @@ module FlowBox = begin
       | And of Attachments * FlowBox array
       | Seq of Attachments * FlowBox array
       
-    let (|Complete|Input|Output|Intermediary|) flowBox =
+    let attachment flowBox =
         match flowBox with
         | Primitive (a, _)
         | Extended (a, _, _)
         | Or (a, _, _)
         | And (a, _)
         | Seq (a, _) ->
-            match a with
-            | {InputAttachment = None; OutputAttachment = None} -> Complete
-            | {InputAttachment = None; OutputAttachment = Some output} -> Input (output)
-            | {InputAttachment = Some input; OutputAttachment = None} -> Output (input)
-            | {InputAttachment = Some input; OutputAttachment = Some output} -> Intermediary (input, output)
-end
+            a
 
-module InstructionBox = begin 
+    let attachmentKind flowBox = (attachment flowBox).Kind
+                
+    let rec mentionedEdges flowBox =
+        match flowBox with
+        | Primitive (_, u) -> 
+            u.Edges
+        | Extended (_, u, f) -> 
+            Set.union u.Edges (mentionedEdges f)
+        | Or (_, fs, _) | And (_, fs) | Seq (_, fs) ->
+            fs 
+         |> Array.map mentionedEdges
+         |> Set.Union   
+
+        
+module InstructionBox =
+
     type InstructionBox =
         Single of Used
       | Multi of Ordering * InstructionBox array
@@ -75,17 +104,16 @@ module InstructionBox = begin
             let bs = Array.map (fun outer -> wrapAround outer inner) out_bs
             Multi (out_o, bs)
                 
-    let rec of_flowBox flowBox =
+    let rec of_FlowBox flowBox =
         match flowBox with
         | FlowBox.Primitive (_, u) -> 
             Single u
         | FlowBox.Extended (_, u, f) ->
-            appendUsed u (of_flowBox flowBox)
+            appendUsed u (of_FlowBox flowBox)
         | FlowBox.Or (_, fs, o) ->
-            Multi (o, (fs |> Array.map of_flowBox))
+            Multi (o, (fs |> Array.map of_FlowBox))
         | FlowBox.And (_, fs) | FlowBox.Seq (_, fs) ->
-            fs |> Array.map of_flowBox |> Array.fold1_right wrapAround
-end
+            fs |> Array.map of_FlowBox |> Array.fold1_right wrapAround
 
 type NodeType = 
     | ValveNode of int
@@ -131,11 +159,13 @@ module Build =
         
     let inputBox (ic : InstructionChip) pi =
         let punchNode = ic.OfNodeType (PunchNode pi)
-        FlowBox.Primitive ({InputAttachment = None; OutputAttachment = Some punchNode}, usedEmpty)
+        FlowBox.Primitive (Attachments.create None (Some punchNode), 
+                           usedEmpty)
     
     let outputBox (ic : InstructionChip) pi =
         let punchNode = ic.OfNodeType (PunchNode pi)
-        FlowBox.Primitive ({InputAttachment = Some punchNode; OutputAttachment = None}, usedEmpty)
+        FlowBox.Primitive (Attachments.create (Some punchNode) None, 
+                           usedEmpty)
     
     let pathBox (ic : InstructionChip) (inputClick, inputEdge) (outputClick, outputEdge) =
         if inputEdge=outputEdge
@@ -147,11 +177,11 @@ module Build =
              let inputNode,outputNode = ic.Representation.OfPoint inputPoint, ic.Representation.OfPoint outputPoint
              let edges = Set.singleton edge
              let valves = Set.empty |> addIfValve ic inputNode |> addIfValve ic outputNode
-             FlowBox.Primitive ({InputAttachment = Some inputNode; OutputAttachment = Some outputNode}, 
+             FlowBox.Primitive (Attachments.create (Some inputNode) (Some outputNode), 
                                 used edges valves)
         else
         // todo
-        FlowBox.Primitive ({InputAttachment = None; OutputAttachment = None}, usedEmpty)     
+        FlowBox.Primitive (Attachments.create None None, usedEmpty)     
     
 module Interactive =
 

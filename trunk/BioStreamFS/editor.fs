@@ -166,6 +166,7 @@ let promptPoint message =
     promptForPoint |> pointIfValid
 
 module Extra =
+
     open BioStream.Micado.Common.Datatypes
 
     module Augmentations =
