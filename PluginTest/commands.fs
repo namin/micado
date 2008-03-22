@@ -177,7 +177,8 @@ let test_flow_representation_with_valves() =
  |> Seq.map flowRep.ToFlowSegment
  |> Seq.iter Debug.drawFlowSegment;
     chip.ControlLayer.Valves
- |> Array.iteri (fun vi valve -> Debug.drawPoint (Debug.maxSegmentLength valve) (flowRep.ToPoint (rawFlowRep.NodeCount+vi)))
+ |> Array.iteri (fun vi valve -> 
+                    Debug.drawPoint (Debug.maxSegmentLength valve) (flowRep.ToPoint (rawFlowRep.NodeCount+vi)))
 
       
 [<CommandMethod("micado_test_prompt_flow_punch")>]
@@ -186,4 +187,41 @@ let test_prompt_flow_punch() =
     let chip = Chip.create (Database.collectChipEntities())
     chip.FlowLayer.promptPunch "Select a flow punch: "
  |> Option.map (fun (i : int) -> Editor.writeLine ("You selected punch #" ^ i.ToString()))
+ |> ignore
+
+
+[<CommandMethod("micado_test_prompt_path_box")>]
+/// test prompting for a path flow box (an instruction part)
+let test_prompt_path_box() =
+    let chip = Chip.create (Database.collectChipEntities())
+    let ic = Instructions.InstructionChip chip
+    let rep = ic.Representation
+    Instructions.Interactive.promptPathBox ic 
+ |> Option.map (function
+                | Instructions.FlowBox.Primitive (a, u) ->
+                    let aLength = chip.FlowLayer.Segments.[0].Width * 0.8 // so we can still see the white of valves
+                    u.Edges 
+                 |> Set.iter (rep.ToFlowSegment >> Debug.drawFlowSegment);
+                    u.Valves
+                 |> Set.iter (fun vi -> 
+                                let valve = chip.ControlLayer.Valves.[vi]
+                                let node = ic.OfNodeType (Instructions.ValveNode vi) 
+                                Debug.drawPoint (Debug.maxSegmentLength valve) (rep.ToPoint node));
+                    (match a.InputAttachment with
+                     | Some node ->
+                         Editor.setColor 3 // Green
+                         Debug.drawPoint aLength (rep.ToPoint node)
+                         Editor.resetColor()
+                     | None -> 
+                         Editor.writeLine ("Input attachment missing (weird)."));
+                    (match a.OutputAttachment with
+                     | Some node ->
+                         Editor.setColor 6 // Magenta
+                         Debug.drawPoint aLength (rep.ToPoint node)
+                         Editor.resetColor()
+                     | None -> 
+                         Editor.writeLine ("Output attachment missing (weird)."));
+                    Editor.writeLine ("Box drawn (input green, output magenta)")
+                | _ -> 
+                    Editor.writeLine("Box built, but is not primitive flow box (wierd)."))
  |> ignore
