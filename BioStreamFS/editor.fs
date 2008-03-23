@@ -69,8 +69,8 @@ let writeLine message =
 /// the boolean parameter is the default similarly coded yes/no value
 let promptYesOrNo defaultYes message =
     let options = new PromptKeywordOptions(message)
-    options.Keywords.Add("yes")
-    options.Keywords.Add("no")
+    options.Keywords.Add("Yes")
+    options.Keywords.Add("No")
     options.AllowArbitraryInput <- true
     let prompt =
         try
@@ -187,7 +187,7 @@ let stringIfValid (res : PromptResult) =
     else Some res.StringResult
 
 /// prompts the user to write an identifier name
-/// rethrns the user-given name if the user complies
+/// returns the user-given name if the user complies
 let promptIdName message =
     let promptFor =
         let opts = new PromptKeywordOptions(message)
@@ -204,21 +204,34 @@ let promptIdName message =
         name.Substring(0,i)
     promptFor |> stringIfValid |> Option.map maybeTruncate
 
+/// prompts the user to write an identifier name
+/// re-prompts the user if he enters the empty string
+/// returns the user-given name if the user complies
+let promptIdNameNotEmpty message =
+    let mutable res = promptIdName message
+    while Option.is_some res && (Option.get res) = "" do
+        writeLine "(cannot be empty)"
+        res <- promptIdName message
+    res
+    
 /// prompts the user to select a name from the set
 /// returns the selected name if the user complies
 let promptSelectIdName message keywords  =
-    // the prompt doesn't allow me to select the keyword with the mouse
-    // nor is auto-complete enabled
+    let capitalizedKeywords = Seq.map String.capitalize keywords
+    let originalKeyword kw =
+        Seq.zip capitalizedKeywords keywords
+     |> Seq.filter (fun (cw,oc) -> kw=cw)
+     |> Seq.map snd
+     |> Seq.hd
     let promptFor =
-        //let opts = new PromptKeywordOptions(message)
-        //opts.AllowArbitraryInput <- false
-        //Seq.iter (opts.Keywords.Add) keywords
-        //Seq.iter (fun (kw) -> opts.Keywords.Add(kw, kw, kw, true, true)) keywords
+        let opts = new PromptKeywordOptions(message)
+        opts.AllowArbitraryInput <- false
+        Seq.iter opts.Keywords.Add capitalizedKeywords
         try
-            //editor().GetKeywords(opts)
-            editor().GetKeywords(message, keywords)
+            editor().GetKeywords(opts)
         with _ -> null
-    promptFor |> stringIfValid
+    promptFor |> stringIfValid |> Option.map originalKeyword 
+ |> Option.map (fun (w) -> writeLine w; w)
                 
 module Extra =
 
