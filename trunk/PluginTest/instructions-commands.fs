@@ -39,7 +39,7 @@ let setNamedFlowBoxes map =
 let nameNSaveFlowBox box =
     let saveName name =
         setNamedFlowBoxes (Map.add name box (getNamedFlowBoxes()))
-    Editor.promptIdName "Name box: "
+    Editor.promptIdNameNotEmpty "Name box: "
  |> Option.map saveName
 
 let saveNclear = nameNSaveFlowBox >> ignore >> Editor.clearMarks
@@ -48,9 +48,28 @@ let drawNsaveNclear ic box =
     Debug.drawFlowBox ic box
     saveNclear box
 
+let prettyStringOfAttachmentKind = function
+    | Instructions.Attachments.Complete -> "complete"
+    | Instructions.Attachments.Input _ -> "input"
+    | Instructions.Attachments.Output _ -> "output"
+    | Instructions.Attachments.Intermediary (_,_) -> "intermediary"
+    
+let prettyStringOfBox flowBox =
+    prettyStringOfAttachmentKind (Instructions.FlowBox.attachmentKind flowBox)
+
+let getNamedFlowBoxesList() =
+    let map = getNamedFlowBoxes()
+    let lst =
+        [for kv in map do
+            let name = kv.Key
+            let box = kv.Value
+            yield ((prettyStringOfBox box) ^ " " ^ name), name]
+    List.sort compare lst
+    
 let promptSelectBox message =
     let map = getNamedFlowBoxes()
-    let keys = map |> Map.to_array |> Array.map fst 
+    let lst = getNamedFlowBoxesList()
+    let keys = lst |> List.map snd
     if keys.Length=0
     then Editor.writeLine "(None)"
          None
@@ -98,27 +117,17 @@ let instruction_prompt_seq_box() =
         let ic = getIChip()
         let seqBox = Instructions.Interactive.promptSeqBox ic (ra.ToArray())
         seqBox  |> Option.map (drawNsaveNclear ic) |> ignore
-    
-let prettyStringOfAttachmentKind = function
-    | Instructions.Attachments.Complete -> "complete"
-    | Instructions.Attachments.Input _ -> "input"
-    | Instructions.Attachments.Output _ -> "output"
-    | Instructions.Attachments.Intermediary (_,_) -> "intermediary"
-    
-let prettyStringOfBox flowBox =
-    prettyStringOfAttachmentKind (Instructions.FlowBox.attachmentKind flowBox)
-    
+                        
 [<CommandMethod("micado_instruction_list_boxes")>]
 /// lists all flow boxes 
 let instruction_list_boxes() =
-    let map = getNamedFlowBoxes()
-    if Map.is_empty map
-    then Editor.writeLine "(None)" 
-    for kv in map do
-        let name = kv.Key
-        let box = kv.Value
-        Editor.writeLine ((prettyStringOfBox box) ^ " " ^ name)
-    ()
+    let lst = getNamedFlowBoxesList()
+    if lst = []
+    then Editor.writeLine "(None)"
+    else 
+    lst
+ |> List.iter (fst >> Editor.writeLine)
+    
 
 [<CommandMethod("micado_instruction_clear_cache")>]    
 /// clear the cache of both the instruction chip and the flow boxes for the active drawing
