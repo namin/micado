@@ -55,7 +55,7 @@ let maxSegmentLength (polyline : #Polyline) =
  |> Seq.map (fun (i) -> polyline.GetLineSegment2dAt(i).Length)
  |> Seq.fold1 min 
  
-let drawFlowBox (ic : Instructions.InstructionChip) flowBox =
+let rec drawFlowBox (ic : Instructions.InstructionChip) flowBox =
     let chip = ic.Chip
     let rep = ic.Representation
     let drawAttachments (a : Instructions.Attachments.Attachments) =
@@ -84,4 +84,15 @@ let drawFlowBox (ic : Instructions.InstructionChip) flowBox =
     | Instructions.FlowBox.Primitive (a, u) ->
         drawUsed u
         drawAttachments a
-    | _ -> Editor.writeLine "(Debug.drawFlowBox not yet implemented :-)"
+    | Instructions.FlowBox.Extended (a, u, f) ->
+        drawFlowBox ic f
+        drawUsed u
+        drawAttachments a
+    | Instructions.FlowBox.Seq (a, fs) | Instructions.FlowBox.And (a, fs) ->
+        Seq.iter (drawFlowBox ic) fs
+        drawAttachments a
+    | Instructions.FlowBox.Or (a, fs, o) ->
+        Editor.setColor 2 // Yellow
+        Seq.iter (drawFlowBox ic) fs
+        drawAttachments a
+        Editor.resetColor()

@@ -18,10 +18,12 @@ open BioStream
 let editor() =
     Application.DocumentManager.MdiActiveDocument.Editor
 
-let private defaultColor = 7 // white
-let private defaultHighlight = false // no highlighting
-let mutable private color = defaultColor
-let mutable private highlight = defaultHighlight
+/// white
+let private defaultColor = 7
+/// no highlighting
+let private defaultHighlight = false
+let mutable private color = [defaultColor]
+let mutable private highlight = [defaultHighlight]
 
 /// sets the color for ephemeral drawings
 /// 1 Red
@@ -31,21 +33,27 @@ let mutable private highlight = defaultHighlight
 /// 5 Blue
 /// 6 Magenta
 /// 7 White or Black
-let setColor c = color <- c
+let setColor c = color <- c :: color
 /// sets whether ephemeral drawings should be highlighted (true) or not (false)
-let setHighlight h = highlight <- h
+let setHighlight h = highlight <- h :: highlight
 
-/// resets the color for ephemeral drawings to the default (white)
-let resetColor () = color <- defaultColor
-/// resets whether ephemeral drawings should be highlighted to the default (no highlight)
-let resetHighlight () = highlight <- defaultHighlight
+/// returns the tail of the list unless there's only one element
+let pop1 lst = 
+    match lst with
+    | [] | [_] -> lst
+    | a::rest -> rest
+    
+/// resets the color for ephemeral drawings to the previous or default value
+let resetColor () = color <- pop1 color
+/// resets whether ephemeral drawings should be highlighted or not, to the previous or default value
+let resetHighlight () = highlight <- pop1 highlight
 
 /// draws an ephemeral segment connecting the given points, in the active drawing,
 let drawVector (pointA : Point3d) (pointB : Point3d) =
     editor().DrawVector( pointA, 
                          pointB, 
-                         color,
-                         highlight )
+                         List.hd color,
+                         List.hd highlight )
 
 /// clear the ephemeral marks on the screen
 let clearMarks() =

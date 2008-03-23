@@ -44,29 +44,61 @@ let nameNSaveFlowBox box =
 
 let saveNclear = nameNSaveFlowBox >> ignore >> Editor.clearMarks
 
-let promptSelectBox() =
+let drawNsaveNclear ic box =
+    Debug.drawFlowBox ic box
+    saveNclear box
+
+let promptSelectBox message =
     let map = getNamedFlowBoxes()
     let keys = map |> Map.to_array |> Array.map fst 
     if keys.Length=0
     then Editor.writeLine "(None)"
          None
     else
-    Editor.promptSelectIdName "Box name " keys
+    Editor.promptSelectIdName message keys
  |> Option.bind (fun (s) -> 
                     if map.ContainsKey s
                     then Some map.[s]
                     else Editor.writeLine "no such box name"
                          None)
-                                     
+
+let promptBox f =
+    let ic = getIChip()
+    f ic 
+ |> Option.map (drawNsaveNclear ic)
+ |> ignore
+                                      
 [<CommandMethod("micado_instruction_prompt_path_box")>]
 /// prompts for a path flow box
 let instruction_prompt_path_box() =
-    let ic = getIChip()
-    Instructions.Interactive.promptPathBox ic 
- |> Option.map (fun (s) -> Debug.drawFlowBox ic s; s)
- |> Option.map saveNclear
- |> ignore
+    promptBox Instructions.Interactive.promptPathBox
 
+[<CommandMethod("micado_instruction_prompt_input_box")>]
+let instruction_prompt_input_box() =
+    promptBox Instructions.Interactive.promptInputBox
+
+[<CommandMethod("micado_instruction_prompt_output_box")>]
+let instruction_prompt_output_box() =
+    promptBox Instructions.Interactive.promptOutputBox
+
+[<CommandMethod("micado_instruction_prompt_seq_box")>]
+let instruction_prompt_seq_box() =
+    let promptBox (i : int) = promptSelectBox ("Box name #" ^ i.ToString())
+    let ra = new ResizeArray<Instructions.FlowBox.FlowBox>()
+    let res1 = promptBox 1
+    match res1 with
+    | None -> ()
+    | Some _ ->
+        let mutable res = res1
+        let mutable counter = 1
+        while Option.is_some res do
+            ra.Add(Option.get res)
+            counter <- counter + 1
+            res <- promptBox counter
+        let ic = getIChip()
+        let seqBox = Instructions.Interactive.promptSeqBox ic (ra.ToArray())
+        seqBox  |> Option.map (drawNsaveNclear ic) |> ignore
+    
 let prettyStringOfAttachmentKind = function
     | Instructions.Attachments.Complete -> "complete"
     | Instructions.Attachments.Input _ -> "input"
@@ -98,6 +130,6 @@ let instruction_clear_cache() =
 [<CommandMethod("micado_instruction_draw_box")>]    
 /// gets and draw an instruction
 let instruction_get() =
-    promptSelectBox()
+    promptSelectBox "Box name"
  |> Option.map (fun (s) -> Debug.drawFlowBox (getIChip()) s)
  |> ignore
