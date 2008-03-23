@@ -325,6 +325,11 @@ let addValves (valves : Valve array) (rep : IFlowRepresentation) =
     let addNode node point edges =
         node2point.[node] <- point
         node2edges.[node] <- edges
+        // WARNING: Some nodes may be skipped over because our topology is based on geometric points
+        // (as opposed to nodes) and two nodes could map to the same point.
+        // This is only potentially a hazard if the node we skip over is a valve.
+        // However, a valve wouldn't map to an intersection point, unless it was off-track to start
+        // with, so this seems OK.
         if not (point2node.ContainsKey point)
         then point2node.Add(point, node)
     for node = 0 to rep.NodeCount-1 do
