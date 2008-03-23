@@ -1,11 +1,6 @@
 #light
 
-#I @"C:\Program Files\Autodesk\Acade 2008"
-#r "acdbmgd.dll"
-#r "acmgd.dll"
-
-#I @"..\debug"
-#r "biostreamfs.dll"
+module BioStream.Micado.Plugin.Test.Commands
 
 open Autodesk.AutoCAD.Runtime
 

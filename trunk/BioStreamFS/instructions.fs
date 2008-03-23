@@ -166,7 +166,14 @@ module Augmentations =
         member ic.addIfValve node set = addIfValve ic node set
 
 module Search =    
+
     let pair2set (a,b) = Set.empty |> Set.add a |> Set.add b    
+
+    let edgesNvalvesOfPath (ic : InstructionChip) (path : FlowRepresentation.Path.IPath) =
+        let edges = path.Edges |> Set.of_list
+        let valves = path.Nodes |> List.choose ic.ifValve |> Set.of_list
+        edges, valves
+        
     let edgeToedge (ic : InstructionChip) inputEdge outputEdge =
         let rep = ic.Representation
         let boundaryEdges = Set.empty |> Set.add inputEdge |> Set.add outputEdge
@@ -181,14 +188,23 @@ module Search =
             // to avoid including valves or turns that weren't consciously on path
             let inputNode = FlowRepresentation.sameAs (path.StartNode) inputNodes
             let outputNode = FlowRepresentation.sameAs (List.hd path.Nodes) outputNodes
-            let edges = path.Edges |> Set.of_list 
-                      // for the same reason, don't include the boundaryEdges
-                      // |> Set.union boundaryEdges
-            let valves = path.Nodes |> List.choose ic.ifValve |> Set.of_list
-                      // already in path.Nodes, since using sameAs: 
-                      // |> ic.addIfValve inputNode |> ic.addIfValve outputNode
+            let edges, valves = edgesNvalvesOfPath ic path 
+            // for the same reason, don't include the boundaryEdges:
+            // |> Set.union boundaryEdges
+            // already in path.Nodes, since using sameAs: 
+            // |> ic.addIfValve inputNode |> ic.addIfValve outputNode
             Some (inputNode, outputNode, edges, valves)
 
+    let nodeTonode (ic : InstructionChip) removedEdges inputNode outputNode =
+        let rep = ic.Representation
+        let maybePath =
+            FlowRepresentation.Search.findShortestPath rep removedEdges (Set.singleton inputNode) (Set.singleton outputNode)
+        match maybePath with
+        | None -> None
+        | Some path ->
+            let edges, valves = edgesNvalvesOfPath ic path
+            Some (inputNode, outputNode, edges, valves)            
+    
 exception NoPathFound of string
             
 module Build =
@@ -222,6 +238,39 @@ module Build =
                                used edges valves)
         | None -> raise(NoPathFound("cannot find path between input flow with output flow"))     
     
+    let SeqBox (ic : InstructionChip) (boxes : # (FlowBox.FlowBox seq)) =
+        // extend the boxes so that the output of one is the input of the next
+        let extendBox ((es, previousBox), (es', currentBox)) =
+            let removedEdges = Set.union es es'
+            let inputNode = 
+                match (FlowBox.attachment previousBox).OutputAttachment with
+                | Some node -> node
+                | None -> invalid_arg "cannot attach intermediary from output"
+            let currentAttachments = FlowBox.attachment currentBox
+            let outputNode =
+                match currentAttachments.InputAttachment with
+                | Some node -> node
+                | None -> invalid_arg "cannot attach intermediary to input"
+            match Search.nodeTonode ic removedEdges inputNode outputNode with
+            | Some (inputNode, outputNode, edges, valves) ->
+                FlowBox.Extended (Attachments.create (Some inputNode) (currentAttachments.OutputAttachment), 
+                                  used edges valves, 
+                                  currentBox)
+            | None -> raise(NoPathFound("cannod find path between intermediaries"))
+        if not (Seq.nonempty boxes)
+        then invalid_arg "cannot make empty sequence"
+        let extendedBoxes =
+            boxes
+         |> Seq.map (fun box -> FlowBox.mentionedEdges box, box)
+         |> fun (s) -> 
+             Seq.append (s |> Seq.hd |> snd |> Seq.singleton)
+                        (s |> Seq.pairwise |> Seq.map extendBox)
+         |> Array.of_seq
+        let inputAttachment = (FlowBox.attachment extendedBoxes.[0]).InputAttachment
+        let outputAttachment = (FlowBox.attachment extendedBoxes.[extendedBoxes.Length-1]).OutputAttachment
+        FlowBox.Seq (Attachments.create inputAttachment outputAttachment, 
+                     extendedBoxes)
+        
 module Interactive =
 
     open BioStream.Micado.Plugin
@@ -258,5 +307,14 @@ module Interactive =
             | None -> None
         | None -> None
 
-
-
+    let promptSeqBox (ic : InstructionChip) (boxes : FlowBox.FlowBox array) =
+        try
+            Some (Build.SeqBox ic boxes)
+        with
+            | InvalidArgument(msg) ->
+                Editor.writeLine ("Invalid argument: " ^ msg ^ ".")
+                None
+            | NoPathFound(msg) ->
+                Editor.writeLine("Error: " ^ msg ^ ".")
+                None
+                

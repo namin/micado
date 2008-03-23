@@ -11,12 +11,16 @@ open BioStream.Micado
 type IBridge =
    abstract Editor_writeLine : string -> unit
    abstract Editor_drawVector : Point3d -> Point3d -> unit
+   abstract Editor_setColor : int -> unit
+   abstract Editor_resetColor : unit -> unit
 
 /// the actual functionality
 let pluginBridge =
     { new IBridge with
         member x.Editor_writeLine message = Plugin.Editor.writeLine message
         member x.Editor_drawVector pointA pointB = Plugin.Editor.drawVector pointA pointB
+        member x.Editor_setColor c = Plugin.Editor.setColor c
+        member x.Editor_resetColor() = Plugin.Editor.resetColor()
     }
 
 /// the mock functionality to be used for unit testing    
@@ -25,6 +29,8 @@ let unitBridge =
         member x.Editor_writeLine message = printfn "%s" message
         member x.Editor_drawVector pointA pointB =
             printfn "drawing line from %s to %s" (pointA.ToString()) (pointB.ToString()) 
+        member x.Editor_setColor c = ()
+        member x.Editor_resetColor() = ()
     }
     
 let mutable bridge = pluginBridge
@@ -38,3 +44,5 @@ module Editor =
     let writeLine message = bridge.Editor_writeLine message
     /// draws a line segment from pthe first given point to the second given point
     let drawVector pointA pointB = bridge.Editor_drawVector pointA pointB
+    let setColor c = bridge.Editor_setColor c
+    let resetColor() = bridge.Editor_resetColor()

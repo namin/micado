@@ -54,3 +54,34 @@ let maxSegmentLength (polyline : #Polyline) =
     {0..polyline.NumberOfVertices-1-(if polyline.Closed then 0 else 1)}
  |> Seq.map (fun (i) -> polyline.GetLineSegment2dAt(i).Length)
  |> Seq.fold1 min 
+ 
+let drawFlowBox (ic : Instructions.InstructionChip) flowBox =
+    let chip = ic.Chip
+    let rep = ic.Representation
+    let drawAttachments (a : Instructions.Attachments.Attachments) =
+        let aLength = chip.FlowLayer.Segments.[0].Width * 0.8 // so we can still see the white of valves
+        (match a.InputAttachment with
+        | Some node ->
+            Editor.setColor 3 // Green
+            drawPoint aLength (rep.ToPoint node)
+            Editor.resetColor()
+        | None -> ());
+        (match a.OutputAttachment with
+        | Some node ->
+            Editor.setColor 6 // Magenta
+            drawPoint aLength (rep.ToPoint node)
+            Editor.resetColor()
+        | None -> ())
+    let drawUsed (u : Instructions.Used) =
+        u.Edges 
+     |> Set.iter (rep.ToFlowSegment >> drawFlowSegment);
+        u.Valves
+     |> Set.iter (fun vi -> 
+                    let valve = chip.ControlLayer.Valves.[vi]
+                    let node = ic.OfNodeType (Instructions.ValveNode vi) 
+                    drawPoint (maxSegmentLength valve) (rep.ToPoint node));        
+    match flowBox with
+    | Instructions.FlowBox.Primitive (a, u) ->
+        drawUsed u
+        drawAttachments a
+    | _ -> Editor.writeLine "(Debug.drawFlowBox not yet implemented :-)"
