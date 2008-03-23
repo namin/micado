@@ -46,7 +46,11 @@ let drawVector (pointA : Point3d) (pointB : Point3d) =
                          pointB, 
                          color,
                          highlight )
-                          
+
+/// clear the ephemeral marks on the screen
+let clearMarks() =
+    BioStream.Micado.User.Commands.ClearMarks()
+                
 /// writes the given message to the active command line
 let writeLine message =
     editor().WriteMessage(message ^ "\n")
@@ -165,6 +169,49 @@ let promptPoint message =
         else Some res.Value
     promptForPoint |> pointIfValid
 
+let stringIfValid (res : PromptResult) =
+    if res = null || res.Status = PromptStatus.Error
+    then writeLine "You did not enter a valid identifier.";
+         None
+    else
+    if res.Status = PromptStatus.Cancel
+    then None
+    else Some res.StringResult
+
+/// prompts the user to write an identifier name
+/// rethrns the user-given name if the user complies
+let promptIdName message =
+    let promptFor =
+        let opts = new PromptKeywordOptions(message)
+        opts.AllowArbitraryInput <- true
+        try
+            editor().GetKeywords(opts)
+        with _ -> null
+    let maybeTruncate (name : string) =
+        let i = name.IndexOf('_')
+        if i = -1
+        then name
+        else
+        writeLine "Character _ not allowed in identifier name. Truncating..."
+        name.Substring(0,i)
+    promptFor |> stringIfValid |> Option.map maybeTruncate
+
+/// prompts the user to select a name from the set
+/// returns the selected name if the user complies
+let promptSelectIdName message keywords  =
+    // the prompt doesn't allow me to select the keyword with the mouse
+    // nor is auto-complete enabled
+    let promptFor =
+        //let opts = new PromptKeywordOptions(message)
+        //opts.AllowArbitraryInput <- false
+        //Seq.iter (opts.Keywords.Add) keywords
+        //Seq.iter (fun (kw) -> opts.Keywords.Add(kw, kw, kw, true, true)) keywords
+        try
+            //editor().GetKeywords(opts)
+            editor().GetKeywords(message, keywords)
+        with _ -> null
+    promptFor |> stringIfValid
+                
 module Extra =
 
     open BioStream.Micado.Common.Datatypes
