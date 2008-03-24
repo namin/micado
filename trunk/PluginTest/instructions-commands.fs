@@ -100,13 +100,12 @@ let instruction_prompt_input_box() =
 let instruction_prompt_output_box() =
     promptBox Instructions.Interactive.promptOutputBox
 
-[<CommandMethod("micado_instruction_prompt_seq_box")>]
-let instruction_prompt_seq_box() =
+let promptSelectBoxes() =
     let promptBox (i : int) = promptSelectBox ("Box name #" ^ i.ToString())
     let ra = new ResizeArray<Instructions.FlowBox.FlowBox>()
     let res1 = promptBox 1
     match res1 with
-    | None -> ()
+    | None -> None
     | Some _ ->
         let mutable res = res1
         let mutable counter = 1
@@ -114,10 +113,28 @@ let instruction_prompt_seq_box() =
             ra.Add(Option.get res)
             counter <- counter + 1
             res <- promptBox counter
+        Some (ra.ToArray())
+
+let promptCombinationBox f =
+    promptSelectBoxes()
+ |> Option.map (fun boxes ->
         let ic = getIChip()
-        let seqBox = Instructions.Interactive.promptSeqBox ic (ra.ToArray())
-        seqBox  |> Option.map (drawNsaveNclear ic) |> ignore
-                        
+        let box = f ic boxes
+        box  |> Option.map (drawNsaveNclear ic) |> ignore)
+ |> ignore
+                     
+[<CommandMethod("micado_instruction_prompt_seq_box")>]
+let instruction_prompt_seq_box() =
+    promptCombinationBox Instructions.Interactive.promptSeqBox
+
+[<CommandMethod("micado_instruction_prompt_and_box")>]
+let instruction_prompt_and_box() =
+    promptCombinationBox Instructions.Interactive.promptAndBox
+
+[<CommandMethod("micado_instruction_prompt_or_box")>]
+let instruction_prompt_or_box() =
+    promptCombinationBox Instructions.Interactive.promptOrBox
+                            
 [<CommandMethod("micado_instruction_list_boxes")>]
 /// lists all flow boxes 
 let instruction_list_boxes() =

@@ -47,6 +47,14 @@ module Attachments =
     
     let create inputAttachment outputAttachment =
         Attachments (inputAttachment, outputAttachment)
+        
+    let sameKind k1 k2 =
+        match k1,k2 with
+        | Complete, Complete
+        | Input _, Input _
+        | Output _, Output _
+        | Intermediary _, Intermediary _ -> true
+        | _ -> false
             
 module FlowBox =
     type Attachments = Attachments.Attachments
@@ -69,15 +77,16 @@ module FlowBox =
 
     let attachmentKind flowBox = (attachment flowBox).Kind
                 
-    let rec mentionedEdges flowBox =
+    let rec mentionedEdgesLax flowBox =
         match flowBox with
         | Primitive (_, u) -> 
             u.Edges
         | Extended (_, u, f) -> 
-            Set.union u.Edges (mentionedEdges f)
+            //Set.union u.Edges (mentionedEdges f)
+            mentionedEdgesLax f
         | Or (_, fs, _) | And (_, fs) | Seq (_, fs) ->
             fs 
-         |> Array.map mentionedEdges
+         |> Array.map mentionedEdgesLax
          |> Set.Union   
 
         
@@ -160,10 +169,14 @@ module Augmentations =
         match ic.ToNodeType node with
         | ValveNode vi -> Set.add vi set
         | _ -> set
+    
+    let isValve (ic : InstructionChip) =
+        ifValve ic >> Option.is_some
         
     type InstructionChip with
         member ic.ifValve node = ifValve ic node
         member ic.addIfValve node set = addIfValve ic node set
+        member ic.isValve node = isValve ic node
 
 module Search =    
 
@@ -261,7 +274,7 @@ module Build =
         then invalid_arg "cannot make empty sequence"
         let extendedBoxes =
             boxes
-         |> Seq.map (fun box -> FlowBox.mentionedEdges box, box)
+         |> Seq.map (fun box -> FlowBox.mentionedEdgesLax box, box)
          |> fun (s) -> 
              Seq.append (s |> Seq.hd |> snd |> Seq.singleton)
                         (s |> Seq.pairwise |> Seq.map extendBox)
@@ -270,7 +283,40 @@ module Build =
         let outputAttachment = (FlowBox.attachment extendedBoxes.[extendedBoxes.Length-1]).OutputAttachment
         FlowBox.Seq (Attachments.create inputAttachment outputAttachment, 
                      extendedBoxes)
+
+    // extend the given box so that it fits into the given attachments        
+    let extendBox ic (a : Attachments.Attachments) box =
+        Debug.Assert (Attachments.sameKind (a.Kind) (FlowBox.attachmentKind box), 
+                      "extendBox: given attachments and box attachments must be of the same kind")        
+        if a.Kind = Attachments.Complete
+        then box
+        else
+        let mentionedEdges = FlowBox.mentionedEdgesLax box
+        let boxA = FlowBox.attachment box
+        let edges, valves = ref Set.empty, ref Set.empty
+        let addSearch inputNode outputNode =
+            match Search.nodeTonode ic mentionedEdges inputNode outputNode with
+            | Some (inputNode, outputNode, edges', valves') ->
+              edges  := Set.union !edges edges'
+              valves := Set.union !valves valves'
+            | None -> raise(NoPathFound("cannot find path to extend box"))
+        if Option.is_some a.InputAttachment
+        then addSearch (Option.get a.InputAttachment) (Option.get boxA.InputAttachment)
+        if Option.is_some a.OutputAttachment
+        then addSearch (Option.get boxA.OutputAttachment) (Option.get a.OutputAttachment)
+        FlowBox.Extended (a, used !edges !valves, box)
+    
+    let extendBoxes ic (a : Attachments.Attachments) boxes =
+        if a.Kind = Attachments.Complete
+        then boxes
+        else boxes |> Array.map (extendBox ic a) 
+    
+    let AndBox (ic : InstructionChip) a boxes =
+        FlowBox.And (a, extendBoxes ic a boxes)
         
+    let OrBox (ic : InstructionChip) a boxes ordering =
+        FlowBox.Or (a, extendBoxes ic a boxes, ordering)
+
 module Interactive =
 
     open BioStream.Micado.Plugin
@@ -317,4 +363,84 @@ module Interactive =
             | NoPathFound(msg) ->
                 Editor.writeLine("Error: " ^ msg ^ ".")
                 None
-                
+    
+    let promptOneAttachment (ic : InstructionChip) message =
+        match ic.Representation.promptEdge message with
+        | None -> None
+        | Some (click, edge) ->
+            let a,b = FlowRepresentation.edge2nodes ic.Representation edge
+            let clickDistance = ic.Representation.ToPoint >> click.GetDistanceTo
+            let chosenNode = // avoid valve nodes, and otherwise choose node closest to clicked point
+                match ic.isValve a, ic.isValve b with
+                | true, true
+                | false, false ->
+                    if clickDistance a < clickDistance b then a else b
+                | false, true -> a
+                | true, false -> b
+            Some chosenNode
+                    
+    let promptAttachments (ic : InstructionChip) (boxes : FlowBox.FlowBox array) =
+        let bas = boxes |> Array.map FlowBox.attachmentKind
+        let kind = bas.[0]
+        let allSameKind = bas |> Seq.for_all (Attachments.sameKind kind)
+        if not allSameKind
+        then Editor.writeLine "Error: All boxes must be of the same kind." 
+             None
+        else
+        try
+            let ia, oa =
+                let noNeedInputAtt() =
+                    Editor.writeLine "(no need input attachment)"
+                    None
+                let noNeedOutputAtt() =
+                    Editor.writeLine "(no need output attachment)"
+                    None
+                let raiseIfNone x = // none would indicate a cancellation on the user's part
+                    if Option.is_none x
+                    then invalid_arg "cancel"
+                    else x
+                let promptInputAtt() =
+                    promptOneAttachment ic "Choose input attachment: " |> raiseIfNone
+                let promptOutputAtt() =
+                    promptOneAttachment ic "Choose output attachment: " |> raiseIfNone
+                match kind with
+                | Attachments.Complete            -> noNeedInputAtt(), noNeedOutputAtt()
+                | Attachments.Input _             -> noNeedInputAtt(), promptOutputAtt()
+                | Attachments.Output _            -> promptInputAtt(), noNeedOutputAtt()
+                | Attachments.Intermediary (_, _) -> promptInputAtt(), promptOutputAtt()
+            
+            Some (Attachments.create ia oa)
+        with
+            | :? InvalidArgumentException -> None // user cancelled 
+            
+    let promptAndBox (ic : InstructionChip) (boxes : FlowBox.FlowBox array) =
+        let build a =
+            try
+                Some (Build.AndBox ic a boxes)
+            with
+                | NoPathFound(msg) ->
+                    Editor.writeLine("Error: " ^ msg ^ ".")
+                    None
+        promptAttachments ic boxes |> Option.bind build
+    
+    let promptOrBox (ic : InstructionChip) (boxes : FlowBox.FlowBox array) =
+        let promptOrdering() =
+            if boxes.Length=1
+            then Some HorizontalOrdering // doesn't matter
+            else
+            Editor.promptSelectIdName "Ordering of boxes" ["horizontal";"vertical"]
+         |> Option.map (fun s -> if s = "horizontal" then HorizontalOrdering else VerticalOrdering)
+            
+        let build a ordering =
+            try
+                Some (Build.OrBox ic a boxes ordering)
+            with
+                | NoPathFound(msg) ->
+                    Editor.writeLine("Error: " ^ msg ^ ".")
+                    None
+                    
+        match promptAttachments ic boxes with
+        | None -> None
+        | Some a ->
+            promptOrdering() |> Option.bind (build a) 
+    
