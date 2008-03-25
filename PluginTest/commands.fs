@@ -220,3 +220,10 @@ let test_prompt_path_box() =
                 | _ -> 
                     Editor.writeLine("Box built, but is not primitive flow box (wierd)."))
  |> ignore
+
+[<CommandMethod("micado_test_export_image")>]
+/// test exporting a snapshot image
+let test_export_image() =
+    Export.GUI.promptImageFilename()
+ |> Option.map Export.GUI.exportImage
+ |> ignore

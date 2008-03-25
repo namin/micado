@@ -64,3 +64,30 @@ let connectValvesToPunches() =
         let solution = iterativeSolver.Solution
         solution |> presenter |> Database.writeEntities |> ignore
         Editor.writeLine ("Routing succeeded: " ^ solution.Length.ToString() ^ " new connections.")
+
+module Instructions = begin
+    // micado_
+    //        new_
+    //            box (?)
+    //            box_
+    //                input
+    //                output
+    //                path
+    //                seq
+    //                and
+    //                or
+    //            instruction
+    //        mark_
+    //             box (print out kind and name)
+    //             instruction (print out partial/complete and name)
+    //        list_
+    //             boxes
+    //             instructions (?)
+    //        export_
+    //               to_gui
+    //               boxes
+    //               instructions
+    //        import_
+    //               boxes
+    //               instructions
+    end

@@ -111,6 +111,10 @@
     {
     "ProjRelPath" = "T"
     }
+    "export-gui.fs"
+    {
+    "ProjRelPath" = "T"
+    }
 }
 "ProjStartupServices"
 {
