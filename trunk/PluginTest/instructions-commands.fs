@@ -1,5 +1,7 @@
 #light
 
+/// Prototype for BioStreamFs' commands related to instructions,
+/// which will be the actual user interface
 module BioStream.Micado.Plugin.Test.Instructions.Commands
 
 open Autodesk.AutoCAD.Runtime

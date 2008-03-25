@@ -6,7 +6,6 @@ open BioStream.Micado.Core
 open BioStream.Micado.Common
 open BioStream.Micado.Common.Datatypes
 open BioStream.Micado.Core.Chip
-open BioStream.Micado.User
 open BioStream
 
 open Autodesk.AutoCAD.Geometry

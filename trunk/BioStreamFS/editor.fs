@@ -14,9 +14,13 @@ open BioStream.Micado.Core
 
 open BioStream
 
+// returns the active document
+let doc() = 
+    Application.DocumentManager.MdiActiveDocument
+
 /// returns the active editor
 let editor() =
-    Application.DocumentManager.MdiActiveDocument.Editor
+    doc().Editor
 
 /// white
 let private defaultColor = 7
