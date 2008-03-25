@@ -217,7 +217,61 @@ let promptIdNameNotEmpty message =
 /// prompts the user to select a name from the set
 /// returns the selected name if the user complies
 let promptSelectIdName message keywords  =
-    let capitalizedKeywords = Seq.map (String.lowercase >> String.capitalize) keywords
+    // for each keyword, the first set of continuous uppercase letters have to be unique
+    // in order for AutoCAD to recognize it as a shortcut
+    // (uniqueness matters for correctness of the mouse menu)
+    let seenCuts = ref (Set.empty : Set<string>)
+    let notSeen k = not ((!seenCuts).Contains k)
+    let addSeen k = seenCuts := (!seenCuts).Add k 
+    let seenWords = ref (Set.empty : Set<string>)
+    let notConflicts (k : string) =
+        let k' = k.ToUpper()
+        Set.empty = Set.filter (fun (word : string) -> word.StartsWith k') (!seenWords)
+    let addWord (s : string) = seenWords := (!seenWords).Add (s.ToUpper()) 
+    let isUpper s =
+        String.uppercase(s) = s
+    let isUpperChar c =
+        Char.uppercase(c) = c
+    let capit (s : string) =
+        let n = String.length s
+        let up i = String.sub s 0 i
+        let low i = String.sub s i (n-i)
+        let upLow i = String.uppercase (up i), low i
+        let k = {n .. -1 .. 1} |> Seq.map up |> Seq.filter isUpper |> Seq.hd
+        let u,s' =
+            if notSeen k && notConflicts k
+            then k, s
+            else
+            let tries =
+                {1..n} |> Seq.filter (fun i -> let u = up i in notSeen u && notConflicts u)
+            if not (Seq.nonempty tries)
+            then // the word was already seen in its entirety, which means that there are uppercase duplicates
+                 let su = s.ToUpper()
+                 let extra (i : int) = su ^ i.ToString()
+                 let mutable i = 2
+                 let mutable s' = extra i
+                 while not (notConflicts s') do
+                    i <- i + 1
+                    s' <- extra i
+                 s', s'
+            else
+            let mutable i = Seq.hd tries
+            while i<n && isUpperChar(s.[i]) do
+                i <- i+1
+            let u,l = upLow i 
+            u,u ^ l
+        addSeen u
+        addWord s'
+        s'
+    // we need the sorted keywords to ensure that capit always finds a part of the string that is not seen
+    // (unless there are uppercase duplicates, in which case, it's hopeless)
+    let sortedKeywords = keywords |> Seq.mapi (fun i k -> k,i) |> Seq.to_array
+    Array.sort compare sortedKeywords
+    let p = new Permutation(sortedKeywords.Length, sortedKeywords |> Array.mapi (fun dst (k,src) -> (src,dst)))
+    let capitalizedKeywords = 
+        sortedKeywords
+     |> Array.map (fst >> String.capitalize >> capit)
+     |> Array.permute p
     let originalKeyword kw =
         Seq.zip capitalizedKeywords keywords
      |> Seq.filter (fun (cw,oc) -> kw=cw)

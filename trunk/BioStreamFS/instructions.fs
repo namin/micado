@@ -196,9 +196,10 @@ let rectangle (ext : Extents2d) =
                  
 type Instruction (ic : InstructionChip, partial : bool, root: string, indices : int array, entity : Entity, used : Used) =
     let prettyIndices =
-        let sb = new System.Text.StringBuilder()
-        Array.iter (fun (i : int) -> sb.Append("_" ^ i.ToString()) |> ignore) indices
-        sb.ToString()
+        if indices.Length=0
+        then ""
+        else
+        "_" ^ (System.String.Join("_", indices |> Array.map (fun i -> i.ToString())))
     let name = root ^ prettyIndices 
     member v.Used = used
     member v.Entity = entity
