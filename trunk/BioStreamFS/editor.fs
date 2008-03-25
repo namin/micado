@@ -217,7 +217,7 @@ let promptIdNameNotEmpty message =
 /// prompts the user to select a name from the set
 /// returns the selected name if the user complies
 let promptSelectIdName message keywords  =
-    let capitalizedKeywords = Seq.map String.capitalize keywords
+    let capitalizedKeywords = Seq.map (String.lowercase >> String.capitalize) keywords
     let originalKeyword kw =
         Seq.zip capitalizedKeywords keywords
      |> Seq.filter (fun (cw,oc) -> kw=cw)

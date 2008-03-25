@@ -54,10 +54,30 @@ let maxSegmentLength (polyline : #Polyline) =
     {0..polyline.NumberOfVertices-1-(if polyline.Closed then 0 else 1)}
  |> Seq.map (fun (i) -> polyline.GetLineSegment2dAt(i).Length)
  |> Seq.fold1 min 
+
+let drawExtents (extents : Extents2d) =
+    let minPt = extents.MinPoint
+    let maxPt = extents.MaxPoint
+    let upPt = new Point2d(minPt.X, maxPt.Y)
+    let downPt = new Point2d(maxPt.X, minPt.Y)
+    Editor.drawVector (minPt |> Geometry.to3d) (maxPt |> Geometry.to3d)
+    Editor.drawVector (upPt |> Geometry.to3d) (downPt |> Geometry.to3d)
+    
+let drawUsed (ic : Instructions.InstructionChip) (u : Instructions.Used) =
+    let chip = ic.Chip
+    let rep = ic.Representation
+    u.Edges 
+ |> Set.iter (rep.ToFlowSegment >> drawFlowSegment);
+    u.Valves
+ |> Set.iter (fun vi -> 
+                let valve = chip.ControlLayer.Valves.[vi]
+                let node = ic.OfNodeType (Instructions.ValveNode vi) 
+                drawPoint (maxSegmentLength valve) (rep.ToPoint node))       
  
 let rec drawFlowBox (ic : Instructions.InstructionChip) flowBox =
     let chip = ic.Chip
     let rep = ic.Representation
+    let drawUsed = drawUsed ic
     let drawAttachments (a : Instructions.Attachments.Attachments) =
         let aLength = chip.FlowLayer.Segments.[0].Width * 0.8 // so we can still see the white of valves
         (match a.InputAttachment with
@@ -72,14 +92,6 @@ let rec drawFlowBox (ic : Instructions.InstructionChip) flowBox =
             drawPoint aLength (rep.ToPoint node)
             Editor.resetColor()
         | None -> ())
-    let drawUsed (u : Instructions.Used) =
-        u.Edges 
-     |> Set.iter (rep.ToFlowSegment >> drawFlowSegment);
-        u.Valves
-     |> Set.iter (fun vi -> 
-                    let valve = chip.ControlLayer.Valves.[vi]
-                    let node = ic.OfNodeType (Instructions.ValveNode vi) 
-                    drawPoint (maxSegmentLength valve) (rep.ToPoint node));        
     match flowBox with
     | Instructions.FlowBox.Primitive (a, u) ->
         drawUsed u
