@@ -122,6 +122,82 @@ module InstructionBox =
             Multi (o, (fs |> Array.map of_FlowBox))
         | FlowBox.And (_, fs) | FlowBox.Seq (_, fs) ->
             fs |> Array.map of_FlowBox |> Array.fold1_right wrapAround
+
+let toExtents2d (entity : Entity) =
+    let ext3d = entity.GeometricExtents
+    let minPt = ext3d.MinPoint |> Geometry.to2d
+    let maxPt = ext3d.MaxPoint |> Geometry.to2d
+    new Extents2d(minPt, maxPt)
+
+let rectangleCorners (ext : Extents2d) =
+    let minPt = ext.MinPoint
+    let maxPt = ext.MaxPoint
+    let pts = [|minPt; new Point2d(maxPt.X, minPt.Y); maxPt; new Point2d(minPt.X, maxPt.Y)|]
+    pts    
+
+let rectangle (ext : Extents2d) =
+    let pts = rectangleCorners ext
+    let polyline = new Polyline()
+    let addVertex = addVertexTo polyline
+    Seq.iter addVertex pts
+    polyline.Closed <- true
+    polyline
+                 
+type Instruction (partial : bool, root: string, indices : int array, entity : Entity, used : Used) =
+    let prettyIndices =
+        if indices.Length=0
+        then ""
+        else
+        "_" ^ (System.String.Join("_", indices |> Array.map (fun i -> i.ToString())))
+    let name = root ^ prettyIndices 
+    member v.Used = used
+    member v.Entity = entity
+    member v.Name = name
+    member v.Root = root
+    member v.Extents = toExtents2d entity
+    member v.Partial = partial
+
+
+module Convert =
+    open BioStream.Micado.Plugin
+
+    let rec to_instructions partial root box (extents : Extents2d) indices =
+        match box with
+        | InstructionBox.Single used ->
+            {yield Instruction(partial, root, indices |> List.rev |> Array.of_list, extents |> rectangle |> Database.writeEntity, used)}
+        | InstructionBox.Multi (ordering, boxes) ->
+            let n = boxes.Length
+            let varC,fixC,varfix, actualIndex =
+                let getX = (fun (pt : Point2d) -> pt.X)
+                let getY = (fun (pt : Point2d)-> pt.Y)
+                match ordering with
+                | HorizontalOrdering ->
+                    getX, getY, (fun x y -> new Point2d(x, y)), (fun i -> i)
+                | VerticalOrdering ->
+                    getY, getX, (fun y x -> new Point2d(x, y)), (fun i -> n-1-i)
+            let minPt, maxPt = extents.MinPoint, extents.MaxPoint
+            let distance = (varC maxPt) - (varC minPt)
+            let sep,one = if n<=1 then 0.0, distance else (0.1*distance)/float(n-1), (0.9*distance)/float(n)
+            let minFixC, maxFixC = fixC minPt, fixC maxPt
+            let baseVarC = varC minPt
+            let ext i' =
+                let i = actualIndex i'
+                let minVarC = baseVarC + (float(i)*(sep + one))
+                let maxVarC = minVarC + one
+                new Extents2d(varfix minVarC minFixC, varfix maxVarC maxFixC)
+            {for i in 0..(n-1) do
+                yield! to_instructions partial root boxes.[i] (ext i) (i::indices)
+            }
+        
+    let box2instructions partial root box entity =
+        match box with
+        | InstructionBox.Single used ->
+            {yield Instruction(partial, root, [||], entity, used)} 
+        | _ -> to_instructions partial root box (toExtents2d entity) []
+    
+    let flowBox2instructions root flowBox entity =
+        let partial = FlowBox.attachmentKind flowBox <> Attachments.Complete
+        box2instructions partial root (InstructionBox.of_FlowBox flowBox) entity
         
 type NodeType = 
     | ValveNode of int
@@ -177,81 +253,6 @@ module Augmentations =
         member ic.addIfValve node set = addIfValve ic node set
         member ic.isValve node = isValve ic node
 
-let toExtents2d (entity : Entity) =
-    let ext3d = entity.GeometricExtents
-    let minPt = ext3d.MinPoint |> Geometry.to2d
-    let maxPt = ext3d.MaxPoint |> Geometry.to2d
-    new Extents2d(minPt, maxPt)
-
-let rectangleCorners (ext : Extents2d) =
-    let minPt = ext.MinPoint
-    let maxPt = ext.MaxPoint
-    let pts = [|minPt; new Point2d(maxPt.X, minPt.Y); maxPt; new Point2d(minPt.X, maxPt.Y)|]
-    pts    
-
-let rectangle (ext : Extents2d) =
-    let pts = rectangleCorners ext
-    let polyline = new Polyline()
-    let addVertex = addVertexTo polyline
-    Seq.iter addVertex pts
-    polyline.Closed <- true
-    polyline
-                 
-type Instruction (ic : InstructionChip, partial : bool, root: string, indices : int array, entity : Entity, used : Used) =
-    let prettyIndices =
-        if indices.Length=0
-        then ""
-        else
-        "_" ^ (System.String.Join("_", indices |> Array.map (fun i -> i.ToString())))
-    let name = root ^ prettyIndices 
-    member v.Used = used
-    member v.Entity = entity
-    member v.Name = name
-    member v.Root = root
-    member v.Extents = toExtents2d entity
-    member v.Partial = partial
-
-
-module Convert =
-    open BioStream.Micado.Plugin
-
-    let rec to_instructions ic partial root box (extents : Extents2d) indices =
-        match box with
-        | InstructionBox.Single used ->
-            {yield Instruction(ic, partial, root, indices |> List.rev |> Array.of_list, extents |> rectangle |> Database.writeEntity, used)}
-        | InstructionBox.Multi (ordering, boxes) ->
-            let n = boxes.Length
-            let varC,fixC,varfix, actualIndex =
-                let getX = (fun (pt : Point2d) -> pt.X)
-                let getY = (fun (pt : Point2d)-> pt.Y)
-                match ordering with
-                | HorizontalOrdering ->
-                    getX, getY, (fun x y -> new Point2d(x, y)), (fun i -> i)
-                | VerticalOrdering ->
-                    getY, getX, (fun y x -> new Point2d(x, y)), (fun i -> n-1-i)
-            let minPt, maxPt = extents.MinPoint, extents.MaxPoint
-            let distance = (varC maxPt) - (varC minPt)
-            let sep,one = if n<=1 then 0.0, distance else (0.1*distance)/float(n-1), (0.9*distance)/float(n)
-            let minFixC, maxFixC = fixC minPt, fixC maxPt
-            let baseVarC = varC minPt
-            let ext i' =
-                let i = actualIndex i'
-                let minVarC = baseVarC + (float(i)*(sep + one))
-                let maxVarC = minVarC + one
-                new Extents2d(varfix minVarC minFixC, varfix maxVarC maxFixC)
-            {for i in 0..(n-1) do
-                yield! to_instructions ic partial root boxes.[i] (ext i) (i::indices)
-            }
-        
-    let box2instructions ic partial root box entity =
-        match box with
-        | InstructionBox.Single used ->
-            {yield Instruction(ic, partial, root, [||], entity, used)} 
-        | _ -> to_instructions ic partial root box (toExtents2d entity) []
-    
-    let flowBox2instructions ic root flowBox entity =
-        let partial = FlowBox.attachmentKind flowBox <> Attachments.Complete
-        box2instructions ic partial root (InstructionBox.of_FlowBox flowBox) entity
     
 module Search =    
 
@@ -554,5 +555,5 @@ module Interactive =
     let promptInstructions (ic : InstructionChip) (root : string) (box : FlowBox.FlowBox) =
         let instructions =
             Editor.promptSelectEntity "Select entity for extents: "
-         |> Option.map (Convert.flowBox2instructions ic root box)
+         |> Option.map (Convert.flowBox2instructions root box)
         instructions
