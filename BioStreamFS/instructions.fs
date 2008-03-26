@@ -404,13 +404,32 @@ module Interactive =
     type BioStream.Micado.Core.FlowRepresentation.IFlowRepresentation with
         member v.promptEdge message = promptEdge v message
     
-    let promptInputBox (ic : InstructionChip) =
-        ic.Chip.FlowLayer.promptPunch "Select an input flow punch: "
-     |> Option.map (Build.inputBox ic)
+    let promptAnyPunchBox (ic : InstructionChip) makeBox message =
+        ic.Chip.FlowLayer.promptPunch message
+     |> Option.map (makeBox ic)
 
-    let promptOutputBox (ic : InstructionChip) =
-        ic.Chip.FlowLayer.promptPunch "Select an output flow punch: "
-     |> Option.map (Build.outputBox ic)
+    let arrayOfRevList = Routing.arrayOfRevList
+    
+    let promptAnyPunchBoxes (ic : InstructionChip) makeBox baseMessage =
+        let message (i : int) = baseMessage ^ " " ^ "#" ^ i.ToString()
+        let rec acc pickedSet boxes i =
+            match ic.Chip.FlowLayer.promptPunch (message i) with
+            | None -> arrayOfRevList boxes
+            | Some pi ->
+                if Set.mem pi pickedSet
+                then Editor.writeLine "Punch already selected."
+                     acc pickedSet boxes i
+                else
+                Editor.writeLine ""
+                let box = makeBox ic pi
+                acc (Set.add pi pickedSet) (box::boxes) (i+1)
+        acc Set.empty [] 1
+        
+    let promptInputBox ic =
+        promptAnyPunchBox ic Build.inputBox "Select an input flow punch: "
+
+    let promptOutputBox ic =
+        promptAnyPunchBox ic Build.outputBox "Select an output flow punch: "
         
     let promptPathBox (ic : InstructionChip) =
         let promptInputEdge() = ic.Representation.promptEdge "Select an input point on the flow: "
@@ -518,7 +537,20 @@ module Interactive =
         | None -> None
         | Some a ->
             promptOrdering() |> Option.bind (build a) 
-    
+
+    let promptOrAnyPunchBox (ic : InstructionChip) makeBox baseMessage =
+        let boxes = promptAnyPunchBoxes (ic : InstructionChip) makeBox baseMessage
+        match boxes.Length with
+        | 0 -> None
+        | 1 -> Some boxes.[0]
+        | _ -> promptOrBox ic boxes
+             
+    let promptOrInputBox ic =
+        promptOrAnyPunchBox ic Build.inputBox "Select input flow punch"
+        
+    let promptOrOutputBox ic =
+        promptOrAnyPunchBox ic Build.outputBox "Select output flow punch"
+        
     let promptInstructions (ic : InstructionChip) (root : string) (box : FlowBox.FlowBox) =
         let instructions =
             Editor.promptSelectEntity "Select entity for extents: "
