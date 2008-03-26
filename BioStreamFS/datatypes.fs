@@ -146,6 +146,10 @@ let entitiesIntersect (entity1 : #Entity) (entity2 : #Entity) =
     let points = new Point3dCollection()
     entity1.IntersectWith(entity2, Intersect.OnBothOperands, points, 0, 0)
     points.Count > 0
+
+let containsEntity (els : # ('a seq)) (el : 'a when 'a :> DBObject) =
+    let id : ObjectId = el.ObjectId
+    Seq.exists (fun (el' : #DBObject) -> id.Equals(el'.ObjectId)) els
     
 /// a control line represents a set of linked valves
 /// with punches if connected,
@@ -160,7 +164,24 @@ type ControlLine =
         List.exists intersectWithEntity v.Valves 
      || List.exists intersectWithEntity v.Punches 
      || List.exists intersectWithEntity v.Others
-        
+    member v.Representative = List.hd v.Valves
+    [<OverloadID("ContainsValve")>]
+    member v.Contains (valve : Valve) =
+        containsEntity v.Valves valve
+    [<OverloadID("ContainsPunch")>]
+    member v.Contains (punch : Punch) =
+        containsEntity v.Punches punch
+    [<OverloadID("ContainsOther")>]
+    member v.Contains (other : RestrictedEntity) =
+        containsEntity v.Others other   
+    [<OverloadID("ContainsEntity")>]
+    member v.Contains (entity : Entity) =
+        match entity with
+        | :? Valve as valve -> v.Contains valve
+        | :? Punch as punch -> v.Contains punch
+        | :? RestrictedEntity as other -> v.Contains other
+        | _ -> false
+                
 /// an entity intersection graph
 /// has the entities as nodes
 /// and an edge only between any two entities that intersect
@@ -187,10 +208,33 @@ let to_entities a =
     
 /// control layer of a chip
 type Control ( valves : Valve list, punches : Punch list, others : RestrictedEntity list ) =
+    let doc = Autodesk.AutoCAD.ApplicationServices.Application.DocumentManager.MdiActiveDocument
     let lines = ref None : ControlLine array option ref
     let unconnectedLines = ref None : ControlLine array option ref
     let unconnectedPunches = ref None : Punch array option ref
-    let obstacles = ref None : RestrictedEntity array option ref    
+    let obstacles = ref None : RestrictedEntity array option ref
+    let lineNumbering = ref None : Permutation option ref
+    member v.computeLineNumbering() =
+        let getLineIndex i (line : ControlLine) =
+            let index = line.Representative.Index
+            if index = -1 then i else index
+        let lines = v.Lines
+        let p = lines |> Array.mapi getLineIndex
+        try
+            new Permutation(p)
+        with
+            | :? FailureException -> Permutation.Identity (lines.Length)
+    member v.setLineNumbering(lineNumbering' : Permutation) =
+        lineNumbering := Some lineNumbering'
+        let lines = v.Lines
+        let db = doc.Database
+        use tr = db.TransactionManager.StartTransaction()
+        use docLock = doc.LockDocument()
+        for i = 0 to lines.Length-1 do
+            let id = lines.[i].Representative.ObjectId
+            use valve = tr.GetObject(id, OpenMode.ForWrite) :?> Valve
+            valve.Index <- lineNumbering'.[i]
+        tr.Commit()
     member private v.computeLines() =
         let entities = Array.concat [(to_entities v.Valves);(to_entities v.Punches);(to_entities v.Others)]
         let graph = entityIntersectionGraph entities
@@ -243,4 +287,12 @@ type Control ( valves : Valve list, punches : Punch list, others : RestrictedEnt
         Array.exists (fun (otherLine : ControlLine) -> otherLine.intersectWith entity) (v.otherLines line)
      || Array.exists intersectWithEntity v.Obstacles
      || Array.exists intersectWithEntity v.UnconnectedPunches
+    member v.LineNumbering with get() = lazyGet v.computeLineNumbering lineNumbering
+                            and set(value : Permutation) = v.setLineNumbering(value)
+    member v.searchLines(entity : Entity) =
+        let lines = v.Lines
+        let results = {0..lines.Length-1} |> Seq.filter (fun i -> lines.[i].Contains entity)
+        if not (Seq.nonempty results)
+        then None
+        else Some (Seq.hd results)
         

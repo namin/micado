@@ -227,3 +227,26 @@ let test_export_image() =
     Export.GUI.promptImageFilename()
  |> Option.map Export.GUI.exportImage
  |> ignore
+ 
+let verify_control_line_number (controlLayer : Datatypes.Control) =
+    let tellUserLineIndex lineIndex =
+        let userLineIndex = controlLayer.LineNumbering.[lineIndex]
+        Editor.writeLine ("Selected line is #" ^ (userLineIndex+1).ToString())
+    controlLayer.promptLine "Select line to verify numbering: "
+ |> Option.map tellUserLineIndex
+ |> ignore
+ 
+[<CommandMethod("micado_test_number_control_lines")>]
+/// test numbering control lines
+let test_number_control_lines() =
+    let chip = Chip.create (Database.collectChipEntities())
+    if chip.ControlLayer.numberLines()
+    then verify_control_line_number chip.ControlLayer
+
+[<CommandMethod("micado_test_verify_control_line_number")>]
+/// test numbering control lines
+let test_verify_control_line_number() =
+    let chip = Chip.create (Database.collectChipEntities())
+    verify_control_line_number chip.ControlLayer
+
+    

@@ -306,5 +306,40 @@ module Extra =
                 promptSelectPunch message
              |> Option.bind justFlowPunch
 
+        let promptLine (controlLayer : Control) message =
+            let rec prompt() =
+                promptSelectEntity message |> Option.bind justLine
+            and justLine entity =
+                match controlLayer.searchLines entity with
+                | None -> writeLine "The selected entity is not part of a control line."
+                          prompt()
+                | s -> s
+            prompt()
+            
+        let numberLines (controlLayer : Control) =
+            let n = controlLayer.Lines.Length
+            let rec acc remaining numbered i =
+                if i=n
+                then let new2oldA = (Set.choose remaining) :: numbered |> Array.of_list |> Array.rev
+                     let new2oldP = new Permutation(new2oldA)
+                     let old2newP = new2oldP.Inverse
+                     controlLayer.LineNumbering <- old2newP
+                     writeLine ("Deducing control line #" ^ i.ToString() ^ ". Numbering completed.")
+                     true
+                else
+                match promptLine controlLayer ("Select control line #" ^ i.ToString() ^ ":") with
+                | None -> false
+                | Some lineIndex ->
+                    if not (remaining.Contains lineIndex)
+                    then writeLine "Control line previously selected. Select another one."
+                         acc remaining numbered i
+                    else writeLine ""
+                         acc (Set.remove lineIndex remaining) (lineIndex::numbered) (i+1)
+            acc ({0..n-1} |> Set.of_seq) [] 1
+            
     type BioStream.Micado.Common.Datatypes.Flow with
         member v.promptPunch message = Augmentations.promptFlowPunch v message
+        
+    type BioStream.Micado.Common.Datatypes.Control with
+        member v.promptLine message = Augmentations.promptLine v message
+        member v.numberLines() = Augmentations.numberLines v
