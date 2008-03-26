@@ -96,8 +96,9 @@ let promptSelectEntityAndPoint message =
             editor().GetEntity(new PromptEntityOptions(message))
         with _ -> null
     let ifValid (res : PromptEntityResult) =
-        if res = null
-           || res.Status = PromptStatus.Error || res.ObjectId.IsNull || not res.ObjectId.IsValid
+        if res.Status <> PromptStatus.Cancel &&
+           (res = null
+            || res.Status = PromptStatus.Error || res.ObjectId.IsNull || not res.ObjectId.IsValid)
         then
            writeLine "You did not select an entity.";
            None

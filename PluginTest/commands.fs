@@ -10,21 +10,21 @@ open BioStream.Micado.Plugin
 
 open BioStream.Micado.Plugin.Editor.Extra
 
-[<CommandMethod("micado_test_polyline2flow")>]
+[<CommandMethod("micadotest_polyline2flow")>]
 /// tests converting a polyline to a flow line
 let test_polyline2flow() =
     Editor.promptSelectFlowSegment "select a flow segment (try a polyline): "
  |> Option.map Debug.drawFlowSegment 
  |> ignore
 
-[<CommandMethod("micado_test_drawArrow")>]
+[<CommandMethod("micadotest_drawArrow")>]
 /// tests drawing an arrow
 let test_drawArrow() =
     Editor.promptSelectFlowSegment "select a flow segment (try a polyline): "
  |> Option.map (fun flow -> Debug.drawArrow flow.Segment.StartPoint flow.Segment.EndPoint)
  |> ignore
 
-[<CommandMethod("micado_test_collectChipEntities")>]
+[<CommandMethod("micadotest_collectChipEntities")>]
 /// tests collecting the chip entities
 let test_collectChipEntities() =
     let chipEntities = Database.collectChipEntities()
@@ -32,7 +32,7 @@ let test_collectChipEntities() =
                               chipEntities.FlowEntities.Length
                               chipEntities.ControlEntities.Length)
 
-[<CommandMethod("micado_test_chip")>]
+[<CommandMethod("micadotest_chip")>]
 /// tests the chip representation                   
 let test_chip() =
     let chip = Chip.create (Database.collectChipEntities())
@@ -45,7 +45,7 @@ let test_chip() =
                                (chip.ControlLayer.UnconnectedPunches.Length)
                                (chip.ControlLayer.Obstacles.Length) )
                                
-[<CommandMethod("micado_test_grid")>]
+[<CommandMethod("micadotest_grid")>]
 /// test the routing grid
 let test_grid() =
     Chip.create (Database.collectChipEntities())
@@ -53,7 +53,7 @@ let test_grid() =
  |> Debug.drawGrid
  |> ignore
  
-[<CommandMethod("micado_test_entities_intersect")>]
+[<CommandMethod("micadotest_entities_intersect")>]
 /// prompts for two entities and prints whether they intersect
 let test_entities_intersect() =
     let entity1 = Editor.promptSelectEntity "select first entity"
@@ -65,7 +65,7 @@ let test_entities_intersect() =
         | false -> Editor.writeLine "selected entities do not intersect"
     | _ -> ()
 
-[<CommandMethod("micado_test_min_cost_flow_routing")>]
+[<CommandMethod("micadotest_min_cost_flow_routing")>]
 /// test the min cost flow routing algorithm
 let test_min_cost_flow_routing() =
     let chipGrid = Chip.create (Database.collectChipEntities()) |> Routing.createChipGrid
@@ -78,7 +78,7 @@ let test_min_cost_flow_routing() =
      |> Database.writeEntities |> ignore
  |> ignore
 
-[<CommandMethod("micado_test_routing")>]
+[<CommandMethod("micadotest_routing")>]
 /// test the routing algorithms in sequence: 
 /// start with the min cost flow routing algorithm
 /// then interactively iterate over the iterative routing algorithm
@@ -103,7 +103,7 @@ let test_routing() =
         promptIterate (new Routing.IterativeRouting (chipGrid, connections)) entities
  |> ignore
  
-[<CommandMethod("micado_test_routing_stable")>]
+[<CommandMethod("micadotest_routing_stable")>]
 /// test the routing algorithms in sequence:
 /// first with the min cost flow routing algorithm
 /// then the iterative routing algorithm until it stabilizes
@@ -121,7 +121,7 @@ let test_routing_stable() =
         Editor.writeLine ("iterative routing ran for " ^ n.ToString() ^ " iterations")
  |> ignore
  
-[<CommandMethod("micado_test_flow_intersections")>]
+[<CommandMethod("micadotest_flow_intersections")>]
 /// test detection of flow intersections
 let test_flow_intersections() =
     let chip = Chip.create (Database.collectChipEntities())
@@ -135,7 +135,7 @@ let test_flow_intersections() =
             }
     Seq.iter (Debug.drawPoint length) points
     
-[<CommandMethod("micado_test_flow_representation")>]
+[<CommandMethod("micadotest_flow_representation")>]
 /// test representation of flow
 let test_flow_representation() =
     let chip = Chip.create (Database.collectChipEntities())
@@ -144,7 +144,7 @@ let test_flow_representation() =
  |> Seq.map flowRep.ToFlowSegment
  |> Seq.iter Debug.drawFlowSegment
 
-[<CommandMethod("micado_test_flow_click")>]
+[<CommandMethod("micadotest_flow_click")>]
 /// test mapping between points and edges of flow representation
 let test_flow_click() =
     let point = Editor.promptPoint "Select a point near some flow: "
@@ -162,7 +162,7 @@ let test_flow_click() =
         Editor.resetColor()
         Editor.resetHighlight()
         
-[<CommandMethod("micado_test_flow_representation_with_valves")>]
+[<CommandMethod("micadotest_flow_representation_with_valves")>]
 /// test representation of flow when valves are added
 let test_flow_representation_with_valves() =
     let chip = Chip.create (Database.collectChipEntities())
@@ -176,7 +176,7 @@ let test_flow_representation_with_valves() =
                     Debug.drawPoint (Debug.maxSegmentLength valve) (flowRep.ToPoint (rawFlowRep.NodeCount+vi)))
 
       
-[<CommandMethod("micado_test_prompt_flow_punch")>]
+[<CommandMethod("micadotest_prompt_flow_punch")>]
 /// test prompting the user for a flow punch
 let test_prompt_flow_punch() =
     let chip = Chip.create (Database.collectChipEntities())
@@ -184,44 +184,7 @@ let test_prompt_flow_punch() =
  |> Option.map (fun (i : int) -> Editor.writeLine ("You selected punch #" ^ i.ToString()))
  |> ignore
 
-
-[<CommandMethod("micado_test_prompt_path_box")>]
-/// test prompting for a path flow box (an instruction part)
-let test_prompt_path_box() =
-    let chip = Chip.create (Database.collectChipEntities())
-    let ic = Instructions.InstructionChip chip
-    let rep = ic.Representation
-    Instructions.Interactive.promptPathBox ic 
- |> Option.map (function
-                | Instructions.FlowBox.Primitive (a, u) ->
-                    let aLength = chip.FlowLayer.Segments.[0].Width * 0.8 // so we can still see the white of valves
-                    u.Edges 
-                 |> Set.iter (rep.ToFlowSegment >> Debug.drawFlowSegment);
-                    u.Valves
-                 |> Set.iter (fun vi -> 
-                                let valve = chip.ControlLayer.Valves.[vi]
-                                let node = ic.OfNodeType (Instructions.ValveNode vi) 
-                                Debug.drawPoint (Debug.maxSegmentLength valve) (rep.ToPoint node));
-                    (match a.InputAttachment with
-                     | Some node ->
-                         Editor.setColor 3 // Green
-                         Debug.drawPoint aLength (rep.ToPoint node)
-                         Editor.resetColor()
-                     | None -> 
-                         Editor.writeLine ("Input attachment missing (weird)."));
-                    (match a.OutputAttachment with
-                     | Some node ->
-                         Editor.setColor 6 // Magenta
-                         Debug.drawPoint aLength (rep.ToPoint node)
-                         Editor.resetColor()
-                     | None -> 
-                         Editor.writeLine ("Output attachment missing (weird)."));
-                    Editor.writeLine ("Box drawn (input green, output magenta)")
-                | _ -> 
-                    Editor.writeLine("Box built, but is not primitive flow box (wierd)."))
- |> ignore
-
-[<CommandMethod("micado_test_export_image")>]
+[<CommandMethod("micadotest_export_image")>]
 /// test exporting a snapshot image
 let test_export_image() =
     Export.GUI.promptImageFilename()
@@ -236,14 +199,7 @@ let verify_control_line_number (controlLayer : Datatypes.Control) =
  |> Option.map tellUserLineIndex
  |> ignore
  
-[<CommandMethod("micado_test_number_control_lines")>]
-/// test numbering control lines
-let test_number_control_lines() =
-    let chip = Chip.create (Database.collectChipEntities())
-    if chip.ControlLayer.numberLines()
-    then verify_control_line_number chip.ControlLayer
-
-[<CommandMethod("micado_test_verify_control_line_number")>]
+[<CommandMethod("micadotest_verify_control_line_number")>]
 /// test numbering control lines
 let test_verify_control_line_number() =
     let chip = Chip.create (Database.collectChipEntities())

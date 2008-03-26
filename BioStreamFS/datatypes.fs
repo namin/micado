@@ -11,7 +11,7 @@ open Autodesk.AutoCAD.DatabaseServices
 open Autodesk.AutoCAD.Geometry
 
 open System.Collections.Generic
-
+    
 type IGrid =
     inherit Graph.IGraph
     abstract ToPoint : int -> Point2d
@@ -26,7 +26,7 @@ let lazyGet computeValue optionValue =
         let value = computeValue()
         optionValue := Some value
         value
-
+            
 let addVertexTo (polyline : #Polyline) (point : Point2d) =
     polyline.AddVertexAt(polyline.NumberOfVertices, point, 0.0, 0.0, 0.0)
             

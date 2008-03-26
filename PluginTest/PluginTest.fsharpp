@@ -47,10 +47,6 @@
     {
     "ProjRelPath" = "T"
     }
-    "instructions-commands.fs"
-    {
-    "ProjRelPath" = "T"
-    }
 }
 "ProjStartupServices"
 {

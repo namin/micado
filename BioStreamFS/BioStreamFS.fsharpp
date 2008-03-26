@@ -99,19 +99,19 @@
     {
     "ProjRelPath" = "T"
     }
-    "commands.fs"
-    {
-    "ProjRelPath" = "T"
-    }
     "debug.fs"
     {
     "ProjRelPath" = "T"
     }
-    "legacy.fs"
+    "export-gui.fs"
     {
     "ProjRelPath" = "T"
     }
-    "export-gui.fs"
+    "commands.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+    "legacy.fs"
     {
     "ProjRelPath" = "T"
     }

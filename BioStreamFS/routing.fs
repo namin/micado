@@ -259,9 +259,9 @@ type CalculatorGrid (g : SimpleGrid) =
                 if outer c c'
                 then yield (i,(g.coordinates2index c'))
         }
-
+        
 let arrayOfRevList lst =
-    lst |> List.rev |> Array.of_list
+    lst |> List.rev |> Array.of_list        
 
 let inverseMapList map =
     let add value' map' key' =

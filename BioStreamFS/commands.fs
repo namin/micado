@@ -66,29 +66,308 @@ let connectValvesToPunches() =
         Editor.writeLine ("Routing succeeded: " ^ solution.Length.ToString() ^ " new connections.")
 
 module Instructions = begin
+    open BioStream.Micado.Core.Instructions
+    open BioStream.Micado.Plugin.Editor.Extra
+    
+    open Autodesk.AutoCAD.DatabaseServices
+    open Autodesk.AutoCAD.ApplicationServices
+    
+    open System.Collections.Generic
+    
+    let doc() =
+        Database.doc()
+
+    let computeInstructionChip() =
+        new InstructionChip (Database.collectChipEntities() |> Chip.create)
+                
+    type CacheEntry() =
+        let instructionChip = computeInstructionChip()
+        let mutable boxes = Map.empty : Map<string, FlowBox.FlowBox>
+        let mutable unsavedChanges = false
+        let instructions = new Dictionary<Entity, Instruction>()
+        member v.InstructionChip = instructionChip
+        member v.Boxes with get() = boxes 
+                        and set(value) = boxes <- value
+                                         unsavedChanges <- true
+        member v.AddInstruction (instruction : Instruction) = 
+            instructions.[instruction.Entity] <- instruction
+            unsavedChanges <- true
+        member v.GetInstruction entity =
+            if instructions.ContainsKey entity |> not
+            then Editor.writeLine "No instruction associated with entity."
+                 None
+            else Some instructions.[entity]
+        member v.Instructions with get() = instructions.Values |> Array.of_seq
+        member v.UnsavedChanges with get() = unsavedChanges
+                
+    let globalCache = new Dictionary<Document, CacheEntry>()
+
+    let deleteCacheEntry(d) =
+        globalCache.Remove(d) |> ignore
+                
+    let activeCacheEntry() =
+        let d = doc()
+        if not (globalCache.ContainsKey d)
+        then globalCache.[d] <- new CacheEntry()
+             d.BeginDocumentClose.Add (fun args -> deleteCacheEntry(d))
+        globalCache.[d]
+
+    let activeInstructionChip() =
+        activeCacheEntry().InstructionChip
+        
+    let activeBoxes() =
+        activeCacheEntry().Boxes
+        
+    let activeInstructions() =
+        activeCacheEntry().Instructions
+        
+    let addInstruction = activeCacheEntry().AddInstruction
+    
+    let getInstruction = activeCacheEntry().GetInstruction
+        
+    let savedActiveCache() = activeCacheEntry().UnsavedChanges |> not
+        
+    let setActiveBoxes map =
+        activeCacheEntry().Boxes <- map
+    
+    [<CommandMethod("micado_clear_cache")>]    
+    /// clears the cache entry of the active document
+    let micado_clear_cache() =
+        let d = doc()
+        if not (globalCache.ContainsKey d)
+        then Editor.writeLine "(No Cache to clear.)"
+        else
+        if savedActiveCache() ||
+           Editor.promptYesOrNo false 
+                                "Are you sure you want to clear unsaved boxes and instructions associated with this drawing?"
+        then deleteCacheEntry d;
+             Editor.writeLine "(Cache cleared.)"
+        else Editor.writeLine "(Cache kept.)"
+        
+    [<CommandMethod("micado_number_control_lines")>]    
+    /// prompts the user to number the control lines by selecting them in turn
+    let micado_number_control_lines() =
+        activeInstructionChip().Chip.ControlLayer.numberLines()        
+     |> ignore
+
+    let markSaveClear ic box =
+        let save name =
+            setActiveBoxes(Map.add name box (activeBoxes()))
+        Debug.drawFlowBox ic box
+        Editor.promptIdNameNotEmpty "Name box: " |> Option.map save |> ignore
+        Editor.clearMarks()
+        
+    let promptNewBox makeBox =
+        let ic = activeInstructionChip()
+        makeBox ic
+     |> Option.map (markSaveClear ic)
+     |> ignore
+
+    [<CommandMethod("micado_new_box_input")>]    
+    /// prompts the user to create a new input box
+    let micado_new_box_input() =
+        promptNewBox Interactive.promptInputBox
+
+    [<CommandMethod("micado_new_box_output")>]    
+    /// prompts the user to create a new output box
+    let micado_new_box_output() =
+        promptNewBox Interactive.promptOutputBox
+
+    [<CommandMethod("micado_new_box_path")>]    
+    /// prompts the user to create a new path box
+    let micado_new_box_path() =
+        promptNewBox Interactive.promptPathBox
+                         
+    let displayAttachmentKind = function
+        | Instructions.Attachments.Complete -> "complete"
+        | Instructions.Attachments.Input _ -> "input"
+        | Instructions.Attachments.Output _ -> "output"
+        | Instructions.Attachments.Intermediary (_,_) -> "intermediary"
+    
+    let boxDisplayName name box =
+        (FlowBox.attachmentKind box |> displayAttachmentKind) ^ " " ^ name
+        
+    let activeBoxesProperties() =
+        let boxes =
+            [for kv in activeBoxes() do
+                let name = kv.Key
+                let box = kv.Value
+                let kind = FlowBox.attachmentKind box
+                yield boxDisplayName name box, name, kind, box]
+        List.sort compare boxes
+    
+    let boxPropDisplayName (x,_,_,_) = x
+    let boxPropName (_,x,_,_) = x
+    let boxPropKind (_,_,x,_) = x
+    let boxPropBox (_,_,_,x) = x
+    
+    let allGood x = true
+    
+    let promptSelectBoxAndName kindFilter boxFilter message =
+        let map = activeBoxes()
+        let keys = activeBoxesProperties() 
+                |> List.filter (boxPropKind >> kindFilter)
+                |> List.filter (boxPropBox >> boxFilter)
+                |> List.map boxPropName
+        if keys.Length=0
+        then Editor.writeLine "(None)"
+             None
+        else 
+        Editor.promptSelectIdName message keys
+     |> Option.bind (fun (s) ->
+                        if map.ContainsKey s
+                        then Some (map.[s], s)
+                        else Editor.writeLine "No such box."
+                             None)
+    
+    let promptSelectBox kindFilter boxFilter message = 
+        promptSelectBoxAndName kindFilter boxFilter message
+     |> Option.map fst
+    
+    let promptSelectAnyBoxAndName = promptSelectBoxAndName allGood allGood
+    let promptSelectAnyBox = promptSelectBox allGood allGood
+    
+    [<CommandMethod("micado_mark_box")>]    
+    /// prompts the user to select a box, marking it on the drawing
+    let micado_mark_box() =
+        match promptSelectAnyBoxAndName "Box " with
+        | None -> ()
+        | Some (box, name) ->
+            Debug.drawFlowBox (activeInstructionChip()) box
+            Editor.writeLine (boxDisplayName name box)
+ 
+    [<CommandMethod("micado_list_boxes")>]
+    /// prints out the list of boxes for active drawing
+    let micado_list_boxes() =
+        activeBoxesProperties() 
+     |> List.iter (fun prop -> Editor.writeLine (boxPropDisplayName prop))
+
+    let selectBoxesMessage (i : int) = "Box #" ^ i.ToString()
+    
+    let arrayOfRevList = Routing.arrayOfRevList
+    
+    let promptSelectBoxesOfSameKind() =
+        let message = selectBoxesMessage
+        let rec acc kindFilter boxes i =
+            let boxFilter box = List.mem box boxes |> not
+            match promptSelectBox kindFilter boxFilter (message i) with
+            | None -> Some (boxes |> arrayOfRevList)
+            | Some box -> acc kindFilter (box::boxes) (i+1)
+        match promptSelectAnyBox (message 1) with
+        | None -> None
+        | Some box ->
+            acc (Attachments.sameKind (FlowBox.attachmentKind box)) [box] 2
+    
+    let promptSelectBoxesForSeq() =
+        let message = selectBoxesMessage
+        let hasInputAttachment kind =
+            match kind with
+            | Attachments.Complete | Attachments.Input _ -> false
+            | _ -> true
+        let hasOutputAttachment kind =
+            match kind with
+            | Attachments.Complete | Attachments.Output _ -> false
+            | _ -> true
+        let rec acc boxes i =
+            match promptSelectBox hasInputAttachment allGood (message i) with
+            | None -> Some (boxes |> arrayOfRevList)
+            | Some box -> 
+                let boxes' = box :: boxes
+                if box |> FlowBox.attachmentKind |> hasOutputAttachment |> not
+                then Editor.writeLine "(Stopping at Output)"
+                     Some (boxes' |> arrayOfRevList)
+                else acc boxes' (i+1)
+        match promptSelectBox hasOutputAttachment allGood (message 1) with
+        | None -> None
+        | Some box ->
+            acc [box] 2
+            
+    let promptNewCombinationBox selectBoxes makeBox =
+        selectBoxes()
+     |> Option.map (let ic = activeInstructionChip()
+                    makeBox ic >> Option.map (markSaveClear ic))
+     |> ignore
+
+    [<CommandMethod("micado_new_box_or")>]    
+    /// prompts the user to create a new or box
+    let micado_new_box_or() =
+        promptNewCombinationBox promptSelectBoxesOfSameKind Interactive.promptOrBox
+        
+    [<CommandMethod("micado_new_box_and")>]    
+    /// prompts the user to create a new and box
+    let micado_new_box_and() =
+        promptNewCombinationBox promptSelectBoxesOfSameKind Interactive.promptAndBox
+
+    [<CommandMethod("micado_new_box_seq")>]    
+    /// prompts the user to create a new seq box
+    let micado_new_box_seq() =
+        promptNewCombinationBox promptSelectBoxesForSeq Interactive.promptSeqBox
+
+    [<CommandMethod("micado_rename_box")>]    
+    /// prompts the user to select a box and rename it
+    let micado_rename_box() =
+        match promptSelectAnyBoxAndName "Box to rename " with
+        | None -> ()
+        | Some (box, name) ->
+            Editor.promptIdNameNotEmpty "New name for box: "
+         |> Option.map (fun name' ->
+                            setActiveBoxes(activeBoxes() |> Map.remove name |> Map.add name' box)
+                            Editor.writeLine ("Renamed box " ^ name ^ " to " ^ name'))
+         |> ignore
+            
+    [<CommandMethod("micado_new_instruction_set")>]
+    /// prompts the user to select a box and builds an instruction set out of it
+    let micado_new_instruction_set() =
+        let ic = activeInstructionChip()
+        match promptSelectAnyBoxAndName "Box " with
+        | None -> ()
+        | Some (box, name) ->
+            Debug.drawFlowBox ic box
+            let instructions = Instructions.Interactive.promptInstructions ic name box
+            Editor.clearMarks()
+            match instructions with
+            | None -> ()
+            | Some instructions -> Seq.iter addInstruction instructions
+
+    [<CommandMethod("micado_mark_instruction")>]
+    /// prompts the user to select an entity associated with an instruction and marks the instruction on the drawing
+    let micado_mark_instruction() =
+        Editor.promptSelectEntity "Select an entity associated with the extents of an instruction: "
+     |> Option.bind getInstruction
+     |> Option.map (fun instruction ->
+                        Editor.writeLine ((if instruction.Partial then "partial" else "complete")
+                                          ^ " instruction " ^ instruction.Name)
+                        Debug.drawExtents (instruction.Extents)
+                        Debug.drawUsed (activeInstructionChip()) (instruction.Used))
+     |> ignore
+
+    [<CommandMethod("micado_export_to_gui")>]
+    /// export files for the java GUI
+    let micado_export_to_gui() =
+        Export.GUI.prompt (activeInstructionChip()) (activeInstructions()) |> ignore
+                                                         
     // micado_
     //        new_
     //            box (?)
     //            box_
-    //                input
-    //                output
-    //                path
-    //                seq
-    //                and
-    //                or
-    //            instruction
+    //                input (v)
+    //                output (v)
+    //                path (v)
+    //                seq (v)
+    //                and (v)
+    //                or (v)
+    //            instruction_set (v)
     //        mark_
-    //             box (print out kind and name)
-    //             instruction (print out partial/complete and name)
+    //             box (print out kind and name) (v)
+    //             instruction (print out partial/complete and name) (v)
     //        list_
-    //             boxes
+    //             boxes (v)
     //             instructions (?)
+    //        rename_box (v)
     //        export_
-    //               to_gui
-    //               boxes
-    //               instructions
-    //        import_
-    //               boxes
-    //               instructions
-    //        number_control_lines
+    //               to_gui (v)
+    //               boxes_and_instructions
+    //        import_boxes_and_instructions
+    //        number_control_lines (v)
+    //        clear_cache (v)
     end
