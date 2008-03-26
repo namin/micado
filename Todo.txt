@@ -1,12 +1,7 @@
 TODO list
 
-Pressure (ASAP)
-- Catch-up with BioCAD in terms of instruction generations
-  * export image
-  * export basic instructions (in terms of open/closed valves/lines)
-  (design-wise, try to look ahead by imagining that valves could be inferred as opposed to imposed)
-  * perhaps, generate the gui already from AutoCAD (as opposed to having to call the python script in addition)
-  * tease out the essential components of the java GUI and organize it within micado-pub
+Documentation (must have for next release)
+- Document micado instruction commands.
   
 Research
 - Specifying instructions by the flow layer
