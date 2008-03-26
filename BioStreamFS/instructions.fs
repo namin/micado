@@ -29,7 +29,10 @@ let usedEmpty = used Set.empty Set.empty
 
 module Attachments =
     type Kind =
-        Complete | Input of NodeIndex | Output of NodeIndex | Intermediary of NodeIndex * NodeIndex
+        Complete 
+      | Input of NodeIndex
+      | Output of NodeIndex 
+      | Intermediary of NodeIndex * NodeIndex
         
     type Attachments (inputAttachment : NodeIndex option, outputAttachment : NodeIndex option) =
         
@@ -88,6 +91,16 @@ module FlowBox =
          |> Array.map mentionedEdgesLax
          |> Set.Union   
 
+    let rec mentionedUsed flowBox =
+        match flowBox with
+        | Primitive (_, u) -> 
+            u
+        | Extended (_, u, f) -> 
+            u.append(mentionedUsed f)
+        | Or (_, fs, _) | And (_, fs) | Seq (_, fs) ->
+            fs 
+         |> Seq.map mentionedUsed
+         |> Seq.fold1 (fun u u' -> u.append(u'))
         
 module InstructionBox =
 
@@ -158,8 +171,11 @@ type Instruction (partial : bool, root: string, indices : int array, entity : En
     member v.Extents = toExtents2d entity
     member v.Partial = partial
 
+/// The XML Serialization is loosely inspired by Expert F#, Chapter 9, 
+/// section Using XML As a Concrete Language Format (starting p.212)
 module Serialization =
     open System.IO
+    open System.Xml
     open BioStream.Micado.Plugin // for Database.readEntityFromHandle
     
     let promptSaveFilename() =
@@ -182,7 +198,7 @@ module Serialization =
         tw.Write("[")
         tw.Write(System.String.Join(";", seq |> Seq.map (fun (i : int) -> i.ToString()) |> Seq.to_array))
         tw.Write("]")
-    
+        
     let importInts (text : string) =
         text.Split([|'[';']';';'|]) 
      |> Array.map (fun s -> s.Trim()) 
@@ -238,14 +254,154 @@ module Serialization =
         instructions |> Seq.iter (exportInstruction tw >> (fun () -> tw.WriteLine("")))
             
     let importInstructions (text : string) =
-        text.Split([|'\r';'\n'|]) |> Array.filter (fun s -> s <> "") |> Array.map importInstruction
+        text.Split([|'\r';'\n'|]) 
+     |> Array.filter (fun s -> s <> "") 
+     |> Array.map importInstruction
 
+    let extractIntOption attrName (attribs : XmlAttributeCollection) =
+        let item = attribs.GetNamedItem(attrName)
+        if item = null
+        then None
+        else Some (Int32.of_string(item.Value))
+
+    let extractAttachments (attribs : XmlAttributeCollection) =
+        let input = extractIntOption "input" attribs
+        let output = extractIntOption "output" attribs
+        Attachments.create input output
+    
+    let extractIntSet attrName (attribs : XmlAttributeCollection) =
+        importIntSet (attribs.GetNamedItem(attrName).Value)
+            
+    let extractUsed (attribs : XmlAttributeCollection) =
+        let edges = extractIntSet "edges" attribs
+        let valves = extractIntSet "valves" attribs
+        used edges valves
+        
+    let extractOrdering (attribs : XmlAttributeCollection) =
+        match attribs.GetNamedItem("ordering").Value with
+        | "horizontal" -> HorizontalOrdering
+        | "vertical" -> VerticalOrdering
+        | _ -> failwith "unrecognized ordering"
+          
+    let rec extractBox (node : XmlNode) =
+        let attribs = node.Attributes
+        let childNodes = node.ChildNodes
+        let attachments = extractAttachments(attribs)
+        let childBoxes() =
+            [| for child in childNodes -> extractBox(child) |]
+        match node.Name with
+        | "Primitive" ->
+            FlowBox.Primitive(attachments, extractUsed(attribs))
+        | "Extended" ->
+            FlowBox.Extended(attachments, extractUsed(attribs), extractBox (childNodes.Item(0)))           
+        | "Or" ->
+            FlowBox.Or(attachments, childBoxes(), extractOrdering(attribs))
+        | "And" ->
+            FlowBox.And(attachments, childBoxes())
+        | "Seq" ->
+            FlowBox.Seq(attachments, childBoxes())
+        | s ->
+            failwith ("unrecognized box type " ^ s)
+            
+    let extractName (attribs : XmlAttributeCollection) =
+        attribs.GetNamedItem("name").Value
+    
+    let extractBoxes (node : XmlNode) =
+        [for node in node.ChildNodes do
+            if node.Name = "Box"
+            then yield extractName node.Attributes, extractBox (node.ChildNodes.Item(0))
+        ]
+    
+    let extractInstructions (node : XmlNode) =
+        importInstructions node.InnerXml
+        
+    let extractBoxesAndInstructions (doc : XmlNode) =
+        let mutable boxes = None
+        let mutable instructions = None
+        for node in doc.ChildNodes do
+            match node.Name with
+            | "Boxes" -> boxes <- Some (extractBoxes(node))
+            | "Instructions" -> instructions <- Some (extractInstructions(node))
+            | _ -> ()
+        Option.get boxes, Option.get instructions
+
+    //  Primitive of Attachments * Used
+    //| Extended of Attachments * Used * FlowBox
+    //| Or of Attachments * FlowBox array * Ordering
+    //| And of Attachments * FlowBox array
+    //| Seq of Attachments * FlowBox array  
+    let rec exportBox (tw : StreamWriter) box =
+        let writeAttachment name att =
+            if Option.is_some att
+            then tw.Write(name ^ "='" ^ ((Option.get att) : int).ToString() ^ "' ")
+        let writeAttachments (a : Attachments.Attachments) =
+            writeAttachment "input" a.InputAttachment
+            writeAttachment "output" a.OutputAttachment
+        let writeIntSet name set =
+            tw.Write(name ^ "='")
+            exportInts tw set
+            tw.Write("' ")
+        let writeUsed (u : Used) =
+            writeIntSet "edges" u.Edges
+            writeIntSet "valves" u.Valves
+        let writeChildren childBoxes =
+            Seq.iter (exportBox tw) childBoxes
+        let writeAndSeq tag a childBoxes =
+            tw.Write("<" ^ tag ^ " ")
+            writeAttachments a
+            tw.WriteLine(">")
+            writeChildren childBoxes
+            tw.WriteLine("</" ^ tag ^ ">")
+        match box with
+        | FlowBox.Primitive (a,u) ->
+            tw.Write("<Primitive ")
+            writeAttachments a   
+            writeUsed u
+            tw.WriteLine("/>")
+        | FlowBox.Extended(a, u, childBox) ->
+            tw.Write("<Extended ")
+            writeAttachments a
+            writeUsed u
+            tw.WriteLine(">")
+            exportBox tw childBox
+            tw.WriteLine("</Extended>")         
+        | FlowBox.Or(a, childBoxes, ordering) ->
+            tw.Write("<Or ")
+            writeAttachments a
+            tw.Write("ordering='")
+            tw.Write(match ordering with
+                     | HorizontalOrdering -> "horizontal"
+                     | VerticalOrdering -> "vertical")
+            tw.Write("'")
+            tw.WriteLine(">")
+            writeChildren childBoxes
+            tw.WriteLine("</Or>")
+         | FlowBox.And(a, childBoxes) ->
+            writeAndSeq "And" a childBoxes
+         | FlowBox.Seq(a, childBoxes) ->
+            writeAndSeq "Seq" a childBoxes
+            
+    let exportNameBox (tw : StreamWriter) (name,box) =
+        tw.WriteLine("<Box name='" ^ name ^ "'>")
+        exportBox tw box
+        tw.WriteLine("</Box>")
+                
+    let exportBoxes (tw : StreamWriter) boxes =
+        boxes |> Seq.iter (exportNameBox tw)
+        
     let export boxes instructions =
         match promptSaveFilename() with
         | None -> false
         | Some filename ->
             use tw = new StreamWriter(filename)
+            tw.WriteLine("<Micado>")
+            tw.WriteLine("<Boxes>")
+            exportBoxes tw boxes
+            tw.WriteLine("</Boxes>")
+            tw.WriteLine("<Instructions>")
             exportInstructions tw instructions
+            tw.WriteLine("</Instructions>")
+            tw.WriteLine("</Micado>")
             Editor.writeLine ("Micado boxes & instructions exported to " ^ filename ^ ".")
             true
     
@@ -254,9 +410,10 @@ module Serialization =
         | None -> None
         | Some filename ->
             let text = use rw = new StreamReader(filename) in rw.ReadToEnd()
+            let doc = new XmlDocument()
+            doc.LoadXml(text)
             try
-                let instructions = importInstructions text
-                Some ([], instructions)
+                Some (extractBoxesAndInstructions (doc.ChildNodes.Item(0)))
             with
                 | Failure(msg) ->
                     Editor.writeLine ("Could not parse file: " ^ msg)
@@ -267,7 +424,11 @@ module Convert =
     let rec to_instructions partial root box (extents : Extents2d) indices =
         match box with
         | InstructionBox.Single used ->
-            {yield Instruction(partial, root, indices |> List.rev |> Array.of_list, extents |> rectangle |> Database.writeEntity, used)}
+            {yield Instruction(partial, 
+                               root, 
+                               indices |> List.rev |> Array.of_list, 
+                               extents |> rectangle |> Database.writeEntity, 
+                               used)}
         | InstructionBox.Multi (ordering, boxes) ->
             let n = boxes.Length
             let varC,fixC,varfix, actualIndex =

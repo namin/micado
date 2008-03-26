@@ -160,9 +160,11 @@ module Instructions = begin
         activeInstructionChip().Chip.ControlLayer.numberLines()        
      |> ignore
 
+    let addBox (name,box) =
+        setActiveBoxes(Map.add name box (activeBoxes()))
+        
     let markSaveClear ic box =
-        let save name =
-            setActiveBoxes(Map.add name box (activeBoxes()))
+        let save name = addBox (name,box)            
         Debug.drawFlowBox ic box
         Editor.promptIdNameNotEmpty "Name box: " |> Option.map save |> ignore
         Editor.clearMarks()
@@ -379,7 +381,10 @@ module Instructions = begin
     [<CommandMethod("micado_export_boxes_and_instructions")>]
     /// export boxes and instructions in order to import them back later
     let micado_export_boxes_and_instructions() =
-        if Serialization.export (activeBoxes()) (activeInstructions())
+        let boxes = 
+            activeBoxesProperties() 
+         |> Seq.map (fun prop -> boxPropName prop, boxPropBox prop)
+        if Serialization.export boxes (activeInstructions())
         then savingActiveCache()
         
     [<CommandMethod("micado_import_boxes_and_instructions")>]
@@ -387,32 +392,48 @@ module Instructions = begin
     let micado_import_boxes_and_instructions() =
         let entry = activeCacheEntry()
         let ic = activeInstructionChip()
+        let currentBoxes = activeBoxes()
         let checkUsed (used : Used) =
             used.Edges.MaximumElement < ic.Representation.EdgeCount
          && used.Valves.MaximumElement < ic.Chip.ControlLayer.Valves.Length            
         let checkInstruction (instruction : Instruction) =
             if instruction.Entity = null
-            then Editor.writeLine ("Skipping " ^ instruction.Name ^ " because associated entity doesn't exist in drawing.")
+            then Editor.writeLine ("Skipping instruction " ^ instruction.Name ^ " because associated entity doesn't exist in drawing.")
                  false
             else
             if checkUsed instruction.Used |> not
-            then Editor.writeLine ("Skipping " ^ instruction.Name ^ " because it doesn't fit with current flow representation.")
+            then Editor.writeLine ("Skipping instruction " ^ instruction.Name ^ " because it doesn't fit with current flow representation.")
                  false
             else
             let sims = entry.SimilarInstructions instruction
             if Seq.nonempty sims
             then let sim = Seq.hd sims
                  if sim.Entity.ObjectId = instruction.Entity.ObjectId
-                 then Editor.writeLine ("Skipping " ^ instruction.Name ^ " because associated entity is already in use.")
-                 else Editor.writeLine ("Skipping " ^ instruction.Name ^ " because its name is already in use.")
+                 then Editor.writeLine ("Skipping instruction " ^ instruction.Name ^ " because associated entity is already in use.")
+                 else Editor.writeLine ("Skipping instruction " ^ instruction.Name ^ " because its name is already in use.")
                  false
-            else Editor.writeLine ("Adding " ^ instruction.Name ^ ".")
+            else Editor.writeLine ("Adding instruction " ^ instruction.Name ^ ".")
                  true
+        let checkNameBox (name,box) =
+           if currentBoxes.ContainsKey name
+           then Editor.writeLine ("Skipping box " ^ name ^ "because its name is already in use.")
+                false
+           else
+           if checkUsed (FlowBox.mentionedUsed box) |> not
+           then Editor.writeLine ("Skipping box " ^ name ^ "because it doesn't fit with current flow representation.")
+                false
+           else Editor.writeLine ("Adding box " ^ name ^ ".")
+                true
         match Serialization.import() with
         | None -> ()
         | Some (boxes, instructions) ->
-            instructions |> Array.filter checkInstruction |> Array.iter addInstruction            
-    
+            let keepBoxes = boxes |> List.filter checkNameBox
+            let keepInstructions = instructions |> Array.filter checkInstruction
+            keepBoxes |> Seq.iter addBox
+            keepInstructions |> Seq.iter addInstruction
+            Editor.writeLine ("Summary")
+            Editor.writeLine ("Added " ^ keepBoxes.Length.ToString() ^ " boxes (out of " ^ boxes.Length.ToString() ^ ").")
+            Editor.writeLine ("Added " ^ keepInstructions.Length.ToString() ^ " instructions (out of " ^ instructions.Length.ToString() ^ ").")    
     // micado_
     //        new_
     //            box (?)
