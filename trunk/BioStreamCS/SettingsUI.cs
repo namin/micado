@@ -317,7 +317,14 @@ namespace BioStream.Micado.User
             string filepath = opf.FileName;
 
             Settings settings = Settings.ImportSettings(filepath);
-            LoadSettings(settings);
+            if (settings != null)
+            {
+                LoadSettings(settings);
+            }
+            else
+            {
+                MessageBox.Show("The provided file is not a valid micado settings file.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Exclamation); ;
+            }
         }
 
         private void buttonAddToFlowLayers_Click(object sender, EventArgs e)

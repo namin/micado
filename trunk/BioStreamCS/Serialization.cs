@@ -41,8 +41,6 @@ namespace BioStream.Micado.Common
         /// <returns>XML string</returns>
         public static String SerializeObject(Type type, Object pObject)
         {
-            //try
-            //{
                 String XmlizedString = null;
                 MemoryStream memoryStream = new MemoryStream();
                 XmlSerializer xs = new XmlSerializer(type);
@@ -52,12 +50,6 @@ namespace BioStream.Micado.Common
                 memoryStream = (MemoryStream)xmlTextWriter.BaseStream;
                 XmlizedString = UTF8ByteArrayToString(memoryStream.ToArray());
                 return XmlizedString;
-            //}
-            //catch (Exception)
-            //{
-            //    System.Console.WriteLine(e);
-            //    return null;
-            //}
         }
 
         /// <summary>

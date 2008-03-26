@@ -19,12 +19,27 @@ namespace BioStream.Micado.User
 
         private static String SerializeObject(Object pObject)
         {
-            return BioStream.Micado.Common.Serialization.SerializeObject(typeof(Settings), pObject);
+            try
+            {
+                return BioStream.Micado.Common.Serialization.SerializeObject(typeof(Settings), pObject);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         private static Object DeserializeObject(String pXmlizedString)
         {
-            return BioStream.Micado.Common.Serialization.DeserializeObject(typeof(Settings), pXmlizedString);
+            try
+            {
+                return BioStream.Micado.Common.Serialization.DeserializeObject(typeof(Settings), pXmlizedString);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+
         }
 
         internal static void ExportSettings(Settings settings, string filepath)
@@ -39,7 +54,7 @@ namespace BioStream.Micado.User
             StreamReader SR = File.OpenText(filepath);
             String str = SR.ReadToEnd();
             SR.Close();
-            return (Settings)DeserializeObject(str);
+            return DeserializeObject(str) as Settings;
         }
 
         internal static void ExportCurrentSettings(Settings settings)

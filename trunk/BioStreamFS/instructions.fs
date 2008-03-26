@@ -411,7 +411,7 @@ module Serialization =
                 Some (extractBoxesAndInstructions (doc.ChildNodes.Item(0)))
             with
                 | err ->
-                    Editor.writeLine ("Could not parse XML file: " ^ err.Message)
+                    Editor.writeLine ("Error: The provided file is not a valid micado data file.")
                     None
                                            
 module Convert =
