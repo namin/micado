@@ -25,7 +25,12 @@ let to2d (point3d : Point3d) =
 
 let upVector = new Vector2d(0.0, 1.0)
 let rightVector = new Vector2d(1.0, 0.0)
-        
+
+/// returns the point that is halfway between the two given points
+let averagePoint (pt1 : Point2d) (pt2 : Point2d) =
+    let avgc c1 c2 = (c1+c2)/2.0
+    new Point2d(avgc pt1.X pt2.X, avgc pt1.Y pt2.Y)
+            
 /// returns the two points, s.t.,
 /// the given point is mid-way in between,
 /// the distance between the given point and each returned point is the given width,

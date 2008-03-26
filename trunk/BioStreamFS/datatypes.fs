@@ -208,12 +208,19 @@ let to_entities a =
     
 /// control layer of a chip
 type Control ( valves : Valve list, punches : Punch list, others : RestrictedEntity list ) =
+    let valves = Array.of_list valves
+    let punches = Array.of_list punches
+    let others = Array.of_list others
     let doc = Autodesk.AutoCAD.ApplicationServices.Application.DocumentManager.MdiActiveDocument
     let lines = ref None : ControlLine array option ref
     let unconnectedLines = ref None : ControlLine array option ref
     let unconnectedPunches = ref None : Punch array option ref
     let obstacles = ref None : RestrictedEntity array option ref
     let lineNumbering = ref None : Permutation option ref
+    let valve2line = ref None : int array option ref
+    member v.computeValve2Line() =
+        let toLineIndex valve = v.searchLines valve |> Option.get
+        Array.map toLineIndex v.Valves
     member v.computeLineNumbering() =
         let getLineIndex i (line : ControlLine) =
             let index = line.Representative.Index
@@ -267,9 +274,9 @@ type Control ( valves : Valve list, punches : Punch list, others : RestrictedEnt
         Array.filter (fun (other : RestrictedEntity) ->
                           not (Array.exists (fun (line : ControlLine) -> List.mem other line.Others) v.Lines))
                      v.Others
-    member v.Valves = Array.of_list valves
-    member v.Punches = Array.of_list punches
-    member v.Others = Array.of_list others
+    member v.Valves = valves
+    member v.Punches = punches
+    member v.Others = others
     /// control lines
     member v.Lines with get() = lazyGet v.computeLines lines
     /// unconnected lines are control lines that do not have punches
@@ -295,4 +302,10 @@ type Control ( valves : Valve list, punches : Punch list, others : RestrictedEnt
         if not (Seq.nonempty results)
         then None
         else Some (Seq.hd results)
+    member v.Valve2Line with get() = lazyGet v.computeValve2Line valve2line
+    member v.ToOpenLines (openValves : Set<int>) =
+        let openLines = Array.create v.Lines.Length false
+        for vi in openValves do
+            openLines.[v.Valve2Line.[vi]] <- true
+        openLines
         
