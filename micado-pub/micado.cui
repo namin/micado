@@ -63,6 +63,116 @@ To access the Customize User Interface dialog box, click the Tools menu > Custom
           <LargeImage Name="RCDATA_16_HATEDI" />
         </Macro>
       </MenuMacro>
+      <MenuMacro UID="MMU_0005">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+          <Name xlate="true" UID="XLS_6422">NewInputBox</Name>
+          <Command>^C^C_micado_new_box_input</Command>
+          <HelpString xlate="true" UID="XLS_6423">New input box</HelpString>
+          <SmallImage Name="C:\micado\Icons\NewBoxInput.BMP" />
+          <LargeImage Name="C:\micado\Icons\NewBoxInput.BMP" />
+        </Macro>
+      </MenuMacro>
+      <MenuMacro UID="MMU_0006">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+          <Name xlate="true" UID="XLS_6427">NewOutputBox</Name>
+          <Command>^C^C_micado_new_box_output</Command>
+          <HelpString xlate="true" UID="XLS_6428">New Output Box</HelpString>
+          <SmallImage Name="C:\micado\Icons\NewBoxOutput.BMP" />
+          <LargeImage Name="C:\micado\Icons\NewBoxOutput.BMP" />
+        </Macro>
+      </MenuMacro>
+      <MenuMacro UID="MMU_0007">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+          <Name xlate="true" UID="XLS_6430">NewPathBox</Name>
+          <Command>^C^C_micado_new_box_path</Command>
+          <HelpString xlate="true" UID="XLS_6431">New Path Box</HelpString>
+          <SmallImage Name="C:\micado\Icons\NewBoxPath.BMP" />
+          <LargeImage Name="C:\micado\Icons\NewBoxPath.BMP" />
+        </Macro>
+      </MenuMacro>
+      <MenuMacro UID="MMU_0008">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+          <Name xlate="true" UID="XLS_6433">NewSeqBox</Name>
+          <Command>^C^C_micado_new_box_seq</Command>
+          <HelpString xlate="true" UID="XLS_6434">New Seq Box</HelpString>
+          <SmallImage Name="C:\micado\Icons\NewBoxSeq.BMP" />
+          <LargeImage Name="C:\micado\Icons\NewBoxSeq.BMP" />
+        </Macro>
+      </MenuMacro>
+      <MenuMacro UID="MMU_0009">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+          <Name xlate="true" UID="XLS_6436">NewOrBox</Name>
+          <Command>^C^C_micado_new_box_or</Command>
+          <HelpString xlate="true" UID="XLS_6437">New Or Box</HelpString>
+          <SmallImage Name="C:\micado\Icons\NewBoxOr.BMP" />
+          <LargeImage Name="C:\micado\Icons\NewBoxOr.BMP" />
+        </Macro>
+      </MenuMacro>
+      <MenuMacro UID="MMU_0010">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+          <Name xlate="true" UID="XLS_6439">NewAndBox</Name>
+          <Command>^C^C_micado_new_box_and</Command>
+          <HelpString xlate="true" UID="XLS_6440">New And Box</HelpString>
+          <SmallImage Name="C:\micado\Icons\NewBoxAnd.BMP" />
+          <LargeImage Name="C:\micado\Icons\NewBoxAnd.BMP" />
+        </Macro>
+      </MenuMacro>
+      <MenuMacro UID="MMU_0011">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+          <Name xlate="true" UID="XLS_6442">NewInstructionSet</Name>
+          <Command>^C^C_micado_new_instruction_set</Command>
+          <HelpString xlate="true" UID="XLS_6443">Generate a new instruction set from any box</HelpString>
+          <SmallImage Name="C:\micado\Icons\NewInstructionSet.BMP" />
+          <LargeImage Name="C:\micado\Icons\NewInstructionSet.BMP" />
+        </Macro>
+      </MenuMacro>
+      <MenuMacro UID="MMU_0012">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+          <Name xlate="true" UID="XLS_6446">MarkBox</Name>
+          <Command>^C^C_micado_mark_box</Command>
+          <HelpString xlate="true" UID="XLS_6447">Mark a box</HelpString>
+          <SmallImage Name="C:\micado\Icons\MarkBox.BMP" />
+          <LargeImage Name="C:\micado\Icons\MarkBox.BMP" />
+        </Macro>
+      </MenuMacro>
+      <MenuMacro UID="MMU_0013">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+          <Name xlate="true" UID="XLS_6449">MarkInstruction</Name>
+          <Command>^C^C_micado_mark_instruction</Command>
+          <HelpString xlate="true" UID="XLS_6450">Mark an instruction by selecting its associated entity</HelpString>
+          <SmallImage Name="C:\micado\Icons\MarkInstruction.BMP" />
+          <LargeImage Name="C:\micado\Icons\MarkInstruction.BMP" />
+        </Macro>
+      </MenuMacro>
+      <MenuMacro UID="MMU_0014">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+          <Name xlate="true" UID="XLS_6452">ExportToGui</Name>
+          <Command>^C^C_micado_export_to_gui</Command>
+          <HelpString xlate="true" UID="XLS_6453">Export image and Java dat files for generating GUI</HelpString>
+          <SmallImage Name="C:\micado\Icons\ExportToGui.BMP" />
+          <LargeImage Name="C:\micado\Icons\ExportToGui.BMP" />
+        </Macro>
+      </MenuMacro>
     </MacroGroup>
     <MenuRoot>
       <AcceleratorRoot />
@@ -232,6 +342,82 @@ To access the Customize User Interface dialog box, click the Tools menu > Custom
             <Name xlate="true" UID="XLS_6414">Settings</Name>
             <MenuItem>
               <MacroRef MenuMacroID="MMU_0004" />
+            </MenuItem>
+          </ToolbarButton>
+        </Toolbar>
+        <Toolbar ToolbarOrient="floating" ToolbarVisible="show" xval="200" yval="200" rows="1" UID="TBU_0005">
+          <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+          <Alias>MICADO_INSTRUCTIONS</Alias>
+          <Description xlate="true" UID="XLS_6426">Instruction Sets Definition and Export to Java GUI</Description>
+          <Name xlate="true" UID="XLS_6425">micado_instructions</Name>
+          <ToolbarButton IsSeparator="false" UID="TBBU_0006">
+            <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+            <Name xlate="true" UID="XLS_6424">New Input Box</Name>
+            <MenuItem>
+              <MacroRef MenuMacroID="MMU_0005" />
+            </MenuItem>
+          </ToolbarButton>
+          <ToolbarButton IsSeparator="false" UID="TBBU_0007">
+            <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+            <Name xlate="true" UID="XLS_6429">New Output Box</Name>
+            <MenuItem>
+              <MacroRef MenuMacroID="MMU_0006" />
+            </MenuItem>
+          </ToolbarButton>
+          <ToolbarButton IsSeparator="false" UID="TBBU_0008">
+            <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+            <Name xlate="true" UID="XLS_6432">New Path Box</Name>
+            <MenuItem>
+              <MacroRef MenuMacroID="MMU_0007" />
+            </MenuItem>
+          </ToolbarButton>
+          <ToolbarButton IsSeparator="false" UID="TBBU_0009">
+            <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+            <Name xlate="true" UID="XLS_6435">New Seq Box</Name>
+            <MenuItem>
+              <MacroRef MenuMacroID="MMU_0008" />
+            </MenuItem>
+          </ToolbarButton>
+          <ToolbarButton IsSeparator="false" UID="TBBU_0010">
+            <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+            <Name xlate="true" UID="XLS_6438">New Or Box</Name>
+            <MenuItem>
+              <MacroRef MenuMacroID="MMU_0009" />
+            </MenuItem>
+          </ToolbarButton>
+          <ToolbarButton IsSeparator="false" UID="TBBU_0011">
+            <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+            <Name xlate="true" UID="XLS_6441">New And Box</Name>
+            <MenuItem>
+              <MacroRef MenuMacroID="MMU_0010" />
+            </MenuItem>
+          </ToolbarButton>
+          <ToolbarButton IsSeparator="false" UID="TBBU_0013">
+            <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+            <Name xlate="true" UID="XLS_6445">New Instruction Set</Name>
+            <MenuItem>
+              <MacroRef MenuMacroID="MMU_0011" />
+            </MenuItem>
+          </ToolbarButton>
+          <ToolbarButton IsSeparator="false" UID="TBBU_0014">
+            <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+            <Name xlate="true" UID="XLS_6448">Mark a Box</Name>
+            <MenuItem>
+              <MacroRef MenuMacroID="MMU_0012" />
+            </MenuItem>
+          </ToolbarButton>
+          <ToolbarButton IsSeparator="false" UID="TBBU_0015">
+            <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+            <Name xlate="true" UID="XLS_6451">Mark an Instruction</Name>
+            <MenuItem>
+              <MacroRef MenuMacroID="MMU_0013" />
+            </MenuItem>
+          </ToolbarButton>
+          <ToolbarButton IsSeparator="false" UID="TBBU_0016">
+            <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+            <Name xlate="true" UID="XLS_6454">Export to Java GUI</Name>
+            <MenuItem>
+              <MacroRef MenuMacroID="MMU_0014" />
             </MenuItem>
           </ToolbarButton>
         </Toolbar>
