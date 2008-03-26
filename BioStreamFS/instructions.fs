@@ -183,13 +183,17 @@ let toExtents2d (entity : Entity) =
     let maxPt = ext3d.MaxPoint |> Geometry.to2d
     new Extents2d(minPt, maxPt)
 
-let rectangle (ext : Extents2d) =
+let rectangleCorners (ext : Extents2d) =
     let minPt = ext.MinPoint
     let maxPt = ext.MaxPoint
-    let pts = [minPt; new Point2d(maxPt.X, minPt.Y); maxPt; new Point2d(minPt.X, maxPt.Y)]
+    let pts = [|minPt; new Point2d(maxPt.X, minPt.Y); maxPt; new Point2d(minPt.X, maxPt.Y)|]
+    pts    
+
+let rectangle (ext : Extents2d) =
+    let pts = rectangleCorners ext
     let polyline = new Polyline()
     let addVertex = addVertexTo polyline
-    List.iter addVertex pts
+    Seq.iter addVertex pts
     polyline.Closed <- true
     polyline
                  

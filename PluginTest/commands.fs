@@ -248,5 +248,3 @@ let test_number_control_lines() =
 let test_verify_control_line_number() =
     let chip = Chip.create (Database.collectChipEntities())
     verify_control_line_number chip.ControlLayer
-
-    

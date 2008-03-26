@@ -207,3 +207,12 @@ let instruction_see() =
     Editor.promptSelectEntity "Select the entity associated with the extents of the instruction: "
  |> Option.map seeInstruction
  |> ignore
+ 
+[<CommandMethod("micado_instruction_export_gui")>]
+/// test exporting a java gui
+let instruction_export_gui() =
+    let ic = getIChip()
+    let entity2instruction = getEntity2Instruction()
+    let instructions = entity2instruction.Values |> Array.of_seq
+    Export.GUI.prompt ic instructions |> ignore
+    
