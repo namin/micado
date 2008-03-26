@@ -97,7 +97,10 @@ module Instructions = begin
             then Editor.writeLine "No instruction associated with entity."
                  None
             else Some instructions.[entity]
-        member v.Instructions with get() = instructions.Values |> Array.of_seq
+        member v.Instructions with get() = let a = instructions.Values |> Array.of_seq
+                                           a |> Array.sort (fun (i : Instruction) (i' : Instruction) -> 
+                                                                compare i.Name i'.Name)
+                                           a                            
         member v.UnsavedChanges with get() = unsavedChanges
                 
     let globalCache = new Dictionary<Document, CacheEntry>()
@@ -340,18 +343,27 @@ module Instructions = begin
             | None -> ()
             | Some instructions -> Seq.iter addInstruction instructions
 
+    let markInstruction (instruction : Instruction) =
+        Editor.writeLine ((if instruction.Partial then "partial" else "complete")
+                          ^ " instruction " ^ instruction.Name)
+        Debug.drawExtents instruction.Extents
+        Debug.drawUsed (activeInstructionChip()) instruction.Used
+        
     [<CommandMethod("micado_mark_instruction")>]
     /// prompts the user to select an entity associated with an instruction and marks the instruction on the drawing
     let micado_mark_instruction() =
         Editor.promptSelectEntity "Select an entity associated with the extents of an instruction: "
      |> Option.bind getInstruction
-     |> Option.map (fun instruction ->
-                        Editor.writeLine ((if instruction.Partial then "partial" else "complete")
-                                          ^ " instruction " ^ instruction.Name)
-                        Debug.drawExtents (instruction.Extents)
-                        Debug.drawUsed (activeInstructionChip()) (instruction.Used))
+     |> Option.map markInstruction
      |> ignore
 
+    [<CommandMethod("micado_list_instructions")>]
+    /// mark the instructions one after the other
+    let micado_list_instructions() =
+        Editor.clearMarks()
+        for instruction in activeInstructions() do
+            markInstruction instruction
+            
     [<CommandMethod("micado_export_to_gui")>]
     /// export files for the java GUI
     let micado_export_to_gui() =
@@ -375,7 +387,7 @@ module Instructions = begin
     //             instruction (print out partial/complete and name) (v)
     //        list_
     //             boxes (v)
-    //             instructions (?)
+    //             instructions (v)
     //        rename_box (v)
     //        export_
     //               to_gui (v)
