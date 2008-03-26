@@ -325,11 +325,6 @@ module Serialization =
             | _ -> ()
         Option.get boxes, Option.get instructions
 
-    //  Primitive of Attachments * Used
-    //| Extended of Attachments * Used * FlowBox
-    //| Or of Attachments * FlowBox array * Ordering
-    //| And of Attachments * FlowBox array
-    //| Seq of Attachments * FlowBox array  
     let rec exportBox (tw : StreamWriter) box =
         let writeAttachment name att =
             if Option.is_some att
@@ -415,9 +410,10 @@ module Serialization =
             try
                 Some (extractBoxesAndInstructions (doc.ChildNodes.Item(0)))
             with
-                | Failure(msg) ->
-                    Editor.writeLine ("Could not parse file: " ^ msg)
-                    None                        
+                | err ->
+                    Editor.writeLine ("Could not parse XML file: " ^ err.Message)
+                    None
+                                           
 module Convert =
     open BioStream.Micado.Plugin // needed for Database.writeEntity
 
