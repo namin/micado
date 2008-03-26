@@ -68,26 +68,6 @@ let writeLine message =
     editor().WriteMessage(message ^ "\n")
     |> ignore
 
-/// prompts the user to answer yes or not:
-/// returns true if 'yes' and false if 'no',
-/// the boolean parameter is the default similarly coded yes/no value
-let promptYesOrNo defaultYes message =
-    let options = new PromptKeywordOptions(message)
-    options.Keywords.Add("Yes")
-    options.Keywords.Add("No")
-    options.AllowArbitraryInput <- true
-    let prompt =
-        try
-            editor().GetKeywords(options)
-        with _ -> null
-    let promptPartial x =
-        prompt.StringResult.StartsWith(x)
-    let promptNot x y =
-        prompt = null || (not (promptPartial x) && not (promptPartial y))
-    match defaultYes with
-    | true -> promptNot "n" "N"
-    | false -> promptNot "y" "Y"
-
 /// prompts the user to select an entity
 /// returns a tuple of the selected entity and the picked point if the user complies
 let promptSelectEntityAndPoint message =
@@ -291,7 +271,19 @@ let promptSelectIdName message keywords  =
         with _ -> null
     promptFor |> stringIfValid |> Option.map originalKeyword 
  |> Option.map (fun (w) -> writeLine w; w)
-                
+
+/// prompts the user to answer yes or not:
+/// returns true if 'yes' and false if 'no',
+/// the boolean parameter is the default similarly coded yes/no value
+let promptYesOrNo defaultYes message =
+    match promptSelectIdName message ["yes";"no"] with
+    | None -> defaultYes
+    | Some key ->
+        match key with
+        | "yes" -> true
+        | "no" -> false
+        | _ -> defaultYes // shouldn't happen
+                        
 module Extra =
 
     open BioStream.Micado.Common.Datatypes

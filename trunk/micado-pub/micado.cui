@@ -173,6 +173,28 @@ To access the Customize User Interface dialog box, click the Tools menu > Custom
           <LargeImage Name="C:\micado\Icons\ExportToGui.BMP" />
         </Macro>
       </MenuMacro>
+      <MenuMacro UID="MMU_0015">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+          <Name xlate="true" UID="XLS_6455">NewOrInputBox</Name>
+          <Command>^C^C_micado_new_box_or_input</Command>
+          <HelpString xlate="true" UID="XLS_6456">Shortcut for new or box of inputs</HelpString>
+          <SmallImage Name="C:\micado\Icons\NewBoxOrInput.BMP" />
+          <LargeImage Name="C:\micado\Icons\NewBoxOrInput.BMP" />
+        </Macro>
+      </MenuMacro>
+      <MenuMacro UID="MMU_0016">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+          <Name xlate="true" UID="XLS_6458">NewOrOutputBox</Name>
+          <Command>^C^C_micado_new_box_or_output</Command>
+          <HelpString xlate="true" UID="XLS_6459">Shortcut for new or box of outputs</HelpString>
+          <SmallImage Name="C:\micado\Icons\NewBoxOrOutput.BMP" />
+          <LargeImage Name="C:\micado\Icons\NewBoxOrOutput.BMP" />
+        </Macro>
+      </MenuMacro>
     </MacroGroup>
     <MenuRoot>
       <AcceleratorRoot />
@@ -362,6 +384,20 @@ To access the Customize User Interface dialog box, click the Tools menu > Custom
             <Name xlate="true" UID="XLS_6429">New Output Box</Name>
             <MenuItem>
               <MacroRef MenuMacroID="MMU_0006" />
+            </MenuItem>
+          </ToolbarButton>
+          <ToolbarButton IsSeparator="false" UID="TBBU_0017">
+            <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+            <Name xlate="true" UID="XLS_6457">New Or Input Box</Name>
+            <MenuItem>
+              <MacroRef MenuMacroID="MMU_0015" />
+            </MenuItem>
+          </ToolbarButton>
+          <ToolbarButton IsSeparator="false" UID="TBBU_0018">
+            <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+            <Name xlate="true" UID="XLS_6460">New Or Output Box</Name>
+            <MenuItem>
+              <MacroRef MenuMacroID="MMU_0016" />
             </MenuItem>
           </ToolbarButton>
           <ToolbarButton IsSeparator="false" UID="TBBU_0008">

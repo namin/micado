@@ -175,6 +175,17 @@ module Instructions = begin
 
     [<CommandMethod("micado_new_box_path")>]    
     /// prompts the user to create a new path box
+    
+    [<CommandMethod("micado_new_box_or_input")>]    
+    /// prompts the user to create a new or box made of input boxes
+    let micado_new_box_or_input() =
+        promptNewBox Interactive.promptOrInputBox
+
+    [<CommandMethod("micado_new_box_or_output")>]    
+    /// prompts the user to create a new or box made of output boxes
+    let micado_new_box_or_output() =
+        promptNewBox Interactive.promptOrOutputBox
+        
     let micado_new_box_path() =
         promptNewBox Interactive.promptPathBox
                          
@@ -356,6 +367,8 @@ module Instructions = begin
     //                seq (v)
     //                and (v)
     //                or (v)
+    //                  _input (v)
+    //                  _output (v)
     //            instruction_set (v)
     //        mark_
     //             box (print out kind and name) (v)
