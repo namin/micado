@@ -101,16 +101,16 @@ let promptBox f =
  |> Option.map (drawNsaveNclear ic)
  |> ignore
                                       
-[<CommandMethod("micado_instruction_prompt_path_box")>]
+[<CommandMethod("micado_debug_instruction_prompt_path_box")>]
 /// prompts for a path flow box
 let instruction_prompt_path_box() =
     promptBox Instructions.Interactive.promptPathBox
 
-[<CommandMethod("micado_instruction_prompt_input_box")>]
+[<CommandMethod("micado_debug_instruction_prompt_input_box")>]
 let instruction_prompt_input_box() =
     promptBox Instructions.Interactive.promptInputBox
 
-[<CommandMethod("micado_instruction_prompt_output_box")>]
+[<CommandMethod("micado_debug_instruction_prompt_output_box")>]
 let instruction_prompt_output_box() =
     promptBox Instructions.Interactive.promptOutputBox
 
@@ -137,19 +137,19 @@ let promptCombinationBox f =
         box  |> Option.map (drawNsaveNclear ic) |> ignore)
  |> ignore
                      
-[<CommandMethod("micado_instruction_prompt_seq_box")>]
+[<CommandMethod("micado_debug_instruction_prompt_seq_box")>]
 let instruction_prompt_seq_box() =
     promptCombinationBox Instructions.Interactive.promptSeqBox
 
-[<CommandMethod("micado_instruction_prompt_and_box")>]
+[<CommandMethod("micado_debug_instruction_prompt_and_box")>]
 let instruction_prompt_and_box() =
     promptCombinationBox Instructions.Interactive.promptAndBox
 
-[<CommandMethod("micado_instruction_prompt_or_box")>]
+[<CommandMethod("micado_debug_instruction_prompt_or_box")>]
 let instruction_prompt_or_box() =
     promptCombinationBox Instructions.Interactive.promptOrBox
                             
-[<CommandMethod("micado_instruction_list_boxes")>]
+[<CommandMethod("micado_debug_instruction_list_boxes")>]
 /// lists all flow boxes 
 let instruction_list_boxes() =
     let lst = getNamedFlowBoxesList()
@@ -160,7 +160,7 @@ let instruction_list_boxes() =
  |> List.iter (fst >> Editor.writeLine)
     
 
-[<CommandMethod("micado_instruction_clear_cache")>]    
+[<CommandMethod("micado_debug_instruction_clear_cache")>]    
 /// clear the cache of both the instruction chip and the flow boxes for the active drawing
 let instruction_clear_cache() =
     let d = doc()
@@ -168,14 +168,14 @@ let instruction_clear_cache() =
     doc2namedFlowBoxes.Remove(d) |> ignore
     doc2entity2instruction.Remove(d) |> ignore
     
-[<CommandMethod("micado_instruction_draw_box")>]    
+[<CommandMethod("micado_debug_instruction_draw_box")>]    
 /// gets and draw a flow box
 let instruction_draw_box() =
     promptSelectBox "Box "
  |> Option.map (fun (s) -> Debug.drawFlowBox (getIChip()) s)
  |> ignore
  
-[<CommandMethod("micado_instruction_build")>]    
+[<CommandMethod("micado_debug_instruction_build")>]    
 /// build instructions from a flow box
 let instruction_build() =
     let ic = getIChip()
@@ -192,7 +192,7 @@ let instruction_build() =
             for instruction in instructions do
                 entity2instruction.Add(instruction.Entity,instruction)
 
-[<CommandMethod("micado_instruction_see")>]    
+[<CommandMethod("micado_debug_instruction_see")>]    
 /// see an instruction
 let instruction_see() =
     let seeInstruction entity =
@@ -208,7 +208,7 @@ let instruction_see() =
  |> Option.map seeInstruction
  |> ignore
  
-[<CommandMethod("micado_instruction_export_gui")>]
+[<CommandMethod("micado_debug_instruction_export_gui")>]
 /// test exporting a java gui
 let instruction_export_gui() =
     let ic = getIChip()
