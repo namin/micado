@@ -100,8 +100,13 @@ module Instructions = begin
         member v.Instructions with get() = let a = instructions.Values |> Array.of_seq
                                            a |> Array.sort (fun (i : Instruction) (i' : Instruction) -> 
                                                                 compare i.Name i'.Name)
-                                           a                            
-        member v.UnsavedChanges with get() = unsavedChanges
+                                           a
+        member v.SimilarInstructions (instruction : Instruction) =
+            instructions.Values
+         |> Seq.filter (fun (instruction' : Instruction) -> 
+                            instruction'.Entity.ObjectId = instruction.Entity.ObjectId 
+                         || instruction'.Name = instruction.Name)                         
+        member v.UnsavedChanges with get() = unsavedChanges and set(value) = unsavedChanges <- value
                 
     let globalCache = new Dictionary<Document, CacheEntry>()
 
@@ -129,7 +134,9 @@ module Instructions = begin
     let getInstruction = activeCacheEntry().GetInstruction
         
     let savedActiveCache() = activeCacheEntry().UnsavedChanges |> not
-        
+
+    let savingActiveCache() = activeCacheEntry().UnsavedChanges <- false
+            
     let setActiveBoxes map =
         activeCacheEntry().Boxes <- map
     
@@ -368,7 +375,44 @@ module Instructions = begin
     /// export files for the java GUI
     let micado_export_to_gui() =
         Export.GUI.prompt (activeInstructionChip()) (activeInstructions()) |> ignore
-                                                         
+        
+    [<CommandMethod("micado_export_boxes_and_instructions")>]
+    /// export boxes and instructions in order to import them back later
+    let micado_export_boxes_and_instructions() =
+        if Serialization.export (activeBoxes()) (activeInstructions())
+        then savingActiveCache()
+        
+    [<CommandMethod("micado_import_boxes_and_instructions")>]
+    /// import boxes and instructions from an earlier exported file
+    let micado_import_boxes_and_instructions() =
+        let entry = activeCacheEntry()
+        let ic = activeInstructionChip()
+        let checkUsed (used : Used) =
+            used.Edges.MaximumElement < ic.Representation.EdgeCount
+         && used.Valves.MaximumElement < ic.Chip.ControlLayer.Valves.Length            
+        let checkInstruction (instruction : Instruction) =
+            if instruction.Entity = null
+            then Editor.writeLine ("Skipping " ^ instruction.Name ^ " because associated entity doesn't exist in drawing.")
+                 false
+            else
+            if checkUsed instruction.Used |> not
+            then Editor.writeLine ("Skipping " ^ instruction.Name ^ " because it doesn't fit with current flow representation.")
+                 false
+            else
+            let sims = entry.SimilarInstructions instruction
+            if Seq.nonempty sims
+            then let sim = Seq.hd sims
+                 if sim.Entity.ObjectId = instruction.Entity.ObjectId
+                 then Editor.writeLine ("Skipping " ^ instruction.Name ^ " because associated entity is already in use.")
+                 else Editor.writeLine ("Skipping " ^ instruction.Name ^ " because its name is already in use.")
+                 false
+            else Editor.writeLine ("Adding " ^ instruction.Name ^ ".")
+                 true
+        match Serialization.import() with
+        | None -> ()
+        | Some (boxes, instructions) ->
+            instructions |> Array.filter checkInstruction |> Array.iter addInstruction            
+    
     // micado_
     //        new_
     //            box (?)

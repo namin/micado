@@ -26,6 +26,25 @@ let readEntityFromId (entId : ObjectId) =
     tr.Commit()
     entity :?> Entity
 
+/// searches for the entity with the given handle in the active database
+/// and returns it if found
+let readEntityFromHandle handle =
+    let db = database()
+    use tr = db.TransactionManager.StartTransaction()
+    let bt = tr.GetObject(db.BlockTableId, OpenMode.ForRead, false) :?> BlockTable
+    let btr = tr.GetObject(bt.[BlockTableRecord.ModelSpace], OpenMode.ForRead, false) :?> BlockTableRecord
+    let search id =
+        match tr.GetObject(id, OpenMode.ForRead, true) with
+        | :? Entity as ent ->
+            if ent.Handle.Value = handle
+            then Some ent
+            else None
+        | _ -> None
+    let results = Seq.choose search {for id in btr -> id}
+    if Seq.nonempty results
+    then Some (Seq.hd results)
+    else None
+            
 /// writes the entity to the active database
 /// returns the given entity (for chaining)
 let writeEntity (entity : #Entity) =
