@@ -154,12 +154,115 @@ type Instruction (partial : bool, root: string, indices : int array, entity : En
     member v.Entity = entity
     member v.Name = name
     member v.Root = root
+    member v.Indices = indices
     member v.Extents = toExtents2d entity
     member v.Partial = partial
 
+module Serialization =
+    open System.IO
+    open BioStream.Micado.Plugin // for Database.readEntityFromHandle
+    
+    let promptSaveFilename() =
+        let sfd = new System.Windows.Forms.SaveFileDialog()
+        sfd.Filter <- "micado data (*.xml)|*.xml"
+        sfd.Title <- "Export Boxes & Instructions"
+        if sfd.ShowDialog() <> System.Windows.Forms.DialogResult.OK
+        then None
+        else Some sfd.FileName
 
+    let promptOpenFilename() =
+         let opf = new System.Windows.Forms.OpenFileDialog();
+         opf.Filter <- "micado data (*.xml)|*.xml|All files (*.*)|*.*"
+         opf.Title <- "Import Boxes & Instructions"
+         if opf.ShowDialog() <> System.Windows.Forms.DialogResult.OK
+         then None
+         else Some opf.FileName
+            
+    let exportInts (tw : StreamWriter) seq =
+        tw.Write("[")
+        tw.Write(System.String.Join(";", seq |> Seq.map (fun (i : int) -> i.ToString()) |> Seq.to_array))
+        tw.Write("]")
+    
+    let importInts (text : string) =
+        text.Split([|'[';']';';'|]) 
+     |> Array.map (fun s -> s.Trim()) 
+     |> Array.filter (fun s -> s <> "")
+     |> Array.map System.Int32.Parse
+    
+    let importIntSet = importInts >> Set.of_array
+    
+    let exportEntity (tw : StreamWriter) (entity : Entity) =
+        tw.Write(entity.Handle.Value.ToString())
+
+    let importEntity (text : string) =
+        let handle = System.Int64.Parse(text)
+        match Database.readEntityFromHandle handle with
+        | None -> null
+        | Some entity -> entity
+    
+    let exportPartial (tw : StreamWriter) partial =
+        tw.Write(if partial then "partial" else "complete")
+
+    let importPartial (text : string) =
+        match text with
+        | "partial" -> true
+        | "complete" -> false
+        | _ -> failwith "invalid instruction partial tag"
+                
+    let exportInstruction (tw : StreamWriter) (instruction : Instruction) =
+        exportPartial tw instruction.Partial
+        tw.Write(",")
+        tw.Write(instruction.Root)
+        tw.Write(",")
+        exportInts tw instruction.Indices
+        tw.Write(",")
+        exportEntity tw instruction.Entity
+        tw.Write(",")
+        exportInts tw instruction.Used.Edges
+        tw.Write(",")
+        exportInts tw instruction.Used.Valves
+
+    let importInstruction (text : string) =
+        match text.Split([|','|]) with
+        | [| partialText; root; indicesText; entityText; edgesText; valvesText |] ->
+            let partial = importPartial partialText
+            let indices = importInts indicesText
+            let entity = importEntity entityText
+            let edges = importIntSet edgesText
+            let valves = importIntSet valvesText
+            new Instruction (partial, root, indices, entity, used edges valves)
+        | _ ->
+            failwith "invalid instruction format"
+    
+    let exportInstructions (tw : StreamWriter) instructions =
+        instructions |> Seq.iter (exportInstruction tw >> (fun () -> tw.WriteLine("")))
+            
+    let importInstructions (text : string) =
+        text.Split([|'\r';'\n'|]) |> Array.filter (fun s -> s <> "") |> Array.map importInstruction
+
+    let export boxes instructions =
+        match promptSaveFilename() with
+        | None -> false
+        | Some filename ->
+            use tw = new StreamWriter(filename)
+            exportInstructions tw instructions
+            Editor.writeLine ("Micado boxes & instructions exported to " ^ filename ^ ".")
+            true
+    
+    let import() =
+        match promptOpenFilename() with
+        | None -> None
+        | Some filename ->
+            let text = use rw = new StreamReader(filename) in rw.ReadToEnd()
+            try
+                let instructions = importInstructions text
+                Some ([], instructions)
+            with
+                | Failure(msg) ->
+                    Editor.writeLine ("Could not parse file: " ^ msg)
+                    None                        
 module Convert =
-    open BioStream.Micado.Plugin
+    open BioStream.Micado.Plugin // needed for Database.writeEntity
 
     let rec to_instructions partial root box (extents : Extents2d) indices =
         match box with
