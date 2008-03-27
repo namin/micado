@@ -1,4 +1,21 @@
-This file contains directions on how to update a microfluidics GUI.
+===========
+Quick Steps
+===========
+
+Here are the steps to create a GUI application called AppName:
+
+1. In Micado, export to a GUI, saving the PNG image as AppName.png and the Java data file as AppName.dat, in this directory.
+
+2. In a command prompt, cd to this directory, and type:
+   build.bat AppName
+   This script will launch the GUI.
+   If necessary, it will generate and compile all the *.java files using the application Template as a base.
+
+=======
+Details
+=======
+
+This remaining of this file contains directions on how to update a microfluidics GUI.
 
 I. REQUIRED SOFTWARE
 --------------------
@@ -10,6 +27,9 @@ You will need to install the following software to use the program:
 
 2. If using the Carl Zeiss microscope, may need Carl Zeiss program (?)
 
+3. Python
+   http://www.python.org/download/
+   
 For the software to run correctly, do the following (one-time) setup:
 
 1. Find the "ij.jar" file at "..\lib\ij.jar".  
