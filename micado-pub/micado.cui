@@ -195,6 +195,50 @@ To access the Customize User Interface dialog box, click the Tools menu > Custom
           <LargeImage Name="C:\micado\Icons\NewBoxOrOutput.BMP" />
         </Macro>
       </MenuMacro>
+      <MenuMacro UID="MMU_0017">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+          <Name xlate="true" UID="XLS_6461">ExportBoxesAndInstructions</Name>
+          <Command>^C^C_micado_export_boxes_and_instructions</Command>
+          <HelpString xlate="true" UID="XLS_6462">Export boxes and instructions for later</HelpString>
+          <SmallImage Name="C:\micado\Icons\ExportBoxesAndInstructions.BMP" />
+          <LargeImage Name="C:\micado\Icons\ExportBoxesAndInstructions.BMP" />
+        </Macro>
+      </MenuMacro>
+      <MenuMacro UID="MMU_0018">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+          <Name xlate="true" UID="XLS_6464">ImportBoxesAndInstructions</Name>
+          <Command>^C^C_micado_import_boxes_and_instructions</Command>
+          <HelpString xlate="true" UID="XLS_6465">Import Boxes and Instructions exported earlier</HelpString>
+          <SmallImage Name="C:\micado\Icons\ImportBoxesAndInstructions.BMP" />
+          <LargeImage Name="C:\micado\Icons\ImportBoxesAndInstructions.BMP" />
+        </Macro>
+      </MenuMacro>
+      <MenuMacro UID="MMU_0019">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+          <Name xlate="true" UID="XLS_6467">ClearMarks</Name>
+          <Command>^C^C_micado_clear_marks</Command>
+          <HelpString xlate="true" UID="XLS_6468">Clear temporary indicator marks</HelpString>
+          <SmallImage Name="C:\micado\Icons\ClearMarks.BMP" />
+          <LargeImage Name="C:\micado\Icons\ClearMarks.BMP" />
+        </Macro>
+      </MenuMacro>
+      <MenuMacro UID="MMU_0020">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+          <Name xlate="true" UID="XLS_6470">ListInstructions</Name>
+          <Command>^C^C_micado_list_instructions</Command>
+          <HelpString xlate="true" UID="XLS_6471">List all instructions at once</HelpString>
+          <SmallImage Name="C:\micado\Icons\ListInstructions.BMP" />
+          <LargeImage Name="C:\micado\Icons\ListInstructions.BMP" />
+        </Macro>
+      </MenuMacro>
     </MacroGroup>
     <MenuRoot>
       <AcceleratorRoot />
@@ -428,18 +472,18 @@ To access the Customize User Interface dialog box, click the Tools menu > Custom
               <MacroRef MenuMacroID="MMU_0010" />
             </MenuItem>
           </ToolbarButton>
-          <ToolbarButton IsSeparator="false" UID="TBBU_0013">
-            <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
-            <Name xlate="true" UID="XLS_6445">New Instruction Set</Name>
-            <MenuItem>
-              <MacroRef MenuMacroID="MMU_0011" />
-            </MenuItem>
-          </ToolbarButton>
           <ToolbarButton IsSeparator="false" UID="TBBU_0014">
             <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
             <Name xlate="true" UID="XLS_6448">Mark a Box</Name>
             <MenuItem>
               <MacroRef MenuMacroID="MMU_0012" />
+            </MenuItem>
+          </ToolbarButton>
+          <ToolbarButton IsSeparator="false" UID="TBBU_0013">
+            <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+            <Name xlate="true" UID="XLS_6445">New Instruction Set</Name>
+            <MenuItem>
+              <MacroRef MenuMacroID="MMU_0011" />
             </MenuItem>
           </ToolbarButton>
           <ToolbarButton IsSeparator="false" UID="TBBU_0015">
@@ -449,11 +493,39 @@ To access the Customize User Interface dialog box, click the Tools menu > Custom
               <MacroRef MenuMacroID="MMU_0013" />
             </MenuItem>
           </ToolbarButton>
+          <ToolbarButton IsSeparator="false" UID="TBBU_0022">
+            <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+            <Name xlate="true" UID="XLS_6472">List Instructions</Name>
+            <MenuItem>
+              <MacroRef MenuMacroID="MMU_0020" />
+            </MenuItem>
+          </ToolbarButton>
           <ToolbarButton IsSeparator="false" UID="TBBU_0016">
             <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
             <Name xlate="true" UID="XLS_6454">Export to Java GUI</Name>
             <MenuItem>
               <MacroRef MenuMacroID="MMU_0014" />
+            </MenuItem>
+          </ToolbarButton>
+          <ToolbarButton IsSeparator="false" UID="TBBU_0019">
+            <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+            <Name xlate="true" UID="XLS_6463">Export Boxes and Instructions</Name>
+            <MenuItem>
+              <MacroRef MenuMacroID="MMU_0017" />
+            </MenuItem>
+          </ToolbarButton>
+          <ToolbarButton IsSeparator="false" UID="TBBU_0020">
+            <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+            <Name xlate="true" UID="XLS_6466">Import Boxes and Instructions</Name>
+            <MenuItem>
+              <MacroRef MenuMacroID="MMU_0018" />
+            </MenuItem>
+          </ToolbarButton>
+          <ToolbarButton IsSeparator="false" UID="TBBU_0021">
+            <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+            <Name xlate="true" UID="XLS_6469">Clear Marks</Name>
+            <MenuItem>
+              <MacroRef MenuMacroID="MMU_0019" />
             </MenuItem>
           </ToolbarButton>
         </Toolbar>

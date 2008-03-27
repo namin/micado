@@ -20,13 +20,18 @@ Admin Automation
   open Microsoft.Win32;;
   let key = Registry.ClassesRoot.OpenSubKey("AutoCAD.Drawing.17\\protocol\\StdFileEditing\\server") // returns null key doesn't exist
   key.GetValue(null);;
+
+- Java GUI build & run script (nice to have for next release)
+  build.bat Foobar should run the python script on Foobar (default settings) + call javac -classpath etc. Foobar*java
+  run.bat Foobar should call java -classpath etc. FoobarMain
   
-- Release Building Script (nice to have for next release)
+- Release Building Script (doesn't matter for next release)
   given a release number $n$, the script should automatically generate the micado-$n$ directory and the micado-$n$.zip archive in $MICADO/pub/
   it should also
   * put the right release number in the $MICADO/pub/micado-$n$/README.txt
   * warn if a release with the same name already exists
   
 Thoughts
-- OK for dev scripts to be in Python
-  Perhaps better for user scripts to be Windows executables (so as to limit dependencies)
+- OK for dev scripts to be in Python.
+  Perhaps better for user scripts to be Windows executables (so as to limit dependencies).
+  But for next release, it's overkill to change the Python app builder.
