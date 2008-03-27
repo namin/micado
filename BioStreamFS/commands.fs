@@ -184,9 +184,6 @@ module Instructions = begin
     /// prompts the user to create a new output box
     let micado_new_box_output() =
         promptNewBox Interactive.promptOutputBox
-
-    [<CommandMethod("micado_new_box_path")>]    
-    /// prompts the user to create a new path box
     
     [<CommandMethod("micado_new_box_or_input")>]    
     /// prompts the user to create a new or box made of input boxes
@@ -197,7 +194,9 @@ module Instructions = begin
     /// prompts the user to create a new or box made of output boxes
     let micado_new_box_or_output() =
         promptNewBox Interactive.promptOrOutputBox
-        
+
+    [<CommandMethod("micado_new_box_path")>]    
+    /// prompts the user to create a new path box        
     let micado_new_box_path() =
         promptNewBox Interactive.promptPathBox
                          
@@ -398,8 +397,8 @@ module Instructions = begin
         let ic = activeInstructionChip()
         let currentBoxes = activeBoxes()
         let checkUsed (used : Used) =
-            used.Edges.MaximumElement < ic.Representation.EdgeCount
-         && used.Valves.MaximumElement < ic.Chip.ControlLayer.Valves.Length            
+            (used.Edges.IsEmpty || used.Edges.MaximumElement < ic.Representation.EdgeCount)
+         && (used.Valves.IsEmpty || used.Valves.MaximumElement < ic.Chip.ControlLayer.Valves.Length)            
         let checkInstruction (instruction : Instruction) =
             if instruction.Entity = null
             then Editor.writeLine ("Skipping instruction " ^ instruction.Name ^ " because associated entity doesn't exist in drawing.")

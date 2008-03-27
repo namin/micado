@@ -1,5 +1,14 @@
 TODO list
 
+Questions to answer by next release
+- Pumps? (not for this release)
+- Are partial instructions a useful concept?
+  In my view, the difference between a partial and a complete instruction is that 
+  a complete instruction closes all valves that it doesn't explicitly open, while 
+  a partial instruction just open some valves without touching others.
+  (not for this release, 
+   eventually might be good to have instructions defined explictly just on a partial set of valves) 
+  
 Documentation (must have for next release)
 - Document micado instruction commands.
   
