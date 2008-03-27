@@ -370,7 +370,11 @@ module Instructions = begin
     /// mark the instructions one after the other
     let micado_list_instructions() =
         Editor.clearMarks()
-        for instruction in activeInstructions() do
+        let instructions = activeInstructions()
+        if instructions.Length = 0
+        then Editor.writeLine "(None)"
+        else
+        for instruction in instructions do
             markInstruction instruction
             
     [<CommandMethod("micado_export_to_gui")>]
