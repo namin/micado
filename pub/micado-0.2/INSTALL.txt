@@ -1,0 +1,43 @@
+============
+Requirements
+============
+--
+F#
+--
+
+In addition to AutoCAD and the .NET framework, you need to have F# installed on your machine in order to run micado.
+F# is available from Microsoft Research: http://research.microsoft.com/fsharp/fsharp.aspx
+
+For this release of micado, download the F# release 1.9.3.14 of January 2008, which you can get from:
+http://research.microsoft.com/research/downloads/Details/7ac148a7-149b-4056-aa06-1e6754efd36f/Details.aspx
+
+---------------
+Java and Python
+---------------
+
+For the Java GUI, you'll need Java and Python. See javagui\src\README.txt for more information.
+
+==================
+Installation Steps
+==================
+
+1. Move this directory to where you'd like Micado to be installed: C:\micado, for example.
+2. Just once, run setup.bat
+   -- this script will generate micado.lnk, the micado shortcut to AutoCAD, and supporting files micado.cui & micado.scr.
+   (If you change your micado directory, you'll have to run this script again in order to update the files.)
+2. Double-Click on the micado shortcut to the AutoCAD 2008 Application.
+3. At the AutoCAD prompt, type CUILOAD. Select the file micado.cui in your micado directory.
+
+That's all. If you want to use the micado-specific commands, you'll have to use the micado shortcut to open the AutoCAD application from now on.
+
+============================
+Possible Installation Issues
+============================
+
+* setup.bat looks up the path to the AutoCAD program in the registry. 
+  If your Windows registry doesn't have that information, micado.lnk won't be generated.
+
+* The micado.lnk sets up AutoCAD to start in the UserCacheData directory of AutoCAD 
+  (or, if it doesn't exist, in the top-level AutoCAD directory). 
+  Feel free to change the starting directory if you want.
+ 
