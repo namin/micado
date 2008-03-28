@@ -74,7 +74,7 @@ WScript.Echo("AutoCAD starting directory is " + autocadStartDir);
 var appLink = appName + ".lnk";
 
 var link = Shell.CreateShortcut(appLink);
-link.Arguments = "/b " + appScr;
+link.Arguments = "/b \"" + currentDir + "\\" + appScr + "\"";
 link.Description = "Launch AutoCAD with " + appPrettyName + " Plug-In";
 link.TargetPath = autocadProgram;
 link.WorkingDirectory = autocadStartDir;

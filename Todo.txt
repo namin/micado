@@ -6,28 +6,9 @@ Documentation (must have for next release)
 Research
 - Specifying instructions by the flow layer
   
-Admin Automation
-- Installation Script (must have for next release)
-  there should be a program, say CreateMicadoShortcut, in the release directory which
-  creates the .scr file (maybe from a template) and the micado shortcut to autocad
-  by inferring the current directory and asking for or figuring out the autocad paths
-  (i.e. the path to the autocad program and autocad's user cache dir)
-  
-  Note: 
-  the path to the AutoCAD application can be retrieved from the registry key:
-  HKEY_CLASSES_ROOT\AutoCAD.Drawing.17\protocol\StdFileEditing\server 
-  In F# interactive:
-  open Microsoft.Win32;;
-  let key = Registry.ClassesRoot.OpenSubKey("AutoCAD.Drawing.17\\protocol\\StdFileEditing\\server") // returns null key doesn't exist
-  key.GetValue(null);;
-  
+Admin Automation  
 - Release Building Script (doesn't matter for next release)
   given a release number $n$, the script should automatically generate the micado-$n$ directory and the micado-$n$.zip archive in $MICADO/pub/
   it should also
   * put the right release number in the $MICADO/pub/micado-$n$/README.txt
   * warn if a release with the same name already exists
-  
-Thoughts
-- OK for dev scripts to be in Python.
-  Perhaps better for user scripts to be Windows executables (so as to limit dependencies).
-  But for next release, it's overkill to change the Python app builder.
