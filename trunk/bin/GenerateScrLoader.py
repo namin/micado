@@ -1,20 +1,20 @@
 usageDoc = """python GenerateScrLoader.py [--release] [generateDirectory] [pluginDirectory]
 
-GenerateScrLoader.py generates the file micado-debug.scr or micado.scr,
+GenerateScrLoader.py generates the file micado-debug.scr or micado.scr.orig,
 which, if loaded with the /b option when starting AutoCAD, will load
 all the micado plugin libraries.
 
 See ..\\ReadMe.txt for more information on running micado.
 
--r or --release: generate micado.scr, instead of micado-debug.scr
+-r or --release: generate micado.scr.orig, instead of micado-debug.scr
 
 generateDirectory: the directory in which the .scr file is generated
 for micado-debug.scr, defaults to C:\\Program Files\\Autodesk\\Acade 2008\\UserDataCache\\
-for micado.scr, defaults to $MICADO_DIR\\trunk\\micado-pub\\
+for micado.scr.orig, defaults to $MICADO_DIR\\trunk\\micado-pub\\
 
 pluginDirectory: the directory where the micado libraries are located
 for micado-debug.scr, defaults to $MICADO_DIR\\trunk\\debug\\
-for micado.scr, defaults to C:\\micado\\
+for micado.scr.orig, defaults to C:\\micado\\
 """
 
 generateDirectoryDebug = "C:\\Program Files\\Autodesk\\Acade 2008\\UserDataCache\\"
@@ -24,7 +24,7 @@ pluginDirectoryDebug = "$MICADO_DIR\\trunk\\debug\\"
 pluginDirectoryRelease = "C:\\micado\\"
 
 scrFilenameDebug = "micado-debug.scr"
-scrFilenameRelease = "micado.scr"
+scrFilenameRelease = "micado.scr.orig"
 
 arxloadFilenames = ["BioStreamDB.dbx"]
 netloadFilenames = ["BioStreamMg.dll", "BioStreamCS.dll", "biostreamfs.dll"]
@@ -88,11 +88,11 @@ def main():
             assert False, "unhandled option"
 
     if release:
-        scrFilename = "micado.scr"
+        scrFilename = scrFilenameRelease
         generateDirectory = generateDirectoryRelease
         pluginDirectory = pluginDirectoryRelease
     else:
-        scrFilename = "micado-debug.scr"
+        scrFilename = scrFilenameDebug
         generateDirectory = generateDirectoryDebug
         pluginDirectory = pluginDirectoryDebug
         netloadFilenames.extend(debugExtraNetloadFilenames)

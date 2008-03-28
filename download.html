@@ -39,24 +39,35 @@ AutoCAD Electrical is a superset of AutoCAD, so you'll be all set.
 <h4>F#</h4>
 <p>In addition to AutoCAD and the .NET framework, you need to have <a href="http://research.microsoft.com/fsharp/fsharp.aspx"><code>F#</code></a> installed on your machine in order to run Micado.</p>
 
-<p>For the Micado release 0.1, <a href="http://research.microsoft.com/research/downloads/Details/7ac148a7-149b-4056-aa06-1e6754efd36f/Details.aspx">download the <code>F#</code> release 1.9.3.14 of January 2008</a>.</p>
+<p>For the Micado release 0.2, <a href="http://research.microsoft.com/research/downloads/Details/7ac148a7-149b-4056-aa06-1e6754efd36f/Details.aspx">download the <code>F#</code> release 1.9.3.14 of January 2008</a>.</p>
+
+<h4>Java and Python</h4>
+
+<p>For the Java GUI, you'll need Java and Python. See the <code>README.txt</code> file in the <code>javagui/src</code> directory of your micado release for more information</p>
 
 <h3>Installation Steps</h3>
 
 <ol>
- <li>Unzip the archive, and move the micado directory to <code>C:\micado</code>.</li>
+ <li>Unzip the archive, and move the micado directory to where you'd like it: <code>C:\micado</code>, for example.</li>
+ <li>Just once, run <code>setup.bat</code>.<br>
+     This script will generate <code>micado.lnk</code>, the micado shortcut to AutoCAD, and supporting files <code>micado.cui</code> &amp; <code>micado.scr</code>.<br>
+   (If you change your micado directory, you'll have to run this script again in order to update the files.)</li>
  <li>Double-Click on the micado shortcut to the AutoCAD 2008 Application.</li>
- <li>At the AutoCAD prompt, type <code>CUILOAD</code>. Select the file  <code>c:\micado\micado.cui</code>. 
-   <br>
-  (You should now have a micado toolbar with four buttons: Valve, Punch, Connect, Settings. Try them!)</li>
+ <li>At the AutoCAD prompt, type <code>CUILOAD</code>. Select the file  <code>micado.cui</code> in your micado directory.</li>
 </ol>
+
 <p>That's all. If you want to use the micado-specific commands, you'll have to use the micado shortcut to open the AutoCAD application from now on.</p>
 
 <h3>Possible Installation Issues</h3>
 
 <ul>
-<li>If you choose to install micado in a directory other than <code>C:\micado</code>, you'll have to change the references to this path in <code>micado.cui</code>, <code>micado.scr</code>, and the command-line arguments in the shortcut <code>micado.lnk</code>.</li>
-<li>If your AutoCAD 2008 application is not <code>"C:\Program Files\Autodesk\Acade 2008\acad.exe"</code>, change the shortcut <code>micado.lnk</code> accordingly.</li>
+<li> <code>setup.bat</code> looks up the path to the AutoCAD program in the registry. 
+  If your Windows registry doesn't have that information, the script will fail and <code>micado.lnk</code> won't be generated.</li>
+
+<li> The <code>micado.lnk</code> sets up AutoCAD to start in the <code>UserCacheData</code> directory of AutoCAD 
+  (or, if it doesn't exist, in the top-level AutoCAD directory). 
+  Feel free to change the starting directory if you want.</li>
+  
 </ul>
 
 </body>
