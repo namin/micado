@@ -149,6 +149,60 @@ For your convenience, the settings are persisted from one AutoCAD session to ano
 In addition, you can explicitly export and import Micado settings, in order to share them with your drawings.
 </p>
 
+<h2><a name="Generation"></a>Generation of Instructions</h2>
+<p>Micado automatically generates a programmable Java GUI for your chip.
+You simply specify the set of instructions to export to the GUI by annotating the flow.
+</p>
+
+<p>The flow annotations can either be simple, representing an input/output flow punch or a flow path, or composed, hierarchically representing flow in sequence or in parallel. In parallel, <code>AND</code> specifies that each flow should be taken <em>at once</em>, and <code>OR</code> specifies that each flow should be taken <em>separately</em>. Composing flow in parallel with <code>OR</code> leads to a combinatorial explosion of instructions, because an instruction is generated for each possible combination of flow.</p>
+
+<p>Once the flow is annotated with names, you create an instruction set by specifying a named flow and an entity on the drawing. The drawing entity becomes the button or set of buttons to run the instruction set.
+</p>
+
+<h3><a name="GenerationCommands"></a>Commands</h3>
+
+<ul>
+ <li><a name="InputCommands"></a>Inputs
+  <ul>
+   <li><a name="NewBoxInput"></a><img src="doc/images/icons/NewBoxInput.png"></img> Name an input<br><i>Creates a new named flow from an input punch.</i></li>
+   <li><a name="NewBoxOrInput"></a><img src="doc/images/icons/NewBoxOrInput.png"></img> Compose in parallel (OR)<br><i>Creates a new named flow as an exclusive combination of input punches, without having to name all the punches individually.</i></li>
+  </ul>
+ <li><a name="InputCommands"></a>Outputs
+  <ul>
+   <li><a name="NewBoxOutput"></a><img src="doc/images/icons/NewBoxOutput.png"></img> Name an output<br><i>Creates a new named flow from an output punch.</i></li>
+   <li><a name="NewBoxOrOutput"></a><img src="doc/images/icons/NewBoxOrOutput.png"></img> Compose in parallel (OR)<br><i>Creates a new named flow as an exclusive combination of output punches, without having to name all the punches individually.</i></li>
+  </ul>
+ <li><a name="InputCommands"></a>Flows
+  <ul>
+   <li><a name="NewBoxPath"></a><img src="doc/images/icons/NewBoxPath.png"></img> Name a flow<br><i>Creates a new named flow as a simple directed path from one point to another. Micado automatically infers the simplest path between the two clicked points.</i></li>
+   <li><a name="NewBoxOr"></a><img src="doc/images/icons/NewBoxOr.png"></img> Compose in parallel (OR)<br><i>Creates a new named flow as some exclusive combination of other named flows. The user also specifies whether to order the possibilities horizontally and vertically for the buttons, and the point(s) where the parallel flows meet.</i></li>
+   <li><a name="NewBoxAnd"></a><img src="doc/images/icons/NewBoxAnd.png"></img> Compose in parallel (AND)<br><i>Creates a new named flow by grouping parallel named flows and clicking on the point(s) where all the parallel flows meet.</i></li>
+   <li><a name="NewBoxSeq"></a><img src="doc/images/icons/NewBoxSeq.png"></img> Compose in sequence<br><i>Creates a new named flow by composing other named flows in sequence. Micado will automatically complete the flow path between successive named flows in the sequence.</i></li>
+   <li><a name="MarkBox"></a><img src="doc/images/icons/MarkBox.png"></img> Highlight a flow<br><i>Draws a named flow.</i></li>   
+  </ul>   
+ </li>
+ <li><a name="InputCommands"></a>Instructions
+  <ul>
+   <li><a name="NewInstructionSet"></a><img src="doc/images/icons/NewInstructionSet.png"></img> Define from flow<br><i>Defines an instruction set by selecting a named flow and an entity to be used for the buttons.</i></li>
+   <li><a name="MarkInstruction"></a><img src="doc/images/icons/MarkInstruction.png"></img> Highlight one<br><i>Draws an instruction, selected by clicking on its entity button.</i></li>   
+   <li><a name="ListInstructions"></a><img src="doc/images/icons/ListInstructions.png"></img> Highlight all<br><i>Draws all instructions and crosses over the entities used as buttons.</i></li>   
+  </ul>   
+ </li>
+ <li><a name="ClearMarks"></a>Clear highlighting<br><i>Clears the temporary drawings made to highlight flows and instructions.</i></li>
+ <li><a name="FileCommand">File
+ <ul>
+    <li><a name="ImportBoxesAndInstructions"></a><img src="doc/images/icons/ImportBoxesAndInstructions.png"></img> Open<br><i>Open an XML file, saved previously, containing named flows and instructions.</i></li>
+   <li><a name="ExportBoxesAndInstructions"></a><img src="doc/images/icons/ExportBoxesAndInstructions.png"></img> Save<br><i>Save the named flows and instructions to an XML file.</i></li>
+   <li><a name="ExportToGUI"></a><img src="doc/images/icons/ExportToGUI.png"></img> Export to Java GUI<br><i>Creates a Java GUI with the drawing and instructions. The exported files should be saved, as <code>AppName.png</code> and <code>AppName.dat</code> in <code>javagui/src/</code>, so that the Java application can be built by simply calling <code>build.bat AppName</code> in that directory.</i></li>   
+   <li><a name="NumberControlLines"></a><img src="doc/images/icons/NumberControlLines.png"></img> Number Control Lines<br><i>Specify the numbering of the control lines to be used in the Java GUI. The custom numbering is to make it easy to map the logical ports to the physical ports on the chip.</i></li>  
+ </ul></li>
+</ul>
+ 
+ <h3><a name="JavaGUI"></a>Java GUI</h3>
+ <p>For each instruction, the Java program contains a method to call the instruction from your code.
+ In addition, each instruction set leads to a parameterized method, the arguments being the indices specifying the choices made along the parallel flow paths composed with <code>OR</code>.
+ </p>
+ 
 </body>
 
 </html>
