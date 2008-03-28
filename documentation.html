@@ -159,7 +159,14 @@ In addition, you can explicitly export and import Micado settings, in order to s
 You simply specify the set of instructions to export to the GUI by annotating the flow.
 </p>
 
-<p>The flow annotations can either be simple, representing an input/output flow punch or a flow path, or composed, hierarchically representing flow in sequence or in parallel. In parallel, <code>AND</code> specifies that each flow should be taken <em>at once</em>, and <code>OR</code> specifies that each flow should be taken <em>separately</em>. Composing flow in parallel with <code>OR</code> leads to a combinatorial explosion of instructions, because an instruction is generated for each possible combination of flow.</p>
+<p>The flow annotations can either be simple, representing an input/output flow punch or a flow path, or composed, hierarchically representing flow in sequence or in parallel. 
+In parallel, <code>AND</code> specifies that the flow will
+split into many branches and be active in all channels at once.  <code>OR</code>
+specifies that the flow will remain unsplit and will progress down
+only one channel, depending on which option the user has selected.
+Note that if many <code>OR</code> blocks are composed sequentially, then there is a
+combinatorial explosion of the number of options presented to the
+user.</p>
 
 <p>Once the flow is annotated with names, you create an instruction set by specifying a named flow and an entity on the drawing. The drawing entity becomes the button or set of buttons to run the instruction set.
 </p>

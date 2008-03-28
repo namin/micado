@@ -754,7 +754,7 @@ To access the Customize User Interface dialog box, click the Tools menu > Custom
           </ToolbarButton>
           <ToolbarButton IsSeparator="false" UID="TBBU_0029">
             <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
-            <Name xlate="true" UID="XLS_6475">NumberControlLines</Name>
+            <Name xlate="true" UID="XLS_6475">Number Control Lines</Name>
             <MenuItem>
               <MacroRef MenuMacroID="MMU_0021" />
             </MenuItem>
