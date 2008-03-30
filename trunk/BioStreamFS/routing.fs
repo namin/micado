@@ -233,7 +233,8 @@ type CalculatorGrid (g : SimpleGrid) =
             for b in ig.Neighbors a do
                 if a < b // avoid duplicates
                 then let ptB = ig.ToPoint b
-                     if intersectWithPolyline (connectionSegment ptA ptB) //(segmentPolyline0 ptA ptB)  
+                     use segment = (connectionSegment ptA ptB) //(segmentPolyline0 ptA ptB)
+                     if intersectWithPolyline segment
                      then if not (interiorOfPolyline ptA)
                           then yield (b,a)
                           if not (interiorOfPolyline ptB)
@@ -312,7 +313,8 @@ type ChipGrid ( chip : Chip ) =
      |> Seq.fold (fun edges toIndex -> addEdge lineIndex toIndex edges) edges      
     let addValve line lineIndex (n,nodes,edges) (valve : Valve) =
         let conflicts index =
-            index |> ig.ToPoint |> connectionSegment valve.Center |> chip.ControlLayer.intersectOutside line
+            use segment = index |> ig.ToPoint |> connectionSegment valve.Center
+            segment |> chip.ControlLayer.intersectOutside line
         let indices = c.surroundingIndices valve.Center |> Seq.filter (fun (i) -> not (conflicts i))
         let nodes' = valve.Center :: nodes
         let edges' = Seq.fold (fun edges toIndex -> addEdge n toIndex edges) 
