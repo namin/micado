@@ -98,7 +98,8 @@ let promptSelectEntity message =
 let justPolyline (entity : Entity) =
     match entity with
     | :? Polyline as polyline -> Some polyline
-    | _ -> editor().WriteMessage("Selected entity is not a polyline.")
+    | _ -> entity.Dispose()
+           editor().WriteMessage("Selected entity is not a polyline.")
            None
 
 /// prompts the user to select a polyline
@@ -116,8 +117,10 @@ let promptSelectPolyline message =
 let justPunch (entity : Entity) =
     match entity with
     | :? Punch as punch -> Some punch
-    | _ -> editor().WriteMessage("Selected entity is not a punch.")
+    | _ -> entity.Dispose()
+           editor().WriteMessage("Selected entity is not a punch.")
            None
+           
 /// prompts the user to select a punch
 /// returns the selected punch if the user complies
 let promptSelectPunch message =
@@ -125,11 +128,11 @@ let promptSelectPunch message =
                
 /// converts the polyline to a flow segment if possible
 let justFlowSegment (polyline : Polyline) =
-    Flow.from_polyline polyline
-    |> function
-       | None -> writeLine "The selected polyline could not be converted to a flow segment."
-                 None
-       | s -> s
+    let flowSegment = Flow.from_polyline polyline
+    polyline.Dispose()
+    if Option.is_none flowSegment
+    then writeLine "The selected polyline could not be converted to a flow segment."
+    flowSegment
                     
 /// prompts the user to select a flow segment
 /// returns the selected segment and the picked point if the user complies
@@ -291,10 +294,11 @@ module Extra =
     module Augmentations =
         let promptFlowPunch (flowLayer : Flow) =
             let justFlowPunch punch =
-                match flowLayer.Punch2Index punch with
-                | None -> writeLine "The selected punch is not a flow punch."
-                          None    
-                | s -> s        
+                let index = flowLayer.Punch2Index punch
+                if Option.is_none index
+                then writeLine "The selected punch is not a flow punch."
+                punch.Dispose()
+                index       
             fun message ->
                 promptSelectPunch message
              |> Option.bind justFlowPunch
@@ -303,10 +307,12 @@ module Extra =
             let rec prompt() =
                 promptSelectEntity message |> Option.bind justLine
             and justLine entity =
-                match controlLayer.searchLines entity with
+                let lineIndex = controlLayer.searchLines entity
+                entity.Dispose()
+                match lineIndex with
                 | None -> writeLine "The selected entity is not part of a control line."
                           prompt()
-                | s -> s
+                | _ -> lineIndex
             prompt()
             
         let numberLines (controlLayer : Control) =
