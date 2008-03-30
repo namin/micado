@@ -32,7 +32,7 @@ let addVertexTo (polyline : #Polyline) (point : Point2d) =
             
 /// creates a hallow polyline with the given width, and starting and ending mid points
 let segmentPolyline width (startPoint : Point2d) (endPoint : Point2d) =
-    let polyline = new Polyline ()
+    let polyline = new Polyline()
     let addVertex = addVertexTo polyline
     if width=0.0
     then addVertex startPoint
@@ -143,7 +143,7 @@ type Flow ( segments : FlowSegment list, punches : Punch list) =
 type RestrictedEntity = Polyline
 
 let entitiesIntersect (entity1 : #Entity) (entity2 : #Entity) =
-    let points = new Point3dCollection()
+    use points = new Point3dCollection()
     entity1.IntersectWith(entity2, Intersect.OnBothOperands, points, 0, 0)
     points.Count > 0
 
