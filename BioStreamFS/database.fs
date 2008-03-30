@@ -31,19 +31,18 @@ let readEntityFromId (entId : ObjectId) =
 let readEntityFromHandle handle =
     let db = database()
     use tr = db.TransactionManager.StartTransaction()
-    let bt = tr.GetObject(db.BlockTableId, OpenMode.ForRead, false) :?> BlockTable
-    let btr = tr.GetObject(bt.[BlockTableRecord.ModelSpace], OpenMode.ForRead, false) :?> BlockTableRecord
-    let search id =
-        match tr.GetObject(id, OpenMode.ForRead, true) with
-        | :? Entity as ent ->
-            if ent.Handle.Value = handle
-            then Some ent
-            else None
-        | _ -> None
-    let results = Seq.choose search {for id in btr -> id}
-    if Seq.nonempty results
-    then Some (Seq.hd results)
-    else None
+    use bt = tr.GetObject(db.BlockTableId, OpenMode.ForRead, false) :?> BlockTable
+    use btr = tr.GetObject(bt.[BlockTableRecord.ModelSpace], OpenMode.ForRead, false) :?> BlockTableRecord
+    let mutable result = None
+    for id in btr do
+        if Option.is_none result
+        then match tr.GetObject(id, OpenMode.ForRead, true) with
+             | :? Entity as entity when entity.Handle.Value = handle ->
+                result <- Some entity
+             | dbObject ->
+                dbObject.Dispose()
+    tr.Commit()
+    result
             
 /// writes the entity to the active database
 /// returns the given entity (for chaining)
@@ -51,8 +50,8 @@ let writeEntity (entity : #Entity) =
     let db = database()
     use tr = db.TransactionManager.StartTransaction()
     use docLock = doc().LockDocument()
-    let bt = tr.GetObject(db.BlockTableId, OpenMode.ForRead, false) :?> BlockTable
-    let btr = tr.GetObject(bt.[BlockTableRecord.ModelSpace], OpenMode.ForWrite, false) :?> BlockTableRecord
+    use bt = tr.GetObject(db.BlockTableId, OpenMode.ForRead, false) :?> BlockTable
+    use btr = tr.GetObject(bt.[BlockTableRecord.ModelSpace], OpenMode.ForWrite, false) :?> BlockTableRecord
     let objectId = btr.AppendEntity(entity)
     tr.AddNewlyCreatedDBObject(entity, true)
     tr.Commit()
@@ -64,8 +63,8 @@ let writeEntities (entities : Entity seq) =
     let db = database()
     use tr = db.TransactionManager.StartTransaction()
     use docLock = doc().LockDocument()
-    let bt = tr.GetObject(db.BlockTableId, OpenMode.ForRead, false) :?> BlockTable
-    let btr = tr.GetObject(bt.[BlockTableRecord.ModelSpace], OpenMode.ForWrite, false) :?> BlockTableRecord
+    use bt = tr.GetObject(db.BlockTableId, OpenMode.ForRead, false) :?> BlockTable
+    use btr = tr.GetObject(bt.[BlockTableRecord.ModelSpace], OpenMode.ForWrite, false) :?> BlockTableRecord
     let objectIds = [ for entity in entities do
                         yield btr.AppendEntity(entity)
                         do tr.AddNewlyCreatedDBObject(entity, true) ]
@@ -75,9 +74,7 @@ let writeEntities (entities : Entity seq) =
 /// erases an entity from the active database    
 let eraseEntity (entity : #Entity) =
     use tr = database().TransactionManager.StartTransaction()
-    let entity' = if entity.IsWriteEnabled 
-                  then entity :> DBObject 
-                  else tr.GetObject(entity.ObjectId, OpenMode.ForWrite, true)
+    use entity' = tr.GetObject(entity.ObjectId, OpenMode.ForWrite, true)
     entity'.Erase()
     tr.Commit()
 
@@ -85,9 +82,7 @@ let eraseEntity (entity : #Entity) =
 let eraseEntities (entities : Entity seq) =
     use tr = database().TransactionManager.StartTransaction()
     for entity in entities do
-        let entity' = if entity.IsWriteEnabled 
-                      then entity :> DBObject 
-                      else tr.GetObject(entity.ObjectId, OpenMode.ForWrite, true)
+        use entity' = tr.GetObject(entity.ObjectId, OpenMode.ForWrite, true)
         entity'.Erase()
     tr.Commit()
     
@@ -96,12 +91,13 @@ let collect f =
     let mutable objects = []
     let db = database()
     use tr = db.TransactionManager.StartTransaction()
-    let bt = tr.GetObject(db.BlockTableId, OpenMode.ForRead, false) :?> BlockTable
-    let btr = tr.GetObject(bt.[BlockTableRecord.ModelSpace], OpenMode.ForRead, false) :?> BlockTableRecord
+    use bt = tr.GetObject(db.BlockTableId, OpenMode.ForRead, false) :?> BlockTable
+    use btr = tr.GetObject(bt.[BlockTableRecord.ModelSpace], OpenMode.ForRead, false) :?> BlockTableRecord
     for id in btr do
         let dbObject = tr.GetObject(id, OpenMode.ForRead, true)
         if (f dbObject)
         then objects <- dbObject :: objects
+        else dbObject.Dispose()
     tr.Commit()
     objects
     
@@ -111,8 +107,8 @@ let collectChipEntities () =
     let mutable controlEntities = []
     let db = database()
     use tr = db.TransactionManager.StartTransaction()
-    let bt = tr.GetObject(db.BlockTableId, OpenMode.ForRead, false) :?> BlockTable
-    let btr = tr.GetObject(bt.[BlockTableRecord.ModelSpace], OpenMode.ForRead, false) :?> BlockTableRecord
+    use bt = tr.GetObject(db.BlockTableId, OpenMode.ForRead, false) :?> BlockTable
+    use btr = tr.GetObject(bt.[BlockTableRecord.ModelSpace], OpenMode.ForRead, false) :?> BlockTableRecord
     for id in btr do
         match tr.GetObject(id, OpenMode.ForRead, true) with
         | :? Entity as ent ->
@@ -121,8 +117,8 @@ let collectChipEntities () =
             then flowEntities <- ent :: flowEntities
             else if (Array.exists isEntLayer Settings.Current.ControlLayers)
                  then controlEntities <- ent :: controlEntities
-                 else ()
-        | _ -> ()
+                 else ent.Dispose()
+        | dbObject -> dbObject.Dispose()
     tr.Commit()
     { FlowEntities = flowEntities ; ControlEntities = controlEntities }
     
