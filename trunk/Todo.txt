@@ -1,7 +1,9 @@
 TODO list
   
-Documentation (must have for next release)
-- Document micado instruction commands.
+Bugs
+- linear.dwg: 
+  Why is the super valve not taken into account in instructions?
+  Probably related to handling topology by points?
   
 Research
 - Specifying instructions by the flow layer
