@@ -8,11 +8,10 @@ Bugs
   Works more often than not.
 
 - Disposing of DBObject
-  - how essential is it to always dispose?
-  - if essential, 
-    * track down segmentPolyline (sometimes, it creates a new object and sometimes not)
-    * cache objectids instead of objects for InstructionChip?
-	  * this would require getting rid of Chip and just having methods for required functionality
+  - According to http://discussion.autodesk.com/thread.jspa?threadID=614533
+    it seems ONLY essential to dispose of DBObjects that have not been opened during a transaction, 
+	therefore, you're safe with InstructionChip, 
+	but you need to track down those new Polyline in the routing process.
 	  
 Research
 - Specifying instructions by the flow layer
