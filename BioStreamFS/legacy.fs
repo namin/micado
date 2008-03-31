@@ -39,4 +39,7 @@ let legacy_convert_valves() =
                        let Some valve' = convertLegacyValve valve
                        yield (valve, valve')]
     List.iter (fun (valve : Valve, valve' : Valve) -> Database.eraseEntity valve; Database.writeEntity valve' |> ignore) newValves
-    Editor.writeLine ("converted " ^ newValves.Length.ToString() ^ " legacy valves")
+    let n = newValves.Length
+    Editor.writeLine ("converted " ^ n.ToString() ^ " legacy valves")
+    valves.Iterate (fun e -> e.Dispose())
+    newValves.Iterate (fun (_, e) -> e.Dispose())
