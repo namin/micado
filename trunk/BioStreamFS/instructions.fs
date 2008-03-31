@@ -423,7 +423,7 @@ module Convert =
             {yield Instruction(partial, 
                                root, 
                                indices |> List.rev |> Array.of_list, 
-                               extents |> rectangle |> Database.writeEntity, 
+                               extents |> rectangle |> (Database.writeEntity >> Database.readEntityFromId), 
                                used)}
         | InstructionBox.Multi (ordering, boxes) ->
             let n = boxes.Length
@@ -465,6 +465,7 @@ type NodeType =
     | IntersectionNode of int
     
 type InstructionChip (chip : Chip) =
+    let mutable disposed = false
     let rep = 
         FlowRepresentation.create chip.FlowLayer
      |> FlowRepresentation.addValves chip.ControlLayer.Valves
@@ -489,11 +490,17 @@ type InstructionChip (chip : Chip) =
         | ValveNode vi -> valve2node vi
         | PunchNode pi -> punch2node pi
         | IntersectionNode ii -> intersection2node ii
+    let cleanup() =
+        if not disposed then 
+            disposed <- true;
+            (chip :> System.IDisposable).Dispose(); 
     member v.Chip = chip
     member v.Representation = rep
     member v.ToNodeType node = node2type node
     member v.OfNodeType nt = type2node nt
-    
+    interface System.IDisposable with
+        member v.Dispose() = cleanup()
+        
 module Augmentations =
     let ifValve (ic : InstructionChip) node =
         match ic.ToNodeType node with

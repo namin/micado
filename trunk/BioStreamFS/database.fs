@@ -45,7 +45,7 @@ let readEntityFromHandle handle =
     result
             
 /// writes the entity to the active database
-/// returns the given entity (for chaining)
+/// returns the entity object id
 let writeEntity (entity : #Entity) =
     let db = database()
     use tr = db.TransactionManager.StartTransaction()
@@ -55,10 +55,13 @@ let writeEntity (entity : #Entity) =
     let objectId = btr.AppendEntity(entity)
     tr.AddNewlyCreatedDBObject(entity, true)
     tr.Commit()
-    objectId |> readEntityFromId
+    objectId //|> readEntityFromId
 
+let writeEntityAndReturn entity =
+    writeEntity entity |> readEntityFromId
+    
 /// writes all the given entities to the active database
-/// returning the sequence of written entities (for chaining)
+/// returning a sequence of the entities object id
 let writeEntities (entities : Entity seq) =
     let db = database()
     use tr = db.TransactionManager.StartTransaction()
@@ -69,8 +72,11 @@ let writeEntities (entities : Entity seq) =
                         yield btr.AppendEntity(entity)
                         do tr.AddNewlyCreatedDBObject(entity, true) ]
     tr.Commit()
-    objectIds |> Seq.map readEntityFromId
-        
+    objectIds //|> Seq.map readEntityFromId
+
+let writeEntitiesAndReturn entities =
+    writeEntities entities |> Seq.map readEntityFromId
+    
 /// erases an entity from the active database    
 let eraseEntity (entity : #Entity) =
     use tr = database().TransactionManager.StartTransaction()
@@ -124,5 +130,5 @@ let collectChipEntities () =
                  else ent.Dispose()
         | dbObject -> dbObject.Dispose()
     tr.Commit()
-    { FlowEntities = flowEntities ; ControlEntities = controlEntities }
+    new ChipEntities(flowEntities, controlEntities)
     

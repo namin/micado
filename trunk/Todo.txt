@@ -4,6 +4,7 @@ Bugs
 - linear.dwg: 
   Why is the super valve not taken into account in instructions?
   Probably related to handling topology by points?
+  Actually, sometimes related to the big flow within small flow issue.
   
 Research
 - Specifying instructions by the flow layer

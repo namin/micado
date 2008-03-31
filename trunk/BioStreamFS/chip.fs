@@ -61,20 +61,27 @@ let findBoundingBox (entities : Entity list) =
                              (List.hd lst)
                              lst
  |> fun (minX, minY, maxX, maxY) -> (new Point2d(minX, minY), new Point2d(maxX, maxY))
- 
+
 /// representation of a multi-layer soft litography chip in terms of a flow layer and a control layer
 type Chip (chipEntities : ChipEntities) =
+    let mutable disposed = false
     let flowLayer = createFlow chipEntities.FlowEntities
     let controlLayer = createControl chipEntities.ControlEntities
     let boundingBox = ref None : (Point2d * Point2d) option ref
     let computeBoundingBox() = 
         findBoundingBox (List.append chipEntities.FlowEntities chipEntities.ControlEntities)
+    let cleanup() =
+        if not disposed then 
+            disposed <- true;
+            (chipEntities :> System.IDisposable).Dispose();            
     member v.FlowLayer = flowLayer
     member v.ControlLayer = controlLayer
     member v.BoundingBox with get() = lazyGet computeBoundingBox boundingBox
+    interface System.IDisposable with
+        member x.Dispose() = cleanup() 
     
 /// creates a chip representation from the given chip entities
-let create(chipEntities : ChipEntities) = Chip chipEntities
+let create(chipEntities : ChipEntities) = new Chip(chipEntities)
 
 module FromDatabase =
     open BioStream.Micado.Plugin
