@@ -13,9 +13,9 @@ open Autodesk.AutoCAD.Runtime
 let placePunch() =
     Editor.promptPoint "Pick center of punch: "
  |> Option.map (fun point3d -> Creation.punch (Geometry.to2d point3d))
- |> Option.map Database.writeEntity 
+ |> Option.map Database.writeEntityAndReturn 
  |> Option.map (fun (entity) -> entity :?> Punch)
- |> Option.map (fun (punch) -> Editor.writeLine ("Created punch at" ^ punch.Center.ToString() ^ "."))
+ |> Option.map (fun (punch) -> Editor.writeLine ("Created punch at" ^ punch.Center.ToString() ^ "."); punch.Dispose())
  |> ignore
 
 /// asks the user for a flow segment and places a valve centered on the segment, 
@@ -24,9 +24,9 @@ let placePunch() =
 let placeValve() =
     Editor.promptSelectFlowSegmentAndPoint "Select point on flow segment: "
  |> Option.map (fun (flowSegment, point3d) -> Creation.valve flowSegment (Geometry.to2d point3d))
- |> Option.map Database.writeEntity
+ |> Option.map Database.writeEntityAndReturn
  |> Option.map (fun (entity) -> entity :?> Valve)
- |> Option.map (fun (valve) -> Editor.writeLine ("Created valve at" ^ valve.Center.ToString() ^ "."))
+ |> Option.map (fun (valve) -> Editor.writeLine ("Created valve at" ^ valve.Center.ToString() ^ "."); valve.Dispose())
  |> ignore
 
 /// automatic routing of control layer
@@ -34,7 +34,7 @@ let placeValve() =
 /// according to the user settings
 [<CommandMethod("ConnectValvesToPunches")>]
 let connectValvesToPunches() =
-    let chip = Chip.FromDatabase.create()
+    use chip = Chip.FromDatabase.create()
     let nLines = chip.ControlLayer.Lines.Length
     let nUnconnectedLines = chip.ControlLayer.UnconnectedLines.Length
     let nPunches = chip.ControlLayer.Punches.Length
@@ -111,7 +111,10 @@ module Instructions = begin
     let globalCache = new Dictionary<Document, CacheEntry>()
 
     let deleteCacheEntry(d) =
-        globalCache.Remove(d) |> ignore
+        if globalCache.ContainsKey d then
+            let ichip = globalCache.[d].InstructionChip    
+            globalCache.Remove(d) |> ignore
+            (ichip :> System.IDisposable).Dispose()
                 
     let activeCacheEntry() =
         let d = doc()

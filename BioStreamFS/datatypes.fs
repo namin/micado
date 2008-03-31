@@ -43,12 +43,23 @@ let segmentPolyline width (startPoint : Point2d) (endPoint : Point2d) =
     polyline
 
 let segmentPolyline0 = segmentPolyline 0.0
-    
-/// chip entities are just straight out of the database
-type ChipEntities = 
-    { FlowEntities : Entity list
-      ControlEntities : Entity list }
 
+let disposeAll s =
+    Seq.iter (fun (e :> DBObject) -> if not e.IsDisposed then e.Dispose()) s
+        
+/// chip entities are just straight out of the database
+type ChipEntities (flowEntities : Entity list, controlEntities : Entity list) = 
+    let mutable disposed = false
+    let cleanup() =
+        if not disposed then
+            disposed <- true;
+            disposeAll flowEntities;
+            disposeAll controlEntities;
+    member v.FlowEntities = flowEntities
+    member v.ControlEntities = controlEntities
+    interface System.IDisposable with
+        member v.Dispose() = cleanup()
+            
 type SegmentSlope = Horizontal | Vertical | Tilted
 
 /// a flow segment
