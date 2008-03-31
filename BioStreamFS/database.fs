@@ -74,16 +74,20 @@ let writeEntities (entities : Entity seq) =
 /// erases an entity from the active database    
 let eraseEntity (entity : #Entity) =
     use tr = database().TransactionManager.StartTransaction()
-    use entity' = tr.GetObject(entity.ObjectId, OpenMode.ForWrite, true)
-    entity'.Erase()
+    if entity.IsWriteEnabled 
+    then entity.Erase() 
+    else use entity' = tr.GetObject(entity.ObjectId, OpenMode.ForWrite, true)
+         entity'.Erase()
     tr.Commit()
 
 /// erases all the given entities from the active database    
 let eraseEntities (entities : Entity seq) =
     use tr = database().TransactionManager.StartTransaction()
     for entity in entities do
-        use entity' = tr.GetObject(entity.ObjectId, OpenMode.ForWrite, true)
-        entity'.Erase()
+        if entity.IsWriteEnabled
+        then entity.Erase()
+        else use entity' = tr.GetObject(entity.ObjectId, OpenMode.ForWrite, true)
+             entity'.Erase()
     tr.Commit()
     
 /// collects all objects in database satisfying the given predicate

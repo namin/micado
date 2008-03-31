@@ -35,7 +35,7 @@ let test_collectChipEntities() =
 [<CommandMethod("micadotest_chip")>]
 /// tests the chip representation                   
 let test_chip() =
-    let chip = Chip.create (Database.collectChipEntities())
+    let chip = Chip.FromDatabase.create()
     Editor.writeLine ( sprintf "Flow: %d segments, %d punches" 
                                (chip.FlowLayer.Segments.Length)
                                (chip.FlowLayer.Punches.Length) )
@@ -48,7 +48,7 @@ let test_chip() =
 [<CommandMethod("micadotest_grid")>]
 /// test the routing grid
 let test_grid() =
-    Chip.create (Database.collectChipEntities())
+    Chip.FromDatabase.create()
  |> Routing.createChipGrid
  |> Debug.drawGrid
  |> ignore
@@ -68,7 +68,7 @@ let test_entities_intersect() =
 [<CommandMethod("micadotest_min_cost_flow_routing")>]
 /// test the min cost flow routing algorithm
 let test_min_cost_flow_routing() =
-    let chipGrid = Chip.create (Database.collectChipEntities()) |> Routing.createChipGrid
+    let chipGrid = Chip.FromDatabase.create() |> Routing.createChipGrid
     chipGrid
  |> Routing.minCostFlowRouting
  |> function
@@ -83,7 +83,7 @@ let test_min_cost_flow_routing() =
 /// start with the min cost flow routing algorithm
 /// then interactively iterate over the iterative routing algorithm
 let test_routing() =
-    let chipGrid = Chip.create (Database.collectChipEntities()) |> Routing.createChipGrid
+    let chipGrid = Chip.FromDatabase.create() |> Routing.createChipGrid
     let presenter = Routing.presentConnections chipGrid 
     let rec promptIterate (iterativeSolver : Routing.IterativeRouting) currentSolution =
         match Editor.promptYesOrNo true "Iterate?" with
@@ -108,7 +108,7 @@ let test_routing() =
 /// first with the min cost flow routing algorithm
 /// then the iterative routing algorithm until it stabilizes
 let test_routing_stable() =
-    let chipGrid = Chip.create (Database.collectChipEntities()) |> Routing.createChipGrid
+    let chipGrid = Chip.FromDatabase.create() |> Routing.createChipGrid
     let presenter = Routing.presentConnections chipGrid 
     chipGrid
  |> Routing.minCostFlowRouting
@@ -124,7 +124,7 @@ let test_routing_stable() =
 [<CommandMethod("micadotest_flow_intersections")>]
 /// test detection of flow intersections
 let test_flow_intersections() =
-    let chip = Chip.create (Database.collectChipEntities())
+    let chip = Chip.FromDatabase.create()
     let segments = chip.FlowLayer.Segments
     let length = if segments.Length > 0 then (segments.[0].Width/2.0) else 1.0
     let points =
@@ -138,7 +138,7 @@ let test_flow_intersections() =
 [<CommandMethod("micadotest_flow_representation")>]
 /// test representation of flow
 let test_flow_representation() =
-    let chip = Chip.create (Database.collectChipEntities())
+    let chip = Chip.FromDatabase.create()
     let flowRep = FlowRepresentation.create chip.FlowLayer
     {0..flowRep.EdgeCount-1}
  |> Seq.map flowRep.ToFlowSegment
@@ -152,7 +152,7 @@ let test_flow_click() =
     match point with
     | None -> ()
     | Some point ->
-        let chip = Chip.create (Database.collectChipEntities())
+        let chip = Chip.FromDatabase.create()
         let flowRep = FlowRepresentation.create chip.FlowLayer
         let edge = flowRep.ClosestEdge point
         let segment = flowRep.ToFlowSegment edge
@@ -165,7 +165,7 @@ let test_flow_click() =
 [<CommandMethod("micadotest_flow_representation_with_valves")>]
 /// test representation of flow when valves are added
 let test_flow_representation_with_valves() =
-    let chip = Chip.create (Database.collectChipEntities())
+    let chip = Chip.FromDatabase.create()
     let rawFlowRep = FlowRepresentation.create chip.FlowLayer
     let flowRep = FlowRepresentation.addValves chip.ControlLayer.Valves rawFlowRep
     {0..flowRep.EdgeCount-1}
@@ -179,7 +179,7 @@ let test_flow_representation_with_valves() =
 [<CommandMethod("micadotest_prompt_flow_punch")>]
 /// test prompting the user for a flow punch
 let test_prompt_flow_punch() =
-    let chip = Chip.create (Database.collectChipEntities())
+    let chip = Chip.FromDatabase.create()
     chip.FlowLayer.promptPunch "Select a flow punch: "
  |> Option.map (fun (i : int) -> Editor.writeLine ("You selected punch #" ^ i.ToString()))
  |> ignore
@@ -202,5 +202,5 @@ let verify_control_line_number (controlLayer : Datatypes.Control) =
 [<CommandMethod("micadotest_verify_control_line_number")>]
 /// test numbering control lines
 let test_verify_control_line_number() =
-    let chip = Chip.create (Database.collectChipEntities())
+    let chip = Chip.FromDatabase.create()
     verify_control_line_number chip.ControlLayer

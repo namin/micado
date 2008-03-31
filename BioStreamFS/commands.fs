@@ -34,7 +34,7 @@ let placeValve() =
 /// according to the user settings
 [<CommandMethod("ConnectValvesToPunches")>]
 let connectValvesToPunches() =
-    let chip = Chip.create (Database.collectChipEntities())
+    let chip = Chip.FromDatabase.create()
     let nLines = chip.ControlLayer.Lines.Length
     let nUnconnectedLines = chip.ControlLayer.UnconnectedLines.Length
     let nPunches = chip.ControlLayer.Punches.Length
@@ -78,7 +78,7 @@ module Instructions = begin
         Database.doc()
 
     let computeInstructionChip() =
-        new InstructionChip (Database.collectChipEntities() |> Chip.create)
+        new InstructionChip (Chip.FromDatabase.create())
                 
     type CacheEntry() =
         let instructionChip = computeInstructionChip()
