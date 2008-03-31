@@ -292,8 +292,8 @@ type ChipGrid ( chip : Chip ) =
     let g = new SimpleGrid (Settings.Current.Resolution, chip.BoundingBox)
     let ig = g :> IGrid
     let c = new CalculatorGrid (g)
-    let lines = chip.ControlLayer.UnconnectedLines
-    let punches = chip.ControlLayer.UnconnectedPunches
+    //let lines = chip.ControlLayer.UnconnectedLines
+    //let punches = chip.ControlLayer.UnconnectedPunches
     let addEdge fromIndex toIndex edges =
         match Map.tryfind fromIndex edges with
         | None -> Map.add fromIndex (Set.Singleton toIndex) edges
@@ -335,8 +335,8 @@ type ChipGrid ( chip : Chip ) =
         (arrayOfRevList rl, acc)
     let punch2index, line2index, nodeCount, nodes, edges =
         let acc = (ig.NodeCount, [], Map.empty)
-        let (punch2index, acc') = addAll addPunch acc punches
-        let (line2index, acc'') = addAll addLine acc' lines
+        let (punch2index, acc') = addAll addPunch acc chip.ControlLayer.UnconnectedPunches
+        let (line2index, acc'') = addAll addLine acc' chip.ControlLayer.UnconnectedLines
         let (nodeCount, nodes, edges) = acc''
         (punch2index, line2index, nodeCount, arrayOfRevList nodes, edges)
     let addFlowSegment removedEdges (flowSegment : FlowSegment) =

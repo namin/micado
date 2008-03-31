@@ -75,3 +75,7 @@ type Chip (chipEntities : ChipEntities) =
     
 /// creates a chip representation from the given chip entities
 let create(chipEntities : ChipEntities) = Chip chipEntities
+
+module FromDatabase =
+    open BioStream.Micado.Plugin
+    let create() = create (Database.collectChipEntities())
