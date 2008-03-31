@@ -453,7 +453,9 @@ module Convert =
         match box with
         | InstructionBox.Single used ->
             {yield Instruction(partial, root, [||], entity, used)} 
-        | _ -> to_instructions partial root box (toExtents2d entity) []
+        | _ -> let extents = toExtents2d entity
+               entity.Dispose()
+               to_instructions partial root box extents []
     
     let flowBox2instructions root flowBox entity =
         let partial = FlowBox.attachmentKind flowBox <> Attachments.Complete

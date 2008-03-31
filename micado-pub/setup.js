@@ -32,7 +32,7 @@ function replaceSave(oldFile, newFile, oldStr, newStr) {
 	newText = oldText.replace(new RegExp(oldStr, "g"), newStr);
 	
 	var fw = File.OpenTextFile(newFile, ForWriting, true);
-	fw.WriteLine(newText);
+	fw.Write(newText);
 	fw.close();
 	WScript.Echo("Created file " + newFile);
 }

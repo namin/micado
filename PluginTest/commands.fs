@@ -4,6 +4,7 @@ module BioStream.Micado.Plugin.Test.Commands
 
 open Autodesk.AutoCAD.Runtime
 
+open BioStream
 open BioStream.Micado.Common
 open BioStream.Micado.Core
 open BioStream.Micado.Plugin
@@ -181,6 +182,30 @@ let test_flow_representation_with_valves() =
  |> Array.iteri (fun vi valve -> 
                     Debug.drawPoint (Debug.maxSegmentLength valve) (flowRep.ToPoint (rawFlowRep.NodeCount+vi)))
 
+[<CommandMethod("micadotest_flow_representation_check_valves")>]
+/// check whether each valve is well represented in the flow representation (i.e. not skipped over)
+let test_flow_representation_check_valves() =
+    use chip = Chip.FromDatabase.create()
+    let rawFlowRep = FlowRepresentation.create chip.FlowLayer
+    let flowRep = FlowRepresentation.addValves chip.ControlLayer.Valves rawFlowRep
+    let getValveNode vi = rawFlowRep.NodeCount+vi
+    let skipped vi =
+        let valveNode = getValveNode vi
+        let ok =
+            flowRep.Neighbors(valveNode) //|> List.of_seq |> (fun lst -> lst.Length = 2) 
+         |> Seq.for_all (fun node -> Seq.exists ((=) valveNode) (flowRep.Neighbors(node)))
+        not ok
+    let skippedIndices = [|0..chip.ControlLayer.Valves.Length-1|] |> Array.filter skipped
+    if skippedIndices.Length = 0
+    then Editor.writeLine "All valves OK!"
+    else
+    for vi in skippedIndices do
+        let valveNode = getValveNode vi
+        let valve = chip.ControlLayer.Valves.[vi]
+        Debug.drawPoint (Debug.maxSegmentLength valve) (flowRep.ToPoint (rawFlowRep.NodeCount+vi))
+        flowRep.NodeEdges valveNode |> Set.iter (flowRep.ToFlowSegment >> Debug.drawFlowSegment)
+    Editor.writeLine (skippedIndices.Length.ToString() ^ " skipped valves highlighted")
+            
       
 [<CommandMethod("micadotest_prompt_flow_punch")>]
 /// test prompting the user for a flow punch
