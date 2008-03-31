@@ -85,11 +85,17 @@ module Instructions = begin
         let mutable boxes = Map.empty : Map<string, FlowBox.FlowBox>
         let mutable unsavedChanges = false
         let instructions = new Dictionary<Entity, Instruction>()
+        let cleanup() =
+            (instructionChip :> System.IDisposable).Dispose()
+            for kv in instructions do
+                kv.Key.Dispose()
         member v.InstructionChip = instructionChip
         member v.Boxes with get() = boxes 
                         and set(value) = boxes <- value
                                          unsavedChanges <- true
-        member v.AddInstruction (instruction : Instruction) = 
+        member v.AddInstruction (instruction : Instruction) =
+            // if entity is already in the instructions map,
+            // sounds risky to dispose of it?
             instructions.[instruction.Entity] <- instruction
             unsavedChanges <- true
         member v.GetInstruction entity =
@@ -107,15 +113,17 @@ module Instructions = begin
                             instruction'.Entity.ObjectId = instruction.Entity.ObjectId 
                          || instruction'.Name = instruction.Name)                         
         member v.UnsavedChanges with get() = unsavedChanges and set(value) = unsavedChanges <- value
-                
+        interface System.IDisposable with
+            member v.Dispose() = cleanup()
+                        
     let globalCache = new Dictionary<Document, CacheEntry>()
 
     let deleteCacheEntry(d) =
         if globalCache.ContainsKey d then
-            let ichip = globalCache.[d].InstructionChip    
+            use entry = globalCache.[d]
             globalCache.Remove(d) |> ignore
-            (ichip :> System.IDisposable).Dispose()
-                
+            
+                    
     let activeCacheEntry() =
         let d = doc()
         if not (globalCache.ContainsKey d)

@@ -5,7 +5,15 @@ Bugs
   Why is the super valve not taken into account in instructions?
   Probably related to handling topology by points?
   Actually, sometimes related to the big flow within small flow issue.
-  
+  Works more often than not.
+
+- Disposing of DBObject
+  - how essential is it to always dispose?
+  - if essential, 
+    * track down segmentPolyline (sometimes, it creates a new object and sometimes not)
+    * cache objectids instead of objects for InstructionChip?
+	  * this would require getting rid of Chip and just having methods for required functionality
+	  
 Research
 - Specifying instructions by the flow layer
   
