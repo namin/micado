@@ -55,6 +55,7 @@ let writeEntity (entity : #Entity) =
     let objectId = btr.AppendEntity(entity)
     tr.AddNewlyCreatedDBObject(entity, true)
     tr.Commit()
+    entity.Dispose()
     objectId //|> readEntityFromId
 
 let writeEntityAndReturn entity =
@@ -72,6 +73,7 @@ let writeEntities (entities : Entity seq) =
                         yield btr.AppendEntity(entity)
                         do tr.AddNewlyCreatedDBObject(entity, true) ]
     tr.Commit()
+    entities |> Seq.iter (fun e -> e.Dispose())
     objectIds //|> Seq.map readEntityFromId
 
 let writeEntitiesAndReturn entities =

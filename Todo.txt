@@ -12,6 +12,8 @@ Bugs
     it seems ONLY essential to dispose of DBObjects that have not been opened during a transaction, 
 	therefore, you're safe with InstructionChip, 
 	but you need to track down those new Polyline in the routing process.
+	Kean confirmed this.
+	It seems almost unnecessary to have Chip be IDisposable then?
 	  
 Research
 - Specifying instructions by the flow layer

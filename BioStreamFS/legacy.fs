@@ -42,4 +42,3 @@ let legacy_convert_valves() =
     let n = newValves.Length
     Editor.writeLine ("converted " ^ n.ToString() ^ " legacy valves")
     valves.Iterate (fun e -> e.Dispose())
-    newValves.Iterate (fun (_, e) -> e.Dispose())

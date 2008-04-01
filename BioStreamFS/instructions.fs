@@ -423,7 +423,7 @@ module Convert =
             {yield Instruction(partial, 
                                root, 
                                indices |> List.rev |> Array.of_list, 
-                               extents |> rectangle |> (Database.writeEntity >> Database.readEntityFromId), 
+                               extents |> rectangle |> Database.writeEntityAndReturn, 
                                used)}
         | InstructionBox.Multi (ordering, boxes) ->
             let n = boxes.Length
