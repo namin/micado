@@ -214,9 +214,11 @@ type CalculatorGrid (g : SimpleGrid) =
         polyline
      |> allInteriorCoordinates
      |> Seq.map g.coordinates2index 
+     |> Seq.to_list // turn it to a list, because the polyline might be disposed by the time the sequence is accessed
     [<OverloadID("interiorIndicesFlowSegment")>]
     member v.interiorIndices (flowSegment : FlowSegment) =
-        flowSegment.to_polyline Settings.Current.FlowExtraWidth |> v.interiorIndices     
+        use polyline = flowSegment.to_polyline Settings.Current.FlowExtraWidth
+        v.interiorIndices polyline     
     member v.neighborsWithSlope (slope : SegmentSlope) index =
         index |> g.index2coordinates |> neighborCoordinatesWithSlope slope |> Seq.map g.coordinates2index
     [<OverloadID("outerEdgesPolyline")>]
@@ -282,6 +284,9 @@ let inverseMapSet map =
         Set.fold (add key) values map'
     Map.fold addEntry map Map.empty
 
+let disposeAllNew s =
+    Seq.iter (fun (e :> DBObject) -> if e.IsNewObject then e.Dispose()) s
+    
 /// A chip grid represents a routing grid that has the connectivity of the chip
 /// following the design rules:
 /// Obstacles cannot be crossed.
@@ -350,7 +355,7 @@ type ChipGrid ( chip : Chip ) =
     let incomingEdges removedEdges (a,b) = addEdge b a removedEdges
     let outgoingEdges removedEdges (a,b) = addEdge a b removedEdges
     let doubleEdges removedEdges (a,b) = addDoubleEdge a b removedEdges
-    let removeOfPolylines f (polylines : Polyline seq) removedEdges =
+    let removeOfPolylines f (polylines : Polyline list) removedEdges =
         polylines
      |> Seq.map_concat c.outerEdges
      |> Seq.fold f removedEdges
@@ -361,22 +366,30 @@ type ChipGrid ( chip : Chip ) =
     let removeOfPunches f punches removedEdges =
         Seq.fold (removeOfPunch f) removedEdges punches
     let removeEdgesOfLine removedEdges (line : ControlLine) =
-        let valvePolylines (valves : Valve list) =
-            valves |> Seq.map (fun (valve) -> valve :> Polyline) |> Seq.map_concat (to_polylines Settings.Current.ValveExtraWidth)
-        let otherPolylines(others : RestrictedEntity list) =
-            others |> Seq.map_concat (to_polylines Settings.Current.ControlLineExtraWidth)
-        removedEdges
-     |> removeOfPolylines incomingEdges (valvePolylines line.Valves)
-     |> removeOfPolylines incomingEdges (otherPolylines line.Others)
-     |> removeOfPunches   incomingEdges (line.Punches :> Punch seq)
+        let valvePolylines =
+            line.Valves |> Seq.map (fun (valve) -> valve :> Polyline) |> Seq.map_concat (to_polylines Settings.Current.ValveExtraWidth)
+         |> List.of_seq
+        let otherPolylines =
+            line.Others |> Seq.map_concat (to_polylines Settings.Current.ControlLineExtraWidth)
+         |> List.of_seq
+        let removedEdges' =
+            removedEdges
+         |> removeOfPolylines incomingEdges valvePolylines
+         |> removeOfPolylines incomingEdges otherPolylines
+         |> removeOfPunches   incomingEdges (line.Punches :> Punch seq)
+        disposeAllNew valvePolylines
+        disposeAllNew otherPolylines
+        removedEdges'
     let removedEdges = 
-        Array.fold_left addFlowSegment Map.empty chip.FlowLayer.Segments
-     |> (chip.ControlLayer.Obstacles
-         |> Seq.map_concat (to_polylines 0.0)
-         |> removeOfPolylines doubleEdges)
-     |> fun removedEdges ->
-            chip.ControlLayer.Lines
-         |> Array.fold_left removeEdgesOfLine removedEdges
+        let removedEdges' = Array.fold_left addFlowSegment Map.empty chip.FlowLayer.Segments
+        let obstaclePolylines = 
+            chip.ControlLayer.Obstacles |> Seq.map_concat (to_polylines 0.0)
+         |> List.of_seq
+        let removedEdges'' = removeOfPolylines doubleEdges obstaclePolylines removedEdges'
+        disposeAllNew obstaclePolylines
+        let removedEdges''' =
+            Array.fold_left removeEdgesOfLine removedEdges'' chip.ControlLayer.Lines
+        removedEdges'''
      |> removeOfPunches outgoingEdges (chip.ControlLayer.UnconnectedPunches :> Punch seq)
      |> removeOfPunches incomingEdges (chip.FlowLayer.Punches :> Punch seq)
     let toPoint index =
