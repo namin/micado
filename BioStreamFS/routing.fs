@@ -153,8 +153,8 @@ let to_polylines extraWidth (polyline : Polyline) =
          let segments = Array.map polyline.GetLineSegment2dAt ies
          let get i = i % polyline.NumberOfVertices |> fun (i) -> if i<0 then i+polyline.NumberOfVertices else i 
          let expand i = (polyline.GetPoint2dAt i)
-                       -(segments.[i].Direction*extraWidth)
-                       +(segments.[get(i-1)].Direction*extraWidth)
+                        - (segments.[i].Direction*extraWidth)
+                        + (segments.[get(i-1)].Direction*extraWidth)
          let points = Array.map expand ies
          let polyline' = new Polyline()
          let addVertex point = polyline'.AddVertexAt(polyline'.NumberOfVertices, point, 0.0, 0.0, 0.0)
