@@ -108,3 +108,22 @@ The src\micado-pub directory contains the basis for a release.
   by running the python script bin\GenerateScrLoader.py.
 
 A release can be installed as documented in \src\micado-pub\INSTALL.txt
+
+----------------
+Lessons Learned
+----------------
+
+* LIFETIME MANAGEMENT ISSUE OF DBOBJECTS
+
+  It is imperative to Dispose of all DBObjects NOT open in a transaction
+  (DBObjects added to the database counts as open). Failing to do so
+  results in heisenbugs where AutoCAD fails with a read/write access error.
+  
+  (It is optional to Dispose of DBObjects open in a transaction, but when I wasn't sure
+  I went ahead and made some datatypes, like Chip, IDisposable just to make sure they'd 
+  Dispose of their DBObjects properly. Though in hindsight it isn't necessarily, I suppose
+  it can only improve performance.)
+  
+  See SVN r128 to r138.
+  
+  

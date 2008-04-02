@@ -46,6 +46,7 @@ let readEntityFromHandle handle =
             
 /// writes the entity to the active database
 /// returns the entity object id
+/// (the original entity is disposed of)
 let writeEntity (entity : #Entity) =
     let db = database()
     use tr = db.TransactionManager.StartTransaction()
@@ -58,11 +59,15 @@ let writeEntity (entity : #Entity) =
     entity.Dispose()
     objectId //|> readEntityFromId
 
+/// writes the entity to the active database
+/// returns the entity as freshly read from the database
+/// (the original entity is disposed of)
 let writeEntityAndReturn entity =
     writeEntity entity |> readEntityFromId
     
 /// writes all the given entities to the active database
 /// returning a sequence of the entities object id
+/// (the original entities are disposed of)
 let writeEntities (entities : Entity seq) =
     let db = database()
     use tr = db.TransactionManager.StartTransaction()
@@ -76,6 +81,9 @@ let writeEntities (entities : Entity seq) =
     entities |> Seq.iter (fun e -> e.Dispose())
     objectIds //|> Seq.map readEntityFromId
 
+/// writes all the given entities to the active database
+/// returning a sequence of the entities as freshly read from the database
+/// (the original entities are disposed of)
 let writeEntitiesAndReturn entities =
     writeEntities entities |> Seq.map readEntityFromId
     
