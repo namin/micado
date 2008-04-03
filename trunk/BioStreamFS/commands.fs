@@ -119,18 +119,19 @@ module Instructions = begin
     let globalCache = new Dictionary<Document, CacheEntry>()
 
     let deleteCacheEntry(d) =
-        if globalCache.ContainsKey d then
-            use entry = globalCache.[d]
-            globalCache.Remove(d) |> ignore
-            
+        let ok,entry = globalCache.TryGetValue(d)
+        if ok then globalCache.Remove(d) |> ignore; (entry :> System.IDisposable).Dispose()             
                     
     let activeCacheEntry() =
         let d = doc()
-        if not (globalCache.ContainsKey d)
-        then globalCache.[d] <- new CacheEntry()
+        let ok,res = globalCache.TryGetValue(d)
+        if ok
+        then res
+        else let res = new CacheEntry()
+             globalCache.[d] <- res
              d.BeginDocumentClose.Add (fun args -> deleteCacheEntry(d))
-        globalCache.[d]
-
+             res
+        
     let activeInstructionChip() =
         activeCacheEntry().InstructionChip
         
@@ -248,10 +249,10 @@ module Instructions = begin
         else 
         Editor.promptSelectIdName message keys
      |> Option.bind (fun (s) ->
-                        if map.ContainsKey s
-                        then Some (map.[s], s)
-                        else Editor.writeLine "No such box."
-                             None)
+                        match map.TryFind(s) with
+                        | Some res -> Some (res, s)
+                        | None -> Editor.writeLine "No such box."
+                                  None)
     
     let promptSelectBox kindFilter boxFilter message = 
         promptSelectBoxAndName kindFilter boxFilter message
