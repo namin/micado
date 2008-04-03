@@ -142,10 +142,9 @@ type Flow ( segments : FlowSegment list, punches : Punch list) =
     let punchDictionaryArray = ref None
     let computePunchDictionaryArray() = dictionaryArray punches
     let getPunchDictionaryArray() = lazyGet computePunchDictionaryArray punchDictionaryArray
-    let punch2index punch =
-        if getPunchDictionaryArray().ContainsKey(punch)
-        then Some (getPunchDictionaryArray().[punch])
-        else None
+    let punch2index (punch : Punch) =
+        let ok, res = getPunchDictionaryArray().TryGetValue(punch)
+        if ok then Some res else None
     member v.Segments = Array.of_list segments
     member v.Punches = Array.of_list punches
     member v.Punch2Index punch = punch2index punch

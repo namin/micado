@@ -13,9 +13,9 @@ type FieldConverterRegistry() =
     let registerFieldConverter t f =
         map.Add(t,f)
     member v.Put = registerFieldConverter
-    member v.Get t = if map.ContainsKey(t)
-                     then Some map.[t]
-                     else None
+    member v.Get t = 
+        let ok, res = map.TryGetValue(t)
+        if ok then Some res else None
 
 let Registry = new FieldConverterRegistry()
     
