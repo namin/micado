@@ -1,15 +1,14 @@
 ============
 Requirements
 ============
---
-F#
---
 
-In addition to AutoCAD and the .NET framework, you need to have F# installed on your machine in order to run micado.
-F# is available from Microsoft Research: http://research.microsoft.com/fsharp/fsharp.aspx
+-------
+AutoCAD
+-------
 
-For this release of micado, download the F# release 1.9.3.14 of January 2008, which you can get from:
-http://research.microsoft.com/research/downloads/Details/7ac148a7-149b-4056-aa06-1e6754efd36f/Details.aspx
+AutoCAD is essential to Micado, as Micado is structured as a plug-in on top of AutoCAD. 
+If you're a student, you can download and use AutoCAD Electrical for freefrom students.autodesk.com.
+AutoCAD Electrical is a superset of AutoCAD, so you'll be all set.
 
 ---------------
 Java and Python
