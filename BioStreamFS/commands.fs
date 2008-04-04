@@ -165,12 +165,20 @@ module Instructions = begin
         then deleteCacheEntry d;
              Editor.writeLine "(Cache cleared.)"
         else Editor.writeLine "(Cache kept.)"
-        
+
+    // won't be able to create a ChipInstruction if the flow representation fails
+    // because there is no flow segments
+    let tryCommand command =
+        try
+            command()
+        with Failure(msg) ->
+            Editor.writeLine msg
+                    
     [<CommandMethod("micado_number_control_lines")>]    
     /// prompts the user to number the control lines by selecting them in turn
-    let micado_number_control_lines() =
+    let micado_number_control_lines() = tryCommand (fun () ->
         activeInstructionChip().Chip.ControlLayer.numberLines()        
-     |> ignore
+     |> ignore)
 
     let addBox (name,box) =
         setActiveBoxes(Map.add name box (activeBoxes()))
@@ -189,28 +197,28 @@ module Instructions = begin
 
     [<CommandMethod("micado_new_box_input")>]    
     /// prompts the user to create a new input box
-    let micado_new_box_input() =
-        promptNewBox Interactive.promptInputBox
+    let micado_new_box_input() = tryCommand (fun () ->
+        promptNewBox Interactive.promptInputBox)
 
     [<CommandMethod("micado_new_box_output")>]    
     /// prompts the user to create a new output box
-    let micado_new_box_output() =
-        promptNewBox Interactive.promptOutputBox
+    let micado_new_box_output() = tryCommand (fun () ->
+        promptNewBox Interactive.promptOutputBox)
     
     [<CommandMethod("micado_new_box_or_input")>]    
     /// prompts the user to create a new or box made of input boxes
-    let micado_new_box_or_input() =
-        promptNewBox Interactive.promptOrInputBox
+    let micado_new_box_or_input() = tryCommand (fun () ->
+        promptNewBox Interactive.promptOrInputBox)
 
     [<CommandMethod("micado_new_box_or_output")>]    
     /// prompts the user to create a new or box made of output boxes
-    let micado_new_box_or_output() =
-        promptNewBox Interactive.promptOrOutputBox
+    let micado_new_box_or_output() = tryCommand (fun () ->
+        promptNewBox Interactive.promptOrOutputBox)
 
     [<CommandMethod("micado_new_box_path")>]    
     /// prompts the user to create a new path box        
-    let micado_new_box_path() =
-        promptNewBox Interactive.promptPathBox
+    let micado_new_box_path() = tryCommand (fun () ->
+        promptNewBox Interactive.promptPathBox)
                          
     let displayAttachmentKind = function
         | Instructions.Attachments.Complete -> "complete"
@@ -260,21 +268,21 @@ module Instructions = begin
     
     let promptSelectAnyBoxAndName = promptSelectBoxAndName allGood allGood
     let promptSelectAnyBox = promptSelectBox allGood allGood
-    
+            
     [<CommandMethod("micado_mark_box")>]    
     /// prompts the user to select a box, marking it on the drawing
-    let micado_mark_box() =
+    let micado_mark_box() = tryCommand (fun () ->
         match promptSelectAnyBoxAndName "Box " with
         | None -> ()
         | Some (box, name) ->
             Debug.drawFlowBox (activeInstructionChip()) box
-            Editor.writeLine (boxDisplayName name box)
+            Editor.writeLine (boxDisplayName name box))
  
     [<CommandMethod("micado_list_boxes")>]
     /// prints out the list of boxes for active drawing
-    let micado_list_boxes() =
+    let micado_list_boxes() = tryCommand (fun () ->
         activeBoxesProperties() 
-     |> List.iter (fun prop -> Editor.writeLine (boxPropDisplayName prop))
+     |> List.iter (fun prop -> Editor.writeLine (boxPropDisplayName prop)))
 
     let selectBoxesMessage (i : int) = "Box #" ^ i.ToString()
     
@@ -324,22 +332,22 @@ module Instructions = begin
 
     [<CommandMethod("micado_new_box_or")>]    
     /// prompts the user to create a new or box
-    let micado_new_box_or() =
-        promptNewCombinationBox promptSelectBoxesOfSameKind Interactive.promptOrBox
+    let micado_new_box_or() = tryCommand (fun () ->
+        promptNewCombinationBox promptSelectBoxesOfSameKind Interactive.promptOrBox)
         
     [<CommandMethod("micado_new_box_and")>]    
     /// prompts the user to create a new and box
-    let micado_new_box_and() =
-        promptNewCombinationBox promptSelectBoxesOfSameKind Interactive.promptAndBox
+    let micado_new_box_and() = tryCommand (fun () ->
+        promptNewCombinationBox promptSelectBoxesOfSameKind Interactive.promptAndBox)
 
     [<CommandMethod("micado_new_box_seq")>]    
     /// prompts the user to create a new seq box
-    let micado_new_box_seq() =
-        promptNewCombinationBox promptSelectBoxesForSeq Interactive.promptSeqBox
+    let micado_new_box_seq() = tryCommand (fun () ->
+        promptNewCombinationBox promptSelectBoxesForSeq Interactive.promptSeqBox)
 
     [<CommandMethod("micado_rename_box")>]    
     /// prompts the user to select a box and rename it
-    let micado_rename_box() =
+    let micado_rename_box() = tryCommand (fun () ->
         match promptSelectAnyBoxAndName "Box to rename " with
         | None -> ()
         | Some (box, name) ->
@@ -347,11 +355,11 @@ module Instructions = begin
          |> Option.map (fun name' ->
                             setActiveBoxes(activeBoxes() |> Map.remove name |> Map.add name' box)
                             Editor.writeLine ("Renamed box " ^ name ^ " to " ^ name'))
-         |> ignore
+         |> ignore)
             
     [<CommandMethod("micado_new_instruction_set")>]
     /// prompts the user to select a box and builds an instruction set out of it
-    let micado_new_instruction_set() =
+    let micado_new_instruction_set() = tryCommand (fun () ->
         let ic = activeInstructionChip()
         match promptSelectAnyBoxAndName "Box " with
         | None -> ()
@@ -361,7 +369,7 @@ module Instructions = begin
             Editor.clearMarks()
             match instructions with
             | None -> ()
-            | Some instructions -> Seq.iter addInstruction instructions
+            | Some instructions -> Seq.iter addInstruction instructions)
 
     let markInstruction (instruction : Instruction) =
         Editor.writeLine ((if instruction.Partial then "partial" else "complete")
@@ -371,40 +379,40 @@ module Instructions = begin
         
     [<CommandMethod("micado_mark_instruction")>]
     /// prompts the user to select an entity associated with an instruction and marks the instruction on the drawing
-    let micado_mark_instruction() =
+    let micado_mark_instruction() = tryCommand (fun () ->
         Editor.promptSelectEntity "Select an entity associated with the extents of an instruction: "
      |> Option.bind getInstruction
      |> Option.map markInstruction
-     |> ignore
+     |> ignore)
 
     [<CommandMethod("micado_list_instructions")>]
     /// mark the instructions one after the other
-    let micado_list_instructions() =
+    let micado_list_instructions() = tryCommand (fun () ->
         Editor.clearMarks()
         let instructions = activeInstructions()
         if instructions.Length = 0
         then Editor.writeLine "(None)"
         else
         for instruction in instructions do
-            markInstruction instruction
+            markInstruction instruction)
             
     [<CommandMethod("micado_export_to_gui")>]
     /// export files for the java GUI
-    let micado_export_to_gui() =
-        Export.GUI.prompt (activeInstructionChip()) (activeInstructions()) |> ignore
+    let micado_export_to_gui() = tryCommand (fun () ->
+        Export.GUI.prompt (activeInstructionChip()) (activeInstructions()) |> ignore)
         
     [<CommandMethod("micado_export_boxes_and_instructions")>]
     /// export boxes and instructions in order to import them back later
-    let micado_export_boxes_and_instructions() =
+    let micado_export_boxes_and_instructions() = tryCommand (fun () ->
         let boxes = 
             activeBoxesProperties() 
          |> Seq.map (fun prop -> boxPropName prop, boxPropBox prop)
         if Serialization.export boxes (activeInstructions())
-        then savingActiveCache()
+        then savingActiveCache())
         
     [<CommandMethod("micado_import_boxes_and_instructions")>]
     /// import boxes and instructions from an earlier exported file
-    let micado_import_boxes_and_instructions() =
+    let micado_import_boxes_and_instructions() = tryCommand (fun () ->
         let entry = activeCacheEntry()
         let ic = activeInstructionChip()
         let currentBoxes = activeBoxes()
@@ -448,7 +456,7 @@ module Instructions = begin
             keepInstructions |> Seq.iter addInstruction
             Editor.writeLine ("Summary")
             Editor.writeLine ("Added " ^ keepBoxes.Length.ToString() ^ " boxes (out of " ^ boxes.Length.ToString() ^ ").")
-            Editor.writeLine ("Added " ^ keepInstructions.Length.ToString() ^ " instructions (out of " ^ instructions.Length.ToString() ^ ").")    
+            Editor.writeLine ("Added " ^ keepInstructions.Length.ToString() ^ " instructions (out of " ^ instructions.Length.ToString() ^ ")."))    
     // micado_
     //        new_
     //            box (?)

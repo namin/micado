@@ -547,14 +547,10 @@ type IterativeRouting (grid : IRoutingGrid, initialSolution) =
             List.iter (fun (node') ->  node2level.[node'] <- level) neighbors
             neighbors
         let rec exploreBFS queue =
-            if queue = []
-            then failwith "did not find any target"
-            else
-            let reachedTargets = List.filter isTarget queue
-            if reachedTargets <> []
-            then reachedTargets
-            else
-            exploreBFS (List.map_concat exploreNode queue)           
+            match queue, List.filter isTarget queue with
+            | [], _  -> failwith "did not find any target"
+            |  _, [] -> exploreBFS (List.map_concat exploreNode queue)
+            |  _, reachedTargets -> reachedTargets                       
         let reachedTargets = exploreBFS [sourceNode]
         let previousCells (node, level, point, slope) =
             grid.InverseNeighbors node 

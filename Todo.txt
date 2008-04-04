@@ -1,6 +1,9 @@
 TODO list
   
 Bugs
+V InstructionChip cannot be constructed if there are no flow segments while there are flow punches.
+  -- needs user-friendly failure.
+
 - linear.dwg: 
   Why is the super valve not taken into account in instructions?
   Probably related to handling topology by points?
