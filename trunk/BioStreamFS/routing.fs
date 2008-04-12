@@ -82,11 +82,10 @@ type SimpleGrid ( resolution, boundingBox : Point2d * Point2d ) =
 let connectionSegment startPoint endPoint = segmentPolyline (Settings.Current.ConnectionWidth) startPoint endPoint
 
 let polylinePoints (polyline : #Polyline) = 
-    Array.map (fun (i) -> polyline.GetPoint2dAt(i)) [|0..polyline.NumberOfVertices-1|]
+    Array.init polyline.NumberOfVertices polyline.GetPoint2dAt
 
 let polylineSegments (polyline : #Polyline) =
-    Array.map (fun (i) -> polyline.GetLineSegment2dAt(i)) 
-              [|0..polyline.NumberOfVertices-(if polyline.Closed then 1 else 2)|]
+    Array.init (polyline.NumberOfVertices-(if polyline.Closed then 0 else 1)) polyline.GetLineSegment2dAt
 
 /// whether the given point lies on a segment of the polyline    
 let pointOnPolyline (p : Point2d) (polyline : #Polyline) =
@@ -149,13 +148,12 @@ let to_polylines extraWidth (polyline : Polyline) =
     then if extraWidth = 0.0
          then { yield polyline }
          else
-         let ies = [|0..polyline.NumberOfVertices-1|]
-         let segments = Array.map polyline.GetLineSegment2dAt ies
+         let segments = Array.init polyline.NumberOfVertices polyline.GetLineSegment2dAt
          let get i = i % polyline.NumberOfVertices |> fun (i) -> if i<0 then i+polyline.NumberOfVertices else i 
          let expand i = (polyline.GetPoint2dAt i)
                         - (segments.[i].Direction*extraWidth)
                         + (segments.[get(i-1)].Direction*extraWidth)
-         let points = Array.map expand ies
+         let points = Array.init polyline.NumberOfVertices expand
          let polyline' = new Polyline()
          let addVertex point = polyline'.AddVertexAt(polyline'.NumberOfVertices, point, 0.0, 0.0, 0.0)
          Array.iter addVertex points
@@ -166,7 +164,7 @@ let to_polylines extraWidth (polyline : Polyline) =
             let a = segment.StartPoint + extraInDir (-1)
             let b = segment.EndPoint + extraInDir 1
             segmentPolyline (width+extraWidth) a b
-         let allSides = {for i in [0..polyline.NumberOfVertices-2] -> polyline.GetStartWidthAt i, polyline.GetLineSegment2dAt i}
+         let allSides = {for i in 0..polyline.NumberOfVertices-2 -> polyline.GetStartWidthAt i, polyline.GetLineSegment2dAt i}
          {for side in allSides -> to_segmentPolyline side}
 
 /// A calculator grid provides some calculation methods on top of a simple grid         
