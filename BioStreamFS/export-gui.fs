@@ -94,9 +94,8 @@ let exportJavaData (ic : Instructions.InstructionChip)
     tw.WriteLine("// number of control lines: " ^ control.Lines.Length.ToString())
     tw.WriteLine("// number of instructions: " ^ instructions.Length.ToString())
     (*tw.WriteLine("// Mapping: {" ^
-                 System.String.Join(",",
-                                    [|0..control.LineNumbering.Length-1|] 
-                                 |> Array.map (control.LineNumbering.Item >> (fun i -> i.ToString()))) ^ 
+                 System.String.Join(",", 
+                                    Array.init control.LineNumbering.Length (control.LineNumbering.Item >> (fun i -> i.ToString()))) ^ 
                  "}")*)
     tw.WriteLine("// BEGIN port locations")
     for ui = 0 to control.Lines.Length-1 do

@@ -15,7 +15,7 @@ let from_polyline (polyline : Polyline) =
     let convertible (polyline : Polyline) =
         polyline.IsOnlyLines && polyline.Closed && (polyline.NumberOfVertices = 4)
     let convert (polyline : Polyline) =
-        let segs = [|0..3|] |> Array.map polyline.GetLineSegment2dAt
+        let segs = Array.init 4 polyline.GetLineSegment2dAt
         let lens = segs |> Array.map (fun (x : LineSegment2d) -> x.Length)
         let makeFlow ia ib =
               new FlowSegment (new LineSegment2d(segs.[ia].MidPoint, segs.[ib].MidPoint), 
