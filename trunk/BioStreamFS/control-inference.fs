@@ -83,5 +83,4 @@ module Plugin =
         with Not_found ->
             Editor.writeLine "The generation could not complete, because some old valves could not be found."
             Editor.writeLine "Undoing inferred valves..."
-            ic.ResetInferred()
             valves |> Array.iter (Database.eraseEntity)
