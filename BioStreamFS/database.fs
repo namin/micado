@@ -18,6 +18,14 @@ let doc() =
 let database() =
     doc().Database
 
+/// returns the name of the current layer
+let currentLayer() =
+    let layerId = HostApplicationServices.WorkingDatabase.Clayer
+    use tr = database().TransactionManager.StartTransaction()
+    let layerRecord = tr.GetObject(layerId, OpenMode.ForRead, true) :?> LayerTableRecord
+    tr.Commit()
+    layerRecord.Name
+        
 /// reads the entity from the active database and returns it
 /// @requires entId points to an entity in the active database
 let readEntityFromId (entId : ObjectId) =

@@ -465,7 +465,39 @@ type NodeType =
     | ValveNode of int
     | PunchNode of int
     | IntersectionNode of int
+
+type InferredChip =
+    { Chip : Chip; 
+      old2new : int -> int ; 
+      inferred2new : int -> int ; 
+      Default : bool;
+      OpenSets : Set<int> array
+    }
     
+let defaultInferred ( chip ) =
+    let intid (i : int) = i
+    { Chip = chip; 
+      old2new = intid; 
+      inferred2new = intid; 
+      Default = true;
+      OpenSets = [||] 
+    }
+
+let computeOld2New newValves oldValves =
+    let equalEntities (e1 : # DBObject) (e2 : # DBObject) = e1.ObjectId.Equals(e2.ObjectId)
+    let newIndex oldValve = Array.find_index (equalEntities oldValve) newValves
+    let old2new = Array.map newIndex oldValves
+    fun i -> old2new.[i]
+    
+let makeInferred ( oldChip : Chip, newChip : Chip, inferredValves, openSets ) =
+    let computeMap = computeOld2New newChip.ControlLayer.Valves
+    { Chip = newChip;
+      old2new = computeMap oldChip.ControlLayer.Valves;
+      inferred2new = computeMap inferredValves;
+      Default = false;
+      OpenSets = openSets  
+    }
+            
 type InstructionChip (chip : Chip) =
     let mutable disposed = false
     let rep = 
@@ -496,10 +528,16 @@ type InstructionChip (chip : Chip) =
         if not disposed then 
             disposed <- true;
             (chip :> System.IDisposable).Dispose(); 
+    let mutable inferred = defaultInferred chip
     member v.Chip = chip
     member v.Representation = rep
     member v.ToNodeType node = node2type node
     member v.OfNodeType nt = type2node nt
+    member v.Inferred with get() = inferred //and set(value) = inferred <- value
+    member v.UpdateInferred (newChip, inferredValves, openSets) =
+        inferred <- makeInferred (v.Chip, newChip, inferredValves, openSets)
+    member v.ResetInferred () =
+        inferred <- defaultInferred v.Chip
     interface System.IDisposable with
         member v.Dispose() = cleanup()
         
