@@ -297,7 +297,7 @@ module Search =
 /// the ith punch maps to the ith node.
 /// requires flow.Segments.Length>0         
 let create (flow : Flow) =
-    if flow.Segments.Length=0
+    if flow.Segments.Length=0 || flow.Punches.Length=0
     then failwith "Cannot create flow representation without flow!"
     let intersectionTable = Compute.flowIntersectionPoints flow.Segments
     let node2point, point2node = Compute.allNodes flow.Punches intersectionTable

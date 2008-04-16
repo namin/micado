@@ -334,7 +334,9 @@ module Extra =
                          acc remaining numbered i
                     else writeLine ""
                          acc (Set.remove lineIndex remaining) (lineIndex::numbered) (i+1)
-            acc ({0..n-1} |> Set.of_seq) [] 1
+            if n=0
+            then writeLine "No control lines to number!"; false
+            else acc ({0..n-1} |> Set.of_seq) [] 1
             
     type BioStream.Micado.Common.Datatypes.Flow with
         member v.promptPunch message = Augmentations.promptFlowPunch v message
