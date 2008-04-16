@@ -536,8 +536,6 @@ type InstructionChip (chip : Chip) =
     member v.Inferred with get() = inferred //and set(value) = inferred <- value
     member v.UpdateInferred (newChip, inferredValves, openSets) =
         inferred <- makeInferred (v.Chip, newChip, inferredValves, openSets)
-    member v.ResetInferred () =
-        inferred <- defaultInferred v.Chip
     interface System.IDisposable with
         member v.Dispose() = cleanup()
         
