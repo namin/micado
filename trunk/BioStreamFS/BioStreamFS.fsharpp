@@ -99,6 +99,10 @@
     {
     "ProjRelPath" = "T"
     }
+    "control-inference.fs"
+    {
+    "ProjRelPath" = "T"
+    }
     "debug.fs"
     {
     "ProjRelPath" = "T"

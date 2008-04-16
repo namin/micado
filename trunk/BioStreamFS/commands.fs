@@ -177,7 +177,7 @@ module Instructions = begin
     [<CommandMethod("micado_number_control_lines")>]    
     /// prompts the user to number the control lines by selecting them in turn
     let micado_number_control_lines() = tryCommand (fun () ->
-        activeInstructionChip().Chip.ControlLayer.numberLines()        
+        activeInstructionChip().Inferred.Chip.ControlLayer.numberLines()        
      |> ignore)
 
     let addBox (name,box) =
@@ -399,7 +399,12 @@ module Instructions = begin
     [<CommandMethod("micado_export_to_gui")>]
     /// export files for the java GUI
     let micado_export_to_gui() = tryCommand (fun () ->
-        Export.GUI.prompt (activeInstructionChip()) (activeInstructions()) |> ignore)
+        let ic = activeInstructionChip()
+        let instructions = activeInstructions()
+        if ic.Inferred.Default || instructions.Length = ic.Inferred.OpenSets.Length
+        then Export.GUI.prompt ic instructions |> ignore
+        else Editor.writeLine "Cannot export GUI because control generation is out of date with instructions."
+    )
         
     [<CommandMethod("micado_export_boxes_and_instructions")>]
     /// export boxes and instructions in order to import them back later
@@ -457,6 +462,7 @@ module Instructions = begin
             Editor.writeLine ("Summary")
             Editor.writeLine ("Added " ^ keepBoxes.Length.ToString() ^ " boxes (out of " ^ boxes.Length.ToString() ^ ").")
             Editor.writeLine ("Added " ^ keepInstructions.Length.ToString() ^ " instructions (out of " ^ instructions.Length.ToString() ^ ")."))    
+    
     // micado_
     //        new_
     //            box (?)
@@ -483,4 +489,13 @@ module Instructions = begin
     //        import_boxes_and_instructions
     //        number_control_lines (v)
     //        clear_cache (v)
+    
+    [<CommandMethod("micado_generate_control")>]
+    /// generate the control lines from the instructions
+    let micado_generate_control() = tryCommand (fun () ->
+        let ic = activeInstructionChip()
+        let instructions = activeInstructions()
+        ControlInference.Plugin.generate ic instructions
+    )
+    
     end

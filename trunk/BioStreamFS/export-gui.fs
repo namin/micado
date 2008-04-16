@@ -87,7 +87,7 @@ let exportJavaData (ic : Instructions.InstructionChip)
             all.[2*i] <- corners.[i]
             all.[2*i+1] <- Geometry.averagePoint corners.[i] corners.[(i+1) % corners.Length]
         all     
-    let chip = ic.Chip
+    let chip = ic.Inferred.Chip
     let control = chip.ControlLayer
     let tw = new StreamWriter(dataFilename)
     tw.WriteLine("// rectangle size: " ^ rect.Size.ToString())
@@ -118,7 +118,12 @@ let exportJavaData (ic : Instructions.InstructionChip)
         tw.WriteLine("// " ^ instructions.[i].Name)
         tw.WriteLine("// " ^ if instructions.[i].Partial then "partial" else "complete")
         tw.Write("{")
-        let openLines = control.ToOpenLines(instructions.[i].Used.Valves) |> Array.permute control.LineNumbering
+        let openValves =
+            if ic.Inferred.Default
+            then instructions.[i].Used.Valves
+            else Set.union (Set.map ic.Inferred.old2new instructions.[i].Used.Valves)
+                           (Set.map ic.Inferred.inferred2new ic.Inferred.OpenSets.[i])
+        let openLines = control.ToOpenLines(openValves) |> Array.permute control.LineNumbering
         let stringOpenLines = openLines |> Array.map (fun b -> if b then "true" else "false")
         tw.Write(System.String.Join(",", stringOpenLines))
         tw.WriteLine("},")
