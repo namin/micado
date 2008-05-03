@@ -134,7 +134,7 @@ module InstructionBox =
         | FlowBox.Or (_, fs, o) ->
             Multi (o, (fs |> Array.map of_FlowBox))
         | FlowBox.And (_, fs) | FlowBox.Seq (_, fs) ->
-            fs |> Array.map of_FlowBox |> Array.fold1_right wrapAround
+            fs |> Array.map of_FlowBox |> Array.reduce_right wrapAround
 
 let toExtents2d (entity : Entity) =
     let ext3d = entity.GeometricExtents

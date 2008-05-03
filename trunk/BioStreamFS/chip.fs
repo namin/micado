@@ -55,7 +55,7 @@ let findBoundingBox (entities : Entity list) =
     List.map (fun (entity : Entity) -> entity.GeometricExtents |> deconstructExtents) entities
  |> function
     | [] -> (0.0, 0.0, 0.0, 0.0)
-    | lst -> lst |> List.fold1_left (fun (minX',minY',maxX',maxY') (minX,minY,maxX,maxY) -> (min minX minX', min minY minY', max maxX maxX', max maxY maxY'))
+    | lst -> lst |> List.reduce_left (fun (minX',minY',maxX',maxY') (minX,minY,maxX,maxY) -> (min minX minX', min minY minY', max maxX maxX', max maxY maxY'))
  |> fun (minX, minY, maxX, maxY) -> (new Point2d(minX, minY), new Point2d(maxX, maxY))
 
 /// representation of a multi-layer soft litography chip in terms of a flow layer and a control layer

@@ -36,9 +36,10 @@ let legacy_convert_valves() =
     let valves = Database.collect (fun dbObject -> dbObject :? Valve) |> List.map (fun dbObject -> dbObject :?> Valve) 
     let legacyValves = valves |> List.filter isLegacyValve
     let newValves = [for valve in legacyValves do
-                       let Some valve' = convertLegacyValve valve
-                       yield (valve, valve')]
+                       match convertLegacyValve valve with
+                       | Some valve' -> yield (valve, valve')
+                       | None -> yield! [] ]
     List.iter (fun (valve : Valve, valve' : Valve) -> Database.eraseEntity valve; Database.writeEntity valve' |> ignore) newValves
     let n = newValves.Length
     Editor.writeLine ("converted " ^ n.ToString() ^ " legacy valves")
-    valves.Iterate (fun e -> e.Dispose())
+    valves |> List.iter (fun e -> e.Dispose())

@@ -248,8 +248,8 @@ type CalculatorGrid (g : SimpleGrid) =
             closestLowerLeftCoordinates center, closestUpperRightCoordinates center
         let bounds =
             let cornerPoint d = center
-                               +Geometry.upVector.MultiplyBy(float(d)*width)
-                               +Geometry.rightVector.MultiplyBy(float(d)*width)
+                              + Geometry.upVector.MultiplyBy(float(d)*width)
+                              + Geometry.rightVector.MultiplyBy(float(d)*width)
             innerBoundingBox (cornerPoint (-1)) (cornerPoint (+1))
         let cs = allCoordinatesInBoundingBox bounds
         let outer1 c c' minC maxC = (c' < c && c <= minC) || (c' > c && c >= maxC)
@@ -464,7 +464,7 @@ let minCostFlowRouting ( grid : #IRoutingGrid ) =
                     (numberOfEdges+1, super_source_vertex :: edge2source, source :: edge2target, 1.0 :: edge2capacity, 0.0 :: edge2cost))
                  acc
                  (sources |> Seq.map node2incomingVertex)
-    let addSuperTargetEdges node2outgoingEdges acc =  
+    let addSuperTargetEdges (node2outgoingEdges : _ array) acc =  
         Seq.fold (fun (numberOfEdges, edge2source, edge2target, edge2capacity, edge2cost) target ->
                     node2outgoingEdges.[target] <- numberOfEdges :: node2outgoingEdges.[target]
                     (numberOfEdges+1,  (node2outgoingVertex target) :: edge2source, super_target_vertex :: edge2target, 1.0 :: edge2capacity, 0.0 :: edge2cost))
@@ -483,7 +483,7 @@ let minCostFlowRouting ( grid : #IRoutingGrid ) =
     let vertex2deficit = Array.create numberOfVertices 0.0
     vertex2deficit.[int(super_source_vertex)-1] <- - float(sources.Length)
     vertex2deficit.[int(super_target_vertex)-1] <- + float(sources.Length)
-    let traceConnection x sourceNode =
+    let traceConnection (x : _ array) sourceNode =
         let rec helper acc outgoingVertex =
             let node = outgoingVertex2node outgoingVertex
             let edge = List.find (fun (edge) -> x.[edge] = 1.0) node2outgoingEdges.[node]
