@@ -80,7 +80,7 @@ module Plugin =
         try
             ic.UpdateInferred (newChip, valves, openSets)
             Editor.writeLine "Control generation succeeded."
-        with Not_found ->
+        with :? System.Collections.Generic.KeyNotFoundException ->
             Editor.writeLine "The generation could not complete, because some old valves could not be found."
             Editor.writeLine "Undoing inferred valves..."
             valves |> Array.iter (Database.eraseEntity)

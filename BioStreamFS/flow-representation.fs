@@ -79,7 +79,7 @@ module Compute =
     let closestSegmentIndexUpTo n (segments : FlowSegment array) (point : Point2d) =
         segments 
      |> Array.mapi (fun i f -> if i<n then (f.getDistanceTo point), i else System.Double.MaxValue, i)
-     |> Array.fold1_right min
+     |> Array.reduce_right min
      |> snd
 
     /// returns the index of the segment from the given array
@@ -124,8 +124,9 @@ module Compute =
         punches |> Array.iteri (fun i punch -> map.Add(punch.Center, i))
         let nodes = seq { for i in [0..(Array2.length1 table)-1] do
                           for j in [i..(Array2.length2 table)-1] do
-                          let Some p = table.[i,j]
-                          yield p }
+                          match table.[i,j] with
+                          | Some p -> yield p
+                          | None -> yield! [] }
         let n = Seq.fold addNode punches.Length nodes
         Utils.dictionaryOfIndexValues2arrayOfKeys (n,map), map
     
@@ -142,8 +143,9 @@ module Compute =
             fun (si) -> segment2punchIndices.[si]
         let pointsOfSegment si =
             [ for sj in [0..(Array2.length2 table)-1] do
-              let Some p = table.[si,sj]
-              yield p ]
+              match table.[si,sj] with
+              | Some p -> yield p
+              | None -> yield! [] ]
            |> List.sort segments.[si].PointComparisonFunction
         let nodesOfSegment si =
             List.fold_left (addPunch si) (pointsOfSegment si) (punchesOfSegment si)
@@ -158,7 +160,7 @@ module Compute =
          |> Seq.concat
         allEdges |> Array.of_seq
              
-    let node2edges n edge2flowSegment point2node =
+    let node2edges n edge2flowSegment (point2node : Dictionary<_,_>)=
         edge2flowSegment
      |> Array.mapi (fun e (f : FlowSegment) ->
                         let s = point2node.[f.Segment.StartPoint]
@@ -167,7 +169,7 @@ module Compute =
      |> Seq.concat
      |> Utils.arraySetOfSeq n
 
-    let node2props propFun (edge2flowSegment : FlowSegment array) point2node node2edges =
+    let node2props propFun (edge2flowSegment : FlowSegment array) (point2node : Dictionary<_,_>) node2edges =
         let edge2prop s e =
             let f = edge2flowSegment.[e]
             let t = differentFrom s (point2node.[f.Segment.StartPoint], point2node.[f.Segment.EndPoint])
