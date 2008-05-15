@@ -28,7 +28,7 @@ let calculate (ic : Instructions.InstructionChip) (instructions : Instructions.I
      |> Seq.map_concat (fun edge -> let a,b = nodesOfEdge edge in Set.union (explore a) (explore b))
      |> Set.of_seq
     let closedPerInstruction = instructions |> Array.map inferClosed
-    let allInferredValves = closedPerInstruction |> Seq.concat |> Array.of_seq
+    let allInferredValves = closedPerInstruction |> Seq.fold Set.union Set.empty |> Set.to_array
     let calculateStates i (instruction : Instructions.Instruction) =
         let edges = instruction.Used.Edges
         let closed = closedPerInstruction.[i]
