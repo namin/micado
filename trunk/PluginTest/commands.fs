@@ -137,8 +137,10 @@ let test_flow_intersections() =
     let points =
         seq { for i in [|0..segments.Length-1|] do
                 for j in [|i..segments.Length-1|] do
-                   for Some point in [segments.[i].intersectWith(segments.[j])] do
-                    yield point
+                   for pointOpt in [segments.[i].intersectWith(segments.[j])] do
+                    match pointOpt with
+                    | Some point -> yield point
+                    | None -> yield! []
             }
     Seq.iter (Debug.drawPoint length) points
     
