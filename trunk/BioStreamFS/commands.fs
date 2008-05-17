@@ -141,9 +141,9 @@ module Instructions = begin
     let activeInstructions() =
         activeCacheEntry().Instructions
         
-    let addInstruction = activeCacheEntry().AddInstruction
+    let addInstruction instruction = activeCacheEntry().AddInstruction instruction
     
-    let getInstruction = activeCacheEntry().GetInstruction
+    let getInstruction entity = activeCacheEntry().GetInstruction entity
         
     let savedActiveCache() = activeCacheEntry().UnsavedChanges |> not
 
@@ -496,6 +496,16 @@ module Instructions = begin
         let ic = activeInstructionChip()
         let instructions = activeInstructions()
         ControlInference.Plugin.generate ic instructions
+    )
+    
+    [<CommandMethod("micado_generate_multiplexer")>]
+    /// prompts the user for a flow box and, if possible, generates a related multiplexer
+    let micado_generate_multiplexer() = tryCommand (fun () ->
+        let ic = activeInstructionChip()
+        match promptSelectAnyBox "Box " with
+        | None -> ()
+        | Some box ->
+            ControlInference.Plugin.generateMultiplexer ic box
     )
     
     end
