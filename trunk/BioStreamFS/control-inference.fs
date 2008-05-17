@@ -206,18 +206,19 @@ let inferMultiplexerForBox (ic : Instructions.InstructionChip) box =
 module Plugin =
     open BioStream.Micado.Plugin
     
-    let generate (ic : Instructions.InstructionChip) (instructions : Instructions.Instruction array) =
+    let currentLayerOK () =
         let isCurrentLayer = 
             let currentLayer = Database.currentLayer()
             fun layer -> currentLayer = layer                
         if not (Array.exists isCurrentLayer Settings.Current.ControlLayers)
         then Editor.writeLine "The current layer must be a control layer, for control generation. Please either change the current layer or update the settings by adding the current layer to the control layers."
-        else
-        let allInferredValves, stateTable = calculate ic instructions
-        let valves = createValves ic allInferredValves 
+             false
+        else true
+
+    let updateChipWith (ic : Instructions.InstructionChip) valves openSets =
+        let valves = valves
                   |> Array.map (Database.writeEntityAndReturn >> (fun entity -> entity :?> Valve))
         let newChip = Chip.FromDatabase.create()
-        let openSets = stateTable |> Array.map states2openSet
         try
             ic.UpdateInferred (newChip, valves, openSets)
             Editor.writeLine "Control generation succeeded."
@@ -226,6 +227,15 @@ module Plugin =
             Editor.writeLine "Undoing inferred valves..."
             valves |> Array.iter (Database.eraseEntity)
             
+    let generate (ic : Instructions.InstructionChip) (instructions : Instructions.Instruction array) =
+        if not (currentLayerOK())
+        then ()
+        else
+        let allInferredValves, stateTable = calculate ic instructions
+        let valves = createValves ic allInferredValves 
+        let openSets = stateTable |> Array.map states2openSet
+        updateChipWith ic valves openSets
+                                
     let generateMultiplexer (ic : Instructions.InstructionChip) box =
         match inferMultiplexerForBox ic box with
         | None ->
