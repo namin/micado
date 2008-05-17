@@ -76,7 +76,7 @@ let writeEntityAndReturn entity =
 /// writes all the given entities to the active database
 /// returning a sequence of the entities object id
 /// (the original entities are disposed of)
-let writeEntities (entities : Entity seq) =
+let writeEntities entities =
     let db = database()
     use tr = db.TransactionManager.StartTransaction()
     use docLock = doc().LockDocument()
@@ -105,9 +105,10 @@ let eraseEntity (entity : #Entity) =
     tr.Commit()
 
 /// erases all the given entities from the active database    
-let eraseEntities (entities : Entity seq) =
+let eraseEntities entities =
     use tr = database().TransactionManager.StartTransaction()
     for entity in entities do
+        let entity = entity :> Entity
         if entity.IsWriteEnabled
         then entity.Erase()
         else use entity' = tr.GetObject(entity.ObjectId, OpenMode.ForWrite, true)
