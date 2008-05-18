@@ -242,9 +242,51 @@ let generateAllMultiplexers (ic : Instructions.InstructionChip) boxes =
      |> ignore
     !valves |> Array.of_seq, !lines |> Array.of_seq, !edge2valves
 
-let inferNeededValves (ic : Instructions.InstructionChip) instructions inferredValves stateTable edge2valves =
-    // TODO
-    inferredValves |> Array.map (fun iv -> true)
+let inferNeededValves (ic : Instructions.InstructionChip) (instructions : Instructions.Instruction array) inferredValves (stateTable : valveState array array) (edge2valves : Map<_,_>) baseNeeded =
+    // A valve is filtered out (not needed) _only_ if it's redundant with respect to the multiplexers.
+    // In particular, 
+    // if an inferred valve is only redundant with respect to another inferred valve, 
+    // it is still kept (needed).
+    // This is to avoid transforming situations like
+    //      |-V-|-V-|
+    //      |       |
+    //      |-V-|-V-|
+    // into situations like
+    //      |-V-|-V-|
+    //      |       |
+    //      |---|---|
+    // As in the rest of the control inference, user valves are totally ignored for now.
+    let rep = ic.Representation
+    let nextInferredValves iv =
+        let b = FlowRepresentation.differentFrom iv.Node (FlowRepresentation.edge2nodes rep iv.Edge)
+        let edges = Set.remove iv.Edge (rep.NodeEdges b)
+        edges |> Set.map (fun e -> { Edge = e; Node = b})        
+    let inferNeeded i iv =
+        let wetEdges =
+            { for j in {0..instructions.Length-1} do
+                let states = stateTable.[j]
+                match states.[i] with
+                | Closed -> yield! instructions.[j].Used.Edges |> Set.to_seq
+                | _ -> yield! []
+            }
+         |> Set.of_seq
+        let rec needed1 ivs seenEdges =
+            if ivs |> Set.exists (fun iv -> Set.mem iv.Edge wetEdges || Set.mem iv.Edge seenEdges)
+            then true
+            else
+            let ivs' =
+                ivs
+             |> Seq.filter (fun iv -> not (edge2valves.ContainsKey iv.Edge))
+             |> Seq.map_concat nextInferredValves
+             |> Set.of_seq
+            if Set.is_empty ivs'
+            then false
+            else
+            let seenEdges' = Set.union seenEdges (ivs |> Set.map (fun iv -> iv.Edge))
+            needed1 ivs' seenEdges'
+        let needed = needed1 (Set.singleton iv) Set.empty
+        needed
+    inferredValves |> Array.mapi inferNeeded
 
 module Plugin =
     open BioStream.Micado.Plugin
@@ -287,13 +329,13 @@ module Plugin =
         else
         let mValves, mLines, edge2valves = generateAllMultiplexers ic boxes
         let iValves, stateTable = calculate ic instructions
-        let iNeeded = inferNeededValves ic instructions iValves stateTable edge2valves
+        let baseNeeded = mValves.Length
+        let iNeeded = inferNeededValves ic instructions iValves stateTable edge2valves baseNeeded
         let neededIndices = [|0..iNeeded.Length-1|] |> Array.filter (fun i -> iNeeded.[i])
         let o2n = Array.create iNeeded.Length None
         neededIndices |> Array.iteri (fun n o -> o2n.[o] <- Some n)
         let iNeededValves = neededIndices |> Seq.map (fun i -> createValve ic iValves.[i])
         let valves = Seq.append mValves iNeededValves |> Array.of_seq
-        let baseNeeded = mValves.Length
         let openSetFor i states =
             let neededOpenSet = 
                 states 
