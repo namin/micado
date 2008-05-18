@@ -76,7 +76,7 @@ let withinMultiplexerPath f f' =
     Geometry.angleWithin (-maxDiff) maxDiff diff    
   
 let inferMultiplexer (ic : Instructions.InstructionChip) nodes =
-    if Array.length nodes <= 6
+    if Array.length nodes < 4
     then None
     else
     let calculatePath node =
@@ -274,11 +274,14 @@ let inferNeededValves (ic : Instructions.InstructionChip) (instructions : Instru
             if ivs |> Set.exists (fun iv -> Set.mem iv.Edge wetEdges || Set.mem iv.Edge seenEdges)
             then true
             else
-            let ivs' =
+            let ivss =
                 ivs
-             |> Seq.filter (fun iv -> not (edge2valves.ContainsKey iv.Edge))
-             |> Seq.map_concat nextInferredValves
-             |> Set.of_seq
+             |> Set.filter (fun iv -> not (edge2valves.ContainsKey iv.Edge))
+             |> Set.map nextInferredValves
+            if ivss |> Set.exists (fun set -> Set.is_empty set)
+            then true
+            else
+            let ivs' = Set.fold Set.union ivss Set.empty
             if Set.is_empty ivs'
             then false
             else
