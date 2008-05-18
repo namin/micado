@@ -119,7 +119,8 @@ let createMultiplexer (ic : Instructions.InstructionChip) (multiplexer : Multipl
     let grid = Array2.zero_create nPaths nLines
     let measurements = Array.zero_create nPaths
     let fillForPath pi path =
-        let fs = path |> Seq.map (fun (e,r) -> rep.ToFlowSegment e, r) |> Array.of_seq
+        let es = path |> Array.of_seq
+        let fs = es |> Array.map (fun (e,r) -> rep.ToFlowSegment e, r)
         let ls = fs |> Array.map (fun (f,r) -> f.Segment.Length)
         let totalLength = Array.fold_left (+) 0.0 ls
         let maxFlowWidth = fs |> Array.fold_left (fun w (f,r) -> max w f.Width) 0.0
@@ -141,7 +142,8 @@ let createMultiplexer (ic : Instructions.InstructionChip) (multiplexer : Multipl
             let p = diffLength / f.Segment.Length
             Debug.Assert(p <= 1.0)
             let p = if r then 1.0-p else p
-            grid.[pi,li] <- f.Segment.EvaluatePoint p, f
+            let e, _ = es.[curSegIndex]
+            grid.[pi,li] <- f.Segment.EvaluatePoint p, (f, e)
             let li' = li+1
             if li'<nLines
             then fill1 li' (fillLength + lengthPerLine) curLength curSegIndex
@@ -171,19 +173,29 @@ let createMultiplexer (ic : Instructions.InstructionChip) (multiplexer : Multipl
         lines.[li] <- polyline
     Seq.iter fillLine {0..nLines-1}
     let valves = Array.zero_create (nValvesPerPath*nPaths)
+    let edge2valves = ref Map.empty
+    let addToEdge2Valves e vi =
+        let set = 
+            match Map.tryfind e !edge2valves with
+            | None -> Set.empty
+            | Some set -> set
+        let set' = Set.add vi set
+        edge2valves := (!edge2valves).Add(e, set')
     let fillValvesForPath pi =
         let baseVi = pi * nValvesPerPath
         let rec fill1 subVi leftPi =
             let li = 2*subVi
             let li = if leftPi % 2 = 1 then li+1 else li
-            let pt,f = grid.[pi,li]
-            valves.[baseVi+subVi] <- Creation.valve f pt
+            let pt,(f,e) = grid.[pi,li]
+            let vi = baseVi+subVi
+            valves.[vi] <- Creation.valve f pt
+            addToEdge2Valves e vi
             let subVi' = subVi+1
             if subVi'<nValvesPerPath
             then fill1 (subVi+1) (leftPi/2)
         fill1 0 pi
     Seq.iter fillValvesForPath {0..nPaths-1}
-    Some (valves, lines)
+    Some (valves, lines, !edge2valves)
 
 let inferMultiplexerForBox (ic : Instructions.InstructionChip) box =
     match box with
@@ -202,7 +214,38 @@ let inferMultiplexerForBox (ic : Instructions.InstructionChip) box =
         else
         inferMultiplexer ic nodes
     | _ -> None
-              
+
+let generateAllMultiplexers (ic : Instructions.InstructionChip) boxes =
+    let valves = ref Seq.empty
+    let lines = ref Seq.empty
+    let edge2valves = ref Map.empty
+    let valvesLength = ref 0
+    let processMultiplexer (valves1, lines1, edge2valves1) =
+        let edgesAllNew =
+            let e2vs = !edge2valves
+            edge2valves1 
+         |> Map.for_all (fun e _ -> not (e2vs.ContainsKey e))
+        if not edgesAllNew
+        then disposeAll valves1
+             disposeAll lines1
+        else
+        let baseVi = !valvesLength
+        edge2valves1 |> Map.iter (fun e s -> edge2valves := (!edge2valves).Add(e, s |> Set.map (fun subVi -> baseVi + subVi)))
+        valvesLength := !valvesLength + (Array.length valves1)
+        valves := Seq.append (!valves) valves1
+        lines := Seq.append (!lines) lines1
+    for box in boxes do
+        box 
+     |> inferMultiplexerForBox ic
+     |> Option.bind (createMultiplexer ic)
+     |> Option.map processMultiplexer
+     |> ignore
+    !valves |> Array.of_seq, !lines |> Array.of_seq, !edge2valves
+
+let inferNeededValves (ic : Instructions.InstructionChip) instructions inferredValves stateTable edge2valves =
+    // TODO
+    inferredValves |> Array.map (fun iv -> true)
+
 module Plugin =
     open BioStream.Micado.Plugin
     
@@ -215,9 +258,10 @@ module Plugin =
              false
         else true
 
-    let updateChipWith (ic : Instructions.InstructionChip) valves openSets =
+    let updateChipWith (ic : Instructions.InstructionChip) valves openSets others =
         let valves = valves
                   |> Array.map (Database.writeEntityAndReturn >> (fun entity -> entity :?> Valve))
+        let others = others |> Database.writeEntitiesAndReturn
         let newChip = Chip.FromDatabase.create()
         try
             ic.UpdateInferred (newChip, valves, openSets)
@@ -225,7 +269,8 @@ module Plugin =
         with :? System.Collections.Generic.KeyNotFoundException ->
             Editor.writeLine "The generation could not complete, because some old valves could not be found."
             Editor.writeLine "Undoing inferred valves..."
-            valves |> Array.iter (Database.eraseEntity)
+            valves |> Database.eraseEntities
+            others |> Database.eraseEntities
             
     let generate (ic : Instructions.InstructionChip) (instructions : Instructions.Instruction array) =
         if not (currentLayerOK())
@@ -234,8 +279,42 @@ module Plugin =
         let allInferredValves, stateTable = calculate ic instructions
         let valves = createValves ic allInferredValves 
         let openSets = stateTable |> Array.map states2openSet
-        updateChipWith ic valves openSets
-                                
+        updateChipWith ic valves openSets Seq.empty
+        
+    let generateWithMultiplexers (ic : Instructions.InstructionChip) (instructions : Instructions.Instruction array) boxes =
+        if not (currentLayerOK())
+        then ()
+        else
+        let mValves, mLines, edge2valves = generateAllMultiplexers ic boxes
+        let iValves, stateTable = calculate ic instructions
+        let iNeeded = inferNeededValves ic instructions iValves stateTable edge2valves
+        let neededIndices = [|0..iNeeded.Length-1|] |> Array.filter (fun i -> iNeeded.[i])
+        let o2n = Array.create iNeeded.Length None
+        neededIndices |> Array.iteri (fun n o -> o2n.[o] <- Some n)
+        let iNeededValves = neededIndices |> Seq.map (fun i -> createValve ic iValves.[i])
+        let valves = Seq.append mValves iNeededValves |> Array.of_seq
+        let baseNeeded = mValves.Length
+        let openSetFor i states =
+            let neededOpenSet = 
+                states 
+             |> states2openSet 
+             |> Set.to_seq 
+             |> Seq.choose (fun o -> o2n.[o])
+             |> Seq.map (fun ni -> ni + baseNeeded)
+             |> Set.of_seq
+            let instruction = instructions.[i]
+            let usedEdges = instruction.Used.Edges
+            let openSet = ref neededOpenSet
+            let addSetOfEdge edge =
+                match Map.tryfind edge edge2valves with
+                | None -> ()
+                | Some set ->
+                    openSet := Set.union (!openSet) set
+            usedEdges |> Set.iter addSetOfEdge
+            !openSet
+        let openSets = stateTable |> Array.mapi openSetFor
+        updateChipWith ic valves openSets mLines
+                                        
     let generateMultiplexer (ic : Instructions.InstructionChip) box =
         match inferMultiplexerForBox ic box with
         | None ->
@@ -245,7 +324,7 @@ module Plugin =
             match createMultiplexer ic multiplexer with
             | None ->
                 Editor.writeLine "Not enough space to create multiplexer."
-            | Some (valves, polylines) ->
+            | Some (valves, polylines, _) ->
                 Editor.writeLine "Multiplexer created."
                 Database.writeEntities valves |> ignore
                 Database.writeEntities polylines |> ignore

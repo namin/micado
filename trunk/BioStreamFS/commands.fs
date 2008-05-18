@@ -135,11 +135,9 @@ module Instructions = begin
     let activeInstructionChip() =
         activeCacheEntry().InstructionChip
         
-    let activeBoxes() =
-        activeCacheEntry().Boxes
+    let activeBoxes() = activeCacheEntry().Boxes
         
-    let activeInstructions() =
-        activeCacheEntry().Instructions
+    let activeInstructions() = activeCacheEntry().Instructions
         
     let addInstruction instruction = activeCacheEntry().AddInstruction instruction
     
@@ -497,7 +495,16 @@ module Instructions = begin
         let instructions = activeInstructions()
         ControlInference.Plugin.generate ic instructions
     )
-    
+
+    [<CommandMethod("micado_generate_multiplexed_control")>]
+    /// generate the control lines with multiplexers from the instructions and boxes
+    let micado_generate_multiplexed_control() = tryCommand (fun () ->
+        let ic = activeInstructionChip()
+        let instructions = activeInstructions()
+        let boxes = activeBoxes() |> Map.to_seq |> Seq.map snd
+        ControlInference.Plugin.generateWithMultiplexers ic instructions boxes
+    )
+     
     [<CommandMethod("micado_generate_multiplexer")>]
     /// prompts the user for a flow box and, if possible, generates a related multiplexer
     let micado_generate_multiplexer() = tryCommand (fun () ->
