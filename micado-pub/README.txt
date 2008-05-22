@@ -1,4 +1,4 @@
-micado 0.4
+micado 0.5
 
 Thank you for downloading Micado, the AutoCAD plug-in for programmable microfluidics.
 
