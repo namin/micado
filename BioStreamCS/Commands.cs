@@ -28,7 +28,7 @@ namespace BioStream.Micado.User
         [CommandMethod("MicadoSettings")]
         static public void MicadoSettings()
         {
-            settingsUI.ShowDialog();
+            Application.ShowModalDialog(settingsUI);
         }
     }
 }
