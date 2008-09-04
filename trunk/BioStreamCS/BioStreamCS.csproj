@@ -30,11 +30,11 @@
   <ItemGroup>
     <Reference Include="acdbmgd, Version=17.1.0.0, Culture=neutral, processorArchitecture=x86">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\..\..\..\Program Files\Autodesk\Acade 2008\acdbmgd.dll</HintPath>
+      <HintPath>C:\Program Files\Autodesk\Acade 2008\acdbmgd.dll</HintPath>
     </Reference>
     <Reference Include="acmgd, Version=17.1.0.0, Culture=neutral, processorArchitecture=x86">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\..\..\..\Program Files\Autodesk\Acade 2008\acmgd.dll</HintPath>
+      <HintPath>C:\Program Files\Autodesk\Acade 2008\acmgd.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
