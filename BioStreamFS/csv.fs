@@ -51,8 +51,7 @@ type SchemaReader<'schema>() =
 
     // Compute the permutation defined by the ColumnAttributes indexes
     let columnToFldIdxPermutation =
-      Permutation(schema.Length,
-                  schema |> Array.map (fun (fldIdx,_,colIdx,_) -> (colIdx,fldIdx)))
+      Permutation.of_pairs (schema |> Array.map (fun (fldIdx,_,colIdx,_) -> (colIdx,fldIdx)))
 
     // Drop the parts of the schema we don't need
     let schema =

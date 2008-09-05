@@ -18,10 +18,10 @@ let valve (flowSegment : FlowSegment) (clickedPoint : Point2d) =
     let centerPoint = flowSegment.Segment.GetClosestPointTo(clickedPoint).Point
     let dWeight = flowSegment.Segment.Direction.GetPerpendicularVector() * width / 2.0
     let dHeight = flowSegment.Segment.Direction * height / 2.0
-    let points = Array.permute (new Permutation [| 0; 2; 3; 1|])
-                               ([| for vW in [dWeight; dWeight.Negate()]
-                                   for vH in [dHeight; dHeight.Negate()]
-                                   -> centerPoint.Add(vW).Add(vH) |])
+    let points = Array.permute (Permutation.of_array [| 0; 3; 1; 2|])
+                               ([| for vW in [dWeight; dWeight.Negate()] do
+                                     for vH in [dHeight; dHeight.Negate()] do
+                                       yield centerPoint.Add(vW).Add(vH) |])
     let valve = new Valve()
     valve.Center <- centerPoint
     let addVertex = addVertexTo valve

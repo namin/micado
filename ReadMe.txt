@@ -10,6 +10,10 @@ Open the solution BiostreamSolution.sln in Visual Studio to access all parts of 
 If your path to AutoCAD is not at C:\Program Files\Autodesk\Acade 2008,
 you might need to adjust the links to the acdbmgd.dll and acmgd.dll.
 
+In order to avoid an incompatible version warning in AutoCAD, the C++ projects must be build 
+with the VC7 tools. Specify this build setting with the VC Build Hook utility, downloadable from 
+http://www.manusoft.com/Resources/ARXTips/Index.stm#VC8ForARX2000
+
 ------------
 VS Projects
 ------------
@@ -80,6 +84,8 @@ Just make sure that BioStreamFS is the default startup project.
 To configure a project as the default startup project, 
 Right-click on it in the Solution Explorer and then click on Set as StartUp Project.
 
+(N.B. TODO: This tip doesn't quite seem to work. Investigate.
+
 If you generated micado-debug.scr in a custom location, 
 configure BioStreamCS as the default startup project and set the debugging options as follows:
 
@@ -93,6 +99,8 @@ configure BioStreamCS as the default startup project and set the debugging optio
   where GENERATE_DIRECTORY is the directory in which you generated micado-debug.scr
   
 - For Working Directory, typically use GENERATE_DIRECTORY as well.
+
+)
 
 ------------------
 Creating a Release

@@ -101,7 +101,7 @@ let exportJavaData (ic : Instructions.InstructionChip)
     for ui = 0 to control.Lines.Length-1 do
         tw.WriteLine("// index " ^ (ui+1).ToString())
         tw.WriteLine("{")
-        let i = control.LineNumbering.Inverse.[ui]
+        let i = control.LineNumbering ui
         for valve in control.Lines.[i].Valves do
             tw.WriteLine(toPixelCoordinates(valve.Center))
         tw.WriteLine("},")

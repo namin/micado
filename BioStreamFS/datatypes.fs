@@ -77,10 +77,10 @@ type FlowSegment (segment : LineSegment2d, width : double) =
          |> fun (diff) -> compare diff 0.0
     let slope = ref None : SegmentSlope option ref
     let computeSlope() = 
-        let around delta base angle =
-            Geometry.angleWithin (base-delta) (base+delta) angle
+        let around delta baseAngle angle =
+            Geometry.angleWithin (baseAngle-delta) (baseAngle+delta) angle
         let angle = Geometry.rad2deg (segment.Direction.Angle)
-        let near base = (around 30 base angle) || (around 30 (base+180) angle)
+        let near baseAngle = (around 30 baseAngle angle) || (around 30 (baseAngle+180) angle)
         match angle with
         | _ when (near 0) -> Horizontal
         | _ when (near 90) -> Vertical
@@ -226,7 +226,7 @@ type Control ( valves : Valve list, punches : Punch list, others : RestrictedEnt
     let unconnectedLines = ref None : ControlLine array option ref
     let unconnectedPunches = ref None : Punch array option ref
     let obstacles = ref None : RestrictedEntity array option ref
-    let lineNumbering = ref None : Permutation option ref
+    let lineNumbering = ref None : permutation option ref
     let valve2line = ref None : int array option ref
     member v.computeValve2Line() =
         let toLineIndex valve = v.searchLines valve |> Option.get
@@ -238,11 +238,12 @@ type Control ( valves : Valve list, punches : Punch list, others : RestrictedEnt
         let lines = v.Lines
         let p = lines |> Array.mapi getLineIndex
         try
-            new Permutation(p)
+            Permutation.of_array p
         with
-            | :? FailureException -> Permutation.Identity (lines.Length)
-    member v.setLineNumbering(lineNumbering' : Permutation) =
+            | :? FailureException -> Permutation.identity
+    member v.setLineNumbering(lineNumbering' : permutation) =
         lineNumbering := Some lineNumbering'
+        let lineNumberingInv = Permutation.inverse v.Lines.Length lineNumbering'
         let lines = v.Lines
         let db = doc.Database
         use tr = db.TransactionManager.StartTransaction()
@@ -250,7 +251,7 @@ type Control ( valves : Valve list, punches : Punch list, others : RestrictedEnt
         for i = 0 to lines.Length-1 do
             let id = lines.[i].Representative.ObjectId
             use valve = tr.GetObject(id, OpenMode.ForWrite) :?> Valve
-            valve.Index <- lineNumbering'.[i]
+            valve.Index <- lineNumberingInv i
         tr.Commit()
     member private v.computeLines() =
         let entities = Array.concat [(to_entities v.Valves);(to_entities v.Punches);(to_entities v.Others)]
@@ -305,7 +306,7 @@ type Control ( valves : Valve list, punches : Punch list, others : RestrictedEnt
      || Array.exists intersectWithEntity v.Obstacles
      || Array.exists intersectWithEntity v.UnconnectedPunches
     member v.LineNumbering with get() = lazyGet v.computeLineNumbering lineNumbering
-                            and set(value : Permutation) = v.setLineNumbering(value)
+                            and set(value : permutation) = v.setLineNumbering(value)
     member v.searchLines(entity : Entity) =
         let lines = v.Lines
         let results = {0..lines.Length-1} |> Seq.filter (fun i -> lines.[i].Contains entity)
