@@ -5,18 +5,12 @@ Visual Studio
 =============
 
 Micado is developed using Visual Studio. 
-Open the solution BiostreamSolution.sln in Visual Studio to access all parts of the project.
+Open the solution BiostreamSolution.sln    in Visual Studio 2008 to access the managed   projects
+ and the solution BioStreamSolutionCpp.sln in Visual Studio 2005 to access the unmanaged projects.
+The managed projects depend on the unmanaged projects.
 
 If your path to AutoCAD is not at C:\Program Files\Autodesk\Acade 2008,
 you might need to adjust the links to the acdbmgd.dll and acmgd.dll.
-
-(TODO: This tip doesn't solve the problem. Investigate.
-
-In order to avoid an incompatible version warning in AutoCAD, the C++ projects must be build 
-with the VC7 tools. Specify this build setting with the VC Build Hook utility, downloadable from 
-http://www.manusoft.com/Resources/ARXTips/Index.stm#VC8ForARX2000
-
-)
 
 ------------
 VS Projects
