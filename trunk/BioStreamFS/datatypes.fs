@@ -44,8 +44,8 @@ let segmentPolyline width (startPoint : Point2d) (endPoint : Point2d) =
 
 let segmentPolyline0 = segmentPolyline 0.0
 
-let disposeAll s =
-    Seq.iter (fun (e :> DBObject) -> if not e.IsDisposed then e.Dispose()) s
+let disposeAll (s : seq<'T> when 'T :> DBObject)=
+    s |> Seq.iter (fun e -> if not e.IsDisposed then e.Dispose())
         
 /// chip entities are just straight out of the database
 type ChipEntities (flowEntities : Entity list, controlEntities : Entity list) = 
@@ -271,7 +271,7 @@ type Control ( valves : Valve list, punches : Punch list, others : RestrictedEnt
             
             acc [] [] []
         Seq.to_array (seq { for c in components do
-                                let line = component2line (Set.elements c)
+                                let line = component2line (Set.to_list c)
                                 if line.Valves <> []
                                 then yield line 
                            })
