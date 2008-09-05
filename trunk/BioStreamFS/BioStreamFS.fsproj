@@ -1,0 +1,103 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="3.5" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- Common Property Group -->
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{e04a09ad-732a-42c6-8da2-bf61a988fb8a}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>
+    </RootNamespace>
+    <AssemblyName>BioStreamFS</AssemblyName>
+    <Name>BioStreamFS</Name>
+  </PropertyGroup>
+  <!-- Configuration Debug -->
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>True</DebugSymbols>
+    <Optimize>False</Optimize>
+    <OutputPath>..\debug</OutputPath>
+    <DefineConstants>
+    </DefineConstants>
+    <WarningLevel>3</WarningLevel>
+  </PropertyGroup>
+  <!-- Configuration Release -->
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugSymbols>False</DebugSymbols>
+    <Optimize>True</Optimize>
+    <OutputPath>..\release</OutputPath>
+    <DefineConstants>
+    </DefineConstants>
+    <WarningLevel>3</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ReferencePath>
+    </ReferencePath>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <StartAction>Program</StartAction>
+    <StartProgram>C:\Program Files\Autodesk\Acade 2008\acad.exe</StartProgram>
+    <StartArguments>/b "C:\Program Files\Autodesk\Acade 2008\UserDataCache\micado-debug"</StartArguments>
+    <StartWorkingDirectory>C:\Program Files\Autodesk\Acade 2008\UserDataCache\</StartWorkingDirectory>
+  </PropertyGroup>
+  <!-- References -->
+  <ItemGroup>
+    <Reference Include="acdbmgd, Version=17.1.0.0, Culture=neutral, PublicKeyToken=null">
+      <Name>acdbmgd</Name>
+      <AssemblyName>acdbmgd.dll</AssemblyName>
+    </Reference>
+    <Reference Include="acmgd, Version=17.1.0.0, Culture=neutral, PublicKeyToken=null">
+      <Name>acmgd</Name>
+      <AssemblyName>acmgd.dll</AssemblyName>
+    </Reference>
+    <Reference Include="MgCS2" />
+    <Reference Include="BioStreamMg" />
+    <Reference Include="BioStreamCS" />
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="FSharp.PowerPack" />
+    <Reference Include="acmgd" />
+    <Reference Include="MgCS2" />
+    <Reference Include="BioStreamMg" />
+    <Reference Include="BioStreamCS" />
+    <Reference Include="acdbmgd" />
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="FSharp.PowerPack" />
+  </ItemGroup>
+  <!-- Files -->
+  <ItemGroup>
+    <Compile Include="graph.fs" />
+    <Compile Include="field-converters.fs" />
+    <Compile Include="csv.fs" />
+    <Compile Include="geometry.fs" />
+    <Compile Include="datatypes.fs" />
+    <Compile Include="flow.fs" />
+    <Compile Include="creation.fs" />
+    <Compile Include="database.fs" />
+    <Compile Include="editor.fs" />
+    <Compile Include="bridge.fs" />
+    <Compile Include="chip.fs" />
+    <Compile Include="routing.fs" />
+    <Compile Include="flow-representation.fs" />
+    <Compile Include="instructions.fs" />
+    <Compile Include="control-inference.fs" />
+    <Compile Include="debug.fs" />
+    <Compile Include="export-gui.fs" />
+    <Compile Include="commands.fs" />
+    <Compile Include="legacy.fs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath)\FSharp\1.0\Microsoft.FSharp.Targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+	     Other similar extension points exist, see Microsoft.Common.targets.
+	<Target Name='BeforeBuild'>
+	</Target>
+	<Target Name='AfterBuild'>
+	</Target>
+	-->
+</Project>

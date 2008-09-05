@@ -226,7 +226,7 @@ let test_export_image() =
  
 let verify_control_line_number (controlLayer : Datatypes.Control) =
     let tellUserLineIndex lineIndex =
-        let userLineIndex = controlLayer.LineNumbering.[lineIndex]
+        let userLineIndex = controlLayer.LineNumbering lineIndex
         Editor.writeLine ("Selected line is #" ^ (userLineIndex+1).ToString())
     controlLayer.promptLine "Select line to verify numbering: "
  |> Option.map tellUserLineIndex

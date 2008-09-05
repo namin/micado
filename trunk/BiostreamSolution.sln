@@ -1,6 +1,12 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 9.00
-# Visual Studio 2005
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{F1E95641-9139-4477-989B-FDC107FEEBD8}"
+	ProjectSection(SolutionItems) = preProject
+		ReadMe.txt = ReadMe.txt
+		Todo.txt = Todo.txt
+	EndProjectSection
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BioStreamDB", "BioStreamDB\BioStreamDB.vcproj", "{E7B49B43-88EA-4D0C-92FE-95664906F7A1}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BioStreamMg", "BioStreamMg\BioStreamMg.vcproj", "{D26DC853-A22B-4C5B-810F-F76D1247FA93}"
@@ -10,25 +16,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BioStreamMg", "BioStreamMg\
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MgCS2", "MgCS2\MgCS2.vcproj", "{55803607-5880-4CA7-923C-B89B7D21EC4B}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{F1E95641-9139-4477-989B-FDC107FEEBD8}"
-	ProjectSection(SolutionItems) = preProject
-		ReadMe.txt = ReadMe.txt
-		Todo.txt = Todo.txt
-	EndProjectSection
-EndProject
-Project("{94D665CA-D915-4DE1-AA53-913450A1AE2D}") = "BioStreamFS", "BioStreamFS\BioStreamFS.fsharpp", "{AA78FA7E-8AD6-45C6-A864-80831A418942}"
-	ProjectSection(ProjectDependencies) = postProject
-		{55803607-5880-4CA7-923C-B89B7D21EC4B} = {55803607-5880-4CA7-923C-B89B7D21EC4B}
-		{D26DC853-A22B-4C5B-810F-F76D1247FA93} = {D26DC853-A22B-4C5B-810F-F76D1247FA93}
-		{E04A8367-B9CB-49BE-BEC4-E691FB686CDB} = {E04A8367-B9CB-49BE-BEC4-E691FB686CDB}
-	EndProjectSection
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BioStreamCS", "BioStreamCS\BioStreamCS.csproj", "{E04A8367-B9CB-49BE-BEC4-E691FB686CDB}"
 EndProject
-Project("{94D665CA-D915-4DE1-AA53-913450A1AE2D}") = "PluginTest", "PluginTest\PluginTest.fsharpp", "{7D3AEE10-AD1C-4989-9187-5717892EF7E1}"
-	ProjectSection(ProjectDependencies) = postProject
-		{AA78FA7E-8AD6-45C6-A864-80831A418942} = {AA78FA7E-8AD6-45C6-A864-80831A418942}
-	EndProjectSection
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "BioStreamFS", "BioStreamFS\BioStreamFS.fsproj", "{E04A09AD-732A-42C6-8DA2-BF61A988FB8A}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "PluginTest", "PluginTest\PluginTest.fsproj", "{14825573-BD9E-4094-BD3B-1429043CDCE3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -70,16 +62,6 @@ Global
 		{55803607-5880-4CA7-923C-B89B7D21EC4B}.Release|Mixed Platforms.Build.0 = Release|Win32
 		{55803607-5880-4CA7-923C-B89B7D21EC4B}.Release|Win32.ActiveCfg = Release|Win32
 		{55803607-5880-4CA7-923C-B89B7D21EC4B}.Release|Win32.Build.0 = Release|Win32
-		{AA78FA7E-8AD6-45C6-A864-80831A418942}.Debug|Any CPU.ActiveCfg = Debug|Win32
-		{AA78FA7E-8AD6-45C6-A864-80831A418942}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
-		{AA78FA7E-8AD6-45C6-A864-80831A418942}.Debug|Mixed Platforms.Build.0 = Debug|Win32
-		{AA78FA7E-8AD6-45C6-A864-80831A418942}.Debug|Win32.ActiveCfg = Debug|Win32
-		{AA78FA7E-8AD6-45C6-A864-80831A418942}.Debug|Win32.Build.0 = Debug|Win32
-		{AA78FA7E-8AD6-45C6-A864-80831A418942}.Release|Any CPU.ActiveCfg = Release|Win32
-		{AA78FA7E-8AD6-45C6-A864-80831A418942}.Release|Mixed Platforms.ActiveCfg = Release|Win32
-		{AA78FA7E-8AD6-45C6-A864-80831A418942}.Release|Mixed Platforms.Build.0 = Release|Win32
-		{AA78FA7E-8AD6-45C6-A864-80831A418942}.Release|Win32.ActiveCfg = Release|Win32
-		{AA78FA7E-8AD6-45C6-A864-80831A418942}.Release|Win32.Build.0 = Release|Win32
 		{E04A8367-B9CB-49BE-BEC4-E691FB686CDB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{E04A8367-B9CB-49BE-BEC4-E691FB686CDB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E04A8367-B9CB-49BE-BEC4-E691FB686CDB}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
@@ -90,17 +72,31 @@ Global
 		{E04A8367-B9CB-49BE-BEC4-E691FB686CDB}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{E04A8367-B9CB-49BE-BEC4-E691FB686CDB}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{E04A8367-B9CB-49BE-BEC4-E691FB686CDB}.Release|Win32.ActiveCfg = Release|Any CPU
-		{7D3AEE10-AD1C-4989-9187-5717892EF7E1}.Debug|Any CPU.ActiveCfg = Debug|Win32
-		{7D3AEE10-AD1C-4989-9187-5717892EF7E1}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
-		{7D3AEE10-AD1C-4989-9187-5717892EF7E1}.Debug|Mixed Platforms.Build.0 = Debug|Win32
-		{7D3AEE10-AD1C-4989-9187-5717892EF7E1}.Debug|Win32.ActiveCfg = Debug|Win32
-		{7D3AEE10-AD1C-4989-9187-5717892EF7E1}.Debug|Win32.Build.0 = Debug|Win32
-		{7D3AEE10-AD1C-4989-9187-5717892EF7E1}.Release|Any CPU.ActiveCfg = Release|Win32
-		{7D3AEE10-AD1C-4989-9187-5717892EF7E1}.Release|Mixed Platforms.ActiveCfg = Release|Win32
-		{7D3AEE10-AD1C-4989-9187-5717892EF7E1}.Release|Win32.ActiveCfg = Release|Win32
-		{7D3AEE10-AD1C-4989-9187-5717892EF7E1}.Release|Win32.Build.0 = Release|Win32
+		{E04A09AD-732A-42C6-8DA2-BF61A988FB8A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E04A09AD-732A-42C6-8DA2-BF61A988FB8A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E04A09AD-732A-42C6-8DA2-BF61A988FB8A}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{E04A09AD-732A-42C6-8DA2-BF61A988FB8A}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{E04A09AD-732A-42C6-8DA2-BF61A988FB8A}.Debug|Win32.ActiveCfg = Debug|Any CPU
+		{E04A09AD-732A-42C6-8DA2-BF61A988FB8A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E04A09AD-732A-42C6-8DA2-BF61A988FB8A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E04A09AD-732A-42C6-8DA2-BF61A988FB8A}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{E04A09AD-732A-42C6-8DA2-BF61A988FB8A}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{E04A09AD-732A-42C6-8DA2-BF61A988FB8A}.Release|Win32.ActiveCfg = Release|Any CPU
+		{14825573-BD9E-4094-BD3B-1429043CDCE3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{14825573-BD9E-4094-BD3B-1429043CDCE3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{14825573-BD9E-4094-BD3B-1429043CDCE3}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{14825573-BD9E-4094-BD3B-1429043CDCE3}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{14825573-BD9E-4094-BD3B-1429043CDCE3}.Debug|Win32.ActiveCfg = Debug|Any CPU
+		{14825573-BD9E-4094-BD3B-1429043CDCE3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{14825573-BD9E-4094-BD3B-1429043CDCE3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{14825573-BD9E-4094-BD3B-1429043CDCE3}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{14825573-BD9E-4094-BD3B-1429043CDCE3}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{14825573-BD9E-4094-BD3B-1429043CDCE3}.Release|Win32.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		VCBuildHookBuildToolVersion = VC7
 	EndGlobalSection
 EndGlobal

@@ -255,7 +255,7 @@ let promptSelectIdName message keywords  =
     // (unless there are uppercase duplicates, in which case, it's hopeless)
     let sortedKeywords = keywords |> Seq.mapi (fun i k -> k,i) |> Seq.to_array
     Array.sort compare sortedKeywords
-    let p = new Permutation(sortedKeywords.Length, sortedKeywords |> Array.mapi (fun dst (k,src) -> (src,dst)))
+    let p = Permutation.of_pairs (sortedKeywords |> Array.mapi (fun dst (k,src) -> (src,dst)))
     let capitalizedKeywords = 
         sortedKeywords
      |> Array.map (fst >> String.capitalize >> capit)
@@ -319,9 +319,8 @@ module Extra =
             let n = controlLayer.Lines.Length
             let rec acc remaining numbered i =
                 if i=n
-                then let new2oldA = (Set.choose remaining) :: numbered |> Array.of_list |> Array.rev
-                     let new2oldP = new Permutation(new2oldA)
-                     let old2newP = new2oldP.Inverse
+                then let old2newA = (Set.choose remaining) :: numbered |> Array.of_list |> Array.rev
+                     let old2newP = Permutation.of_array old2newA
                      controlLayer.LineNumbering <- old2newP
                      writeLine ("Deducing control line #" ^ i.ToString() ^ ". Numbering completed.")
                      true

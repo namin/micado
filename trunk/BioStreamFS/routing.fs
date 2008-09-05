@@ -41,42 +41,42 @@ type SimpleGrid ( resolution, boundingBox : Point2d * Point2d ) =
     let nodeCount = nX*nY
     let withinC nC c =
         0<=c && c<nC
-    let withinX = withinC nX
-    let withinY = withinC nY
-    let within (x,y) =
-        withinX x && withinY y
-    let index2coordinates index =
+    let withinX' = withinC nX
+    let withinY' = withinC nY
+    let within' (x,y) =
+        withinX' x && withinY' y
+    let index2coordinates' index =
         let x = index % nX
         let y = (index-x) / nX
         (x,y)
-    let coordinates2index (x,y) =
+    let coordinates2index' (x,y) =
         x+y*nX
-    let neighborCoordinates (x,y) =
-        { for d in deltas do
-            let x' = x+d
-            if withinX x'
-            then yield (x',y)
-            let y' = y+d
-            if withinY y'
-            then yield (x,y')
-        }
-    let coordinates2point (x,y) =
+    let neighborCoordinates' (x,y) =
+        seq { for d in deltas do
+                let x' = x+d
+                if withinX' x'
+                then yield (x',y)
+                let y' = y+d
+                if withinY' y'
+                then yield (x,y')
+            }
+    let coordinates2point' (x,y) =
         new Point2d (lowerLeft.X+float(x)*resolution, lowerLeft.Y+float(y)*resolution)
     member v.NX = nX
     member v.NY = nY
     member v.LowerLeft = lowerLeft
     member v.Resolution = resolution
-    member v.index2coordinates = index2coordinates
-    member v.coordinates2index = coordinates2index
-    member v.neighborCoordinates = neighborCoordinates
-    member v.coordinates2point = coordinates2point
-    member v.withinX = withinX
-    member v.withinY = withinY
-    member v.within = within
+    member v.index2coordinates = index2coordinates'
+    member v.coordinates2index = coordinates2index'
+    member v.neighborCoordinates = neighborCoordinates'
+    member v.coordinates2point = coordinates2point'
+    member v.withinX = withinX'
+    member v.withinY = withinY'
+    member v.within = within'
     interface IGrid with
         member v.NodeCount = nodeCount
-        member v.Neighbors index = Seq.map coordinates2index (neighborCoordinates (index2coordinates index))
-        member v.ToPoint index = index |> index2coordinates |> coordinates2point
+        member v.Neighbors index = Seq.map coordinates2index' (neighborCoordinates' (index2coordinates' index))
+        member v.ToPoint index = index |> index2coordinates' |> coordinates2point'
 
 /// A connection segment is a line whose thickness is specified by user setting ConnectionWidth
 let connectionSegment startPoint endPoint = segmentPolyline (Settings.Current.ConnectionWidth) startPoint endPoint
@@ -146,7 +146,7 @@ let interiorPointConvex (polyline : #Polyline) (p : Point2d) =
 let to_polylines extraWidth (polyline : Polyline) =
     if polyline.Closed 
     then if extraWidth = 0.0
-         then { yield polyline }
+         then seq { yield polyline }
          else
          let segments = Array.init polyline.NumberOfVertices polyline.GetLineSegment2dAt
          let get i = i % polyline.NumberOfVertices |> fun (i) -> if i<0 then i+polyline.NumberOfVertices else i 
@@ -158,14 +158,14 @@ let to_polylines extraWidth (polyline : Polyline) =
          let addVertex point = polyline'.AddVertexAt(polyline'.NumberOfVertices, point, 0.0, 0.0, 0.0)
          Array.iter addVertex points
          polyline'.Closed <- true
-         { yield polyline' }
+         seq { yield polyline' }
     else let to_segmentPolyline (width, segment : LineSegment2d) =
             let extraInDir d = segment.Direction*float(d)*extraWidth
             let a = segment.StartPoint + extraInDir (-1)
             let b = segment.EndPoint + extraInDir 1
             segmentPolyline (width+extraWidth) a b
-         let allSides = {for i in 0..polyline.NumberOfVertices-2 -> polyline.GetStartWidthAt i, polyline.GetLineSegment2dAt i}
-         {for side in allSides -> to_segmentPolyline side}
+         let allSides = seq {for i in 0..polyline.NumberOfVertices-2 -> polyline.GetStartWidthAt i, polyline.GetLineSegment2dAt i}
+         seq {for side in allSides -> to_segmentPolyline side}
 
 /// A calculator grid provides some calculation methods on top of a simple grid         
 type CalculatorGrid (g : SimpleGrid) =
@@ -178,12 +178,12 @@ type CalculatorGrid (g : SimpleGrid) =
     let closestUpperRightCoordinates = closestCoordinates System.Math.Ceiling
     let surroundingCoordinates lowerLeftCoordinates =
         let x,y = lowerLeftCoordinates
-        { for dx in [0;1] do
-            for dy in [0;1] do
-                let c = (x+dx,y+dy)
-                if g.within c
-                then yield c
-        }
+        seq { for dx in [0;1] do
+                for dy in [0;1] do
+                  let c = (x+dx,y+dy)
+                  if g.within c
+                  then yield c
+            }
     let innerBoundingBox (llPt : Point2d) (urPt : Point2d) =
         (closestUpperRightCoordinates llPt, closestLowerLeftCoordinates urPt)
     let outerBoundingBox (llPt : Point2d) (urPt : Point2d) =
@@ -191,15 +191,15 @@ type CalculatorGrid (g : SimpleGrid) =
     let allCoordinatesInBoundingBox (ll, ur) =
         let (llx, lly) =  ll
         let (urx, ury) =  ur
-        { for x in [llx..urx] do
-            for y in [lly..ury] do
-                yield (x,y)
-        }
+        seq { for x in [llx..urx] do
+                for y in [lly..ury] do
+                  yield (x,y)
+            }
     let neighborCoordinatesWithSlope (slope : SegmentSlope) (x,y) =
         match slope with
         | Tilted -> Seq.empty
-        | Horizontal -> { for dx in deltas when g.withinX(x+dx) -> (x+dx,y) }
-        | Vertical -> { for dy in deltas when g.withinY(y+dy) -> (x,y+dy) }
+        | Horizontal -> seq { for dx in deltas do if g.withinX(x+dx) then yield (x+dx,y) }
+        | Vertical -> seq { for dy in deltas do if g.withinY(y+dy) then yield (x,y+dy) }
     let allInteriorCoordinates (polyline : Polyline) =
         polyline.GeometricExtents
      |> fun (e) -> innerBoundingBox (Geometry.to2d e.MinPoint) (Geometry.to2d e.MaxPoint)
@@ -228,18 +228,18 @@ type CalculatorGrid (g : SimpleGrid) =
          |> Seq.map g.coordinates2index                                               
         let intersectWithPolyline = entitiesIntersect polyline
         let interiorOfPolyline = interiorPoint polyline
-        { for a in outerBoundingBoxIndices polyline do
-            let ptA = ig.ToPoint a
-            for b in ig.Neighbors a do
-                if a < b // avoid duplicates
-                then let ptB = ig.ToPoint b
-                     use segment = (connectionSegment ptA ptB) //(segmentPolyline0 ptA ptB)
-                     if intersectWithPolyline segment
-                     then if not (interiorOfPolyline ptA)
-                          then yield (b,a)
-                          if not (interiorOfPolyline ptB)
-                          then yield (a,b)
-        }
+        seq { for a in outerBoundingBoxIndices polyline do
+                let ptA = ig.ToPoint a
+                for b in ig.Neighbors a do
+                    if a < b // avoid duplicates
+                    then let ptB = ig.ToPoint b
+                         use segment = (connectionSegment ptA ptB) //(segmentPolyline0 ptA ptB)
+                         if intersectWithPolyline segment
+                         then if not (interiorOfPolyline ptA)
+                              then yield (b,a)
+                              if not (interiorOfPolyline ptB)
+                              then yield (a,b)
+            }
     [<OverloadID("outerEdgesPunch")>]
     member v.outerEdges (punch : Punch) =
         let center = punch.Center
@@ -254,12 +254,12 @@ type CalculatorGrid (g : SimpleGrid) =
         let cs = allCoordinatesInBoundingBox bounds
         let outer1 c c' minC maxC = (c' < c && c <= minC) || (c' > c && c >= maxC)
         let outer (x,y) (x',y') = outer1 x x' minX maxX || outer1 y y' minY maxY
-        { for c in cs do
-            let i = g.coordinates2index c
-            for c' in g.neighborCoordinates c do
-                if outer c c'
-                then yield (i,(g.coordinates2index c'))
-        }
+        seq { for c in cs do
+                let i = g.coordinates2index c
+                for c' in g.neighborCoordinates c do
+                    if outer c c'
+                    then yield (i,(g.coordinates2index c'))
+            }
         
 let arrayOfRevList lst =
     lst |> List.rev |> Array.of_list        
@@ -271,19 +271,19 @@ let inverseMapList map =
         | Some lst -> Map.add key' (value'::lst) map'
     let addEntry key values map' =
         List.fold_left (add key) map' values
-    Map.fold addEntry map Map.empty
+    Map.fold_right addEntry map Map.empty
 
 let inverseMapSet map =
     let add value' key' map' =
         match Map.tryfind key' map' with
-        | None -> Map.add key' (Set.Singleton value') map'
+        | None -> Map.add key' (Set.singleton value') map'
         | Some set -> Map.add key' (Set.add value' set) map'
     let addEntry key values map' =
-        Set.fold (add key) values map'
-    Map.fold addEntry map Map.empty
+        Set.fold_right (add key) values map'
+    Map.fold_right addEntry map Map.empty
 
-let disposeAllNew s =
-    Seq.iter (fun (e :> DBObject) -> if e.IsNewObject then e.Dispose()) s
+let disposeAllNew (s : seq<'T> when 'T :> DBObject) =
+    s |> Seq.iter (fun e -> if e.IsNewObject then e.Dispose())
     
 /// A chip grid represents a routing grid that has the connectivity of the chip
 /// following the design rules:
@@ -299,7 +299,7 @@ type ChipGrid ( chip : Chip ) =
     //let punches = chip.ControlLayer.UnconnectedPunches
     let addEdge fromIndex toIndex edges =
         match Map.tryfind fromIndex edges with
-        | None -> Map.add fromIndex (Set.Singleton toIndex) edges
+        | None -> Map.add fromIndex (Set.singleton toIndex) edges
         | Some set -> if Set.mem toIndex set
                       then edges
                       else Map.add fromIndex (Set.add toIndex set) edges
@@ -407,10 +407,10 @@ type ChipGrid ( chip : Chip ) =
                 | None -> seq
                 | Some set -> seq |> Seq.filter (fun (x) -> not (Set.mem x set)) 
     let computeNeighbors edges removedEdges index =
-        { 
-          yield! extraNeighbors edges index
-          yield! filteredNeighbors removedEdges index
-        }
+        seq { 
+              yield! extraNeighbors edges index
+              yield! filteredNeighbors removedEdges index
+            }
     let neighbors = computeNeighbors edges removedEdges
     let inverseEdges = inverseMapSet edges
     let inverseRemovedEdges = inverseMapSet removedEdges
@@ -561,10 +561,10 @@ type IterativeRouting (grid : IRoutingGrid, initialSolution) =
         // still, I am keeping it (though turning it off) just in case
         let maxNonGreedyTurns = 0
         let keepBestTrace =
-            Seq.fold1 (fun (slopeChanges, trace) (slopeChanges', trace') ->
-                        if slopeChanges < slopeChanges'
-                        then (slopeChanges, trace)
-                        else (slopeChanges', trace'))
+            Seq.reduce (fun (slopeChanges, trace) (slopeChanges', trace') ->
+                          if slopeChanges < slopeChanges'
+                          then (slopeChanges, trace)
+                          else (slopeChanges', trace'))
         // note: not tail-recursive
         let rec tracebackWith (slopeChanges, nonGreedyTurns, trace) (node,level,point,slope) =
             if level = 0
@@ -666,6 +666,6 @@ let presentConnections (grid : #IGrid) connections =
         let polyline = new Polyline()
         let addVertex point = polyline.AddVertexAt(polyline.NumberOfVertices, point, 0.0, Settings.Current.ConnectionWidth, Settings.Current.ConnectionWidth)
         List.iter addVertex points
-        { yield (polyline :> Entity) }
+        seq { yield (polyline :> Entity) }
     connections |> Array.map trace2points |> Seq.of_array |> Seq.map_concat points2entities
    

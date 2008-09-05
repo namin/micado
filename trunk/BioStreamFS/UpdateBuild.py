@@ -1,4 +1,6 @@
-usage = """Really dumb updater of build.bat -- just call python UpdateBuild.py"""
+usage = """Really dumb updater of build.bat -- just call python UpdateBuild.py
+TODO: Update this to read from .fsproj file instead of the superseded .fsharpp file.
+"""
 
 fileBat = "build.bat"
 fileFsharpp = "BioStreamFS.fsharpp"
