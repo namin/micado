@@ -270,5 +270,9 @@
 		</Filter>
 	</Files>
 	<Globals>
+		<Global
+			Name="VCBuildHookBuildToolVersion"
+			Value="VC7"
+		/>
 	</Globals>
 </VisualStudioProject>
