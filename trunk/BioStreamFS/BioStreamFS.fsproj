@@ -73,8 +73,6 @@
   <!-- Files -->
   <ItemGroup>
     <Compile Include="graph.fs" />
-    <Compile Include="field-converters.fs" />
-    <Compile Include="csv.fs" />
     <Compile Include="geometry.fs" />
     <Compile Include="datatypes.fs" />
     <Compile Include="flow.fs" />

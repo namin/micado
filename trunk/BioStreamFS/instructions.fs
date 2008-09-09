@@ -89,7 +89,7 @@ module FlowBox =
         | Or (_, fs, _) | And (_, fs) | Seq (_, fs) ->
             fs 
          |> Array.map mentionedEdgesLax
-         |> Set.Union   
+         |> Set.union_all   
 
     let rec mentionedUsed flowBox =
         match flowBox with
@@ -100,7 +100,7 @@ module FlowBox =
         | Or (_, fs, _) | And (_, fs) | Seq (_, fs) ->
             fs 
          |> Seq.map mentionedUsed
-         |> Seq.fold1 (fun u u' -> u.append(u'))
+         |> Seq.reduce (fun u u' -> u.append(u'))
         
 module InstructionBox =
 
@@ -420,11 +420,11 @@ module Convert =
     let rec to_instructions partial root box (extents : Extents2d) indices =
         match box with
         | InstructionBox.Single used ->
-            {yield Instruction(partial, 
-                               root, 
-                               indices |> List.rev |> Array.of_list, 
-                               extents |> rectangle |> Database.writeEntityAndReturn, 
-                               used)}
+            seq {yield Instruction(partial, 
+                                  root, 
+                                  indices |> List.rev |> Array.of_list, 
+                                  extents |> rectangle |> Database.writeEntityAndReturn, 
+                                  used)}
         | InstructionBox.Multi (ordering, boxes) ->
             let n = boxes.Length
             let varC,fixC,varfix, actualIndex =
@@ -445,14 +445,14 @@ module Convert =
                 let minVarC = baseVarC + (float(i)*(sep + one))
                 let maxVarC = minVarC + one
                 new Extents2d(varfix minVarC minFixC, varfix maxVarC maxFixC)
-            {for i in 0..(n-1) do
-                yield! to_instructions partial root boxes.[i] (ext i) (i::indices)
-            }
+            seq { for i in 0..(n-1) do
+                      yield! to_instructions partial root boxes.[i] (ext i) (i::indices)
+                }
         
     let box2instructions partial root box entity =
         match box with
         | InstructionBox.Single used ->
-            {yield Instruction(partial, root, [||], entity, used)} 
+            seq {yield Instruction(partial, root, [||], entity, used)} 
         | _ -> let extents = toExtents2d entity
                entity.Dispose()
                to_instructions partial root box extents []
@@ -757,8 +757,8 @@ module Interactive =
         try
             Some (Build.SeqBox ic boxes)
         with
-            | InvalidArgument(msg) ->
-                Editor.writeLine ("Invalid argument: " ^ msg ^ ".")
+            | :? System.ArgumentException as e ->
+                Editor.writeLine ("Invalid argument: " ^ e.Message ^ ".")
                 None
             | NoPathFound(msg) ->
                 Editor.writeLine("Error: " ^ msg ^ ".")
@@ -811,7 +811,7 @@ module Interactive =
             
             Some (Attachments.create ia oa)
         with
-            | :? InvalidArgumentException -> None // user cancelled 
+            | :? System.ArgumentException -> None // user cancelled 
             
     let promptAndBox (ic : InstructionChip) (boxes : FlowBox.FlowBox array) =
         let build a =

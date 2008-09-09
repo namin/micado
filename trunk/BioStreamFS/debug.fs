@@ -53,7 +53,7 @@ let drawPoint length ( point : Point2d ) =
 let maxSegmentLength (polyline : #Polyline) =
     {0..polyline.NumberOfVertices-1-(if polyline.Closed then 0 else 1)}
  |> Seq.map (fun (i) -> polyline.GetLineSegment2dAt(i).Length)
- |> Seq.fold1 min 
+ |> Seq.reduce min 
 
 let drawExtents (extents : Extents2d) =
     let minPt = extents.MinPoint
