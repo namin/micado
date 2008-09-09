@@ -420,8 +420,8 @@ module Instructions = begin
         let ic = activeInstructionChip()
         let currentBoxes = activeBoxes()
         let checkUsed (used : Used) =
-            (used.Edges.IsEmpty || used.Edges.MaximumElement < ic.Representation.EdgeCount)
-         && (used.Valves.IsEmpty || used.Valves.MaximumElement < ic.Chip.ControlLayer.Valves.Length)            
+            (used.Edges.IsEmpty || Set.max_elt used.Edges < ic.Representation.EdgeCount)
+         && (used.Valves.IsEmpty || Set.min_elt used.Valves < ic.Chip.ControlLayer.Valves.Length)            
         let checkInstruction (instruction : Instruction) =
             if instruction.Entity = null
             then Editor.writeLine ("Skipping instruction " ^ instruction.Name ^ " because associated entity doesn't exist in drawing.")

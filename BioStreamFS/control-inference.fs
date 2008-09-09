@@ -85,7 +85,7 @@ let inferMultiplexer (ic : Instructions.InstructionChip) nodes =
         if edges.Count <> 1
         then None
         else
-        let edge = edges.Choose
+        let edge = Set.choose edges
         let nodesOfEdge = FlowRepresentation.edge2nodes rep
         let otherNode (a,e) = FlowRepresentation.differentFrom a (nodesOfEdge edge)
         let reverseSeg (a,e) = a <> rep.OfPoint ((rep.ToFlowSegment e).Segment.StartPoint)
@@ -95,7 +95,7 @@ let inferMultiplexer (ic : Instructions.InstructionChip) nodes =
             if es.Count <> 1
             then None
             else
-            let e' = es.Choose
+            let e' = Set.choose es
             let f,f' = rep.ToFlowSegment e, rep.ToFlowSegment e'
             if withinMultiplexerPath f f'
             then Some ((e',reverseSeg(b,e')), (b,e'))
@@ -263,12 +263,12 @@ let inferNeededValves (ic : Instructions.InstructionChip) (instructions : Instru
         edges |> Set.map (fun e -> { Edge = e; Node = b})        
     let inferNeeded i iv =
         let wetEdges =
-            { for j in {0..instructions.Length-1} do
-                let states = stateTable.[j]
-                match states.[i] with
-                | Closed -> yield! instructions.[j].Used.Edges |> Set.to_seq
-                | _ -> yield! []
-            }
+            seq { for j in {0..instructions.Length-1} do
+                    let states = stateTable.[j]
+                    match states.[i] with
+                    | Closed -> yield! instructions.[j].Used.Edges |> Set.to_seq
+                    | _ -> yield! []
+                }
          |> Set.of_seq
         let rec needed1 ivs seenEdges =
             if ivs |> Set.exists (fun iv -> Set.mem iv.Edge wetEdges || Set.mem iv.Edge seenEdges)
@@ -281,7 +281,7 @@ let inferNeededValves (ic : Instructions.InstructionChip) (instructions : Instru
             if ivss |> Set.exists (fun set -> Set.is_empty set)
             then true
             else
-            let ivs' = Set.fold Set.union ivss Set.empty
+            let ivs' = Set.fold_right Set.union ivss Set.empty
             if Set.is_empty ivs'
             then false
             else
