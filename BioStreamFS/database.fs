@@ -150,4 +150,45 @@ let collectChipEntities () =
         | dbObject -> dbObject.Dispose()
     tr.Commit()
     new ChipEntities(flowEntities, controlEntities)
-    
+
+/// Registered Developer Symbol for Micado    
+let rds = "MIDO"
+
+/// Gets the id of the nested dictionary for the given object.
+/// May optionally creates the nested dictionary if it doesn't exist.
+/// The lookup sequence is: read given dictionary -> search for rds dictionary -> search for app dictionary.
+let getDictionaryId createIfNotExisting app dictId =
+    let db = database()
+    use tr = db.TransactionManager.StartTransaction()
+    let readDict id = tr.GetObject(id, OpenMode.ForRead) :?> DBDictionary
+    let createNestedDict key (outerDict : DBDictionary, upgradeOpen) =
+        let nestedDict = new DBDictionary()
+        if upgradeOpen then outerDict.UpgradeOpen()
+        outerDict.SetAt(key, nestedDict) |> ignore
+        tr.AddNewlyCreatedDBObject(nestedDict, true)
+        nestedDict
+    let readNestedDict key (outerDict : DBDictionary) = readDict (outerDict.GetAt(key))
+    let getNestedDict (key : string) (outerDict : DBDictionary, upgradeOpen) =
+        match outerDict.Contains(key), createIfNotExisting with
+        | false, false -> None
+        | false, true -> Some (createNestedDict key (outerDict,upgradeOpen), false)
+        | true, _ -> Some (readNestedDict key outerDict,true)
+    let appDictId = (readDict dictId, true)
+                 |> getNestedDict rds
+                 |> Option.bind (getNestedDict app)
+                 |> Option.map fst
+                 |> Option.map (fun dict -> dict.ObjectId)
+    tr.Commit()
+    appDictId
+
+let getExtensionDictionaryId createIfNotExisting app (dbObject : #DBObject) =
+    match dbObject.ExtensionDictionary <> ObjectId.Null, createIfNotExisting with
+    | true, _ -> getDictionaryId createIfNotExisting app (dbObject.ExtensionDictionary)
+    | false, false -> None
+    | false, true ->
+        let db = database()
+        use tr = db.TransactionManager.StartTransaction()
+        let dbObjectW = tr.GetObject(dbObject.ObjectId, OpenMode.ForWrite, true)
+        dbObjectW.CreateExtensionDictionary()
+        tr.Commit()
+        getDictionaryId createIfNotExisting app (dbObjectW.ExtensionDictionary)
