@@ -154,8 +154,8 @@ let collectChipEntities () =
 /// Registered Developer Symbol for Micado    
 let rds = "MIDO"
 
-/// Gets the id of the nested dictionary for the given object.
-/// May optionally creates the nested dictionary if it doesn't exist.
+/// Gets the id of the nested dictionary starting with the given dictionary id.
+/// May optionally creates the nested dictionaries if they don't exist.
 /// The lookup sequence is: read given dictionary -> search for rds dictionary -> search for app dictionary.
 let getDictionaryId createIfNotExisting app dictId =
     let db = database()
@@ -181,6 +181,9 @@ let getDictionaryId createIfNotExisting app dictId =
     tr.Commit()
     appDictId
 
+/// Gets the id of the nested dictionary in the extension dictionary for the given object.
+/// May optionally creates the dictionaries if they don't exist.
+/// The lookup sequence is: search for extension dictionary -> search for rds dictionary -> search for app dictionary.
 let getExtensionDictionaryId createIfNotExisting app (dbObject : #DBObject) =
     match dbObject.ExtensionDictionary <> ObjectId.Null, createIfNotExisting with
     | true, _ -> getDictionaryId createIfNotExisting app (dbObject.ExtensionDictionary)
@@ -192,3 +195,45 @@ let getExtensionDictionaryId createIfNotExisting app (dbObject : #DBObject) =
         dbObjectW.CreateExtensionDictionary()
         tr.Commit()
         getDictionaryId createIfNotExisting app (dbObjectW.ExtensionDictionary)
+
+/// Writes the given values in an Xrecord under the given key in the given dictionary.
+let writeDictionaryEntry dictId (key : string) values =
+    let db = database()
+    use tr = db.TransactionManager.StartTransaction()
+    let dict = tr.GetObject(dictId, OpenMode.ForWrite) :?> DBDictionary
+    let rb = new ResultBuffer(values)
+    let xrec, xrecIsNew =
+        match dict.Contains(key) with
+        | true ->
+            let obj = tr.GetObject(dict.GetAt(key), OpenMode.ForWrite)
+            match obj with
+            | :? Xrecord as xrec -> xrec, false
+            | _ -> 
+                // Since we only store XRecords here, this shouldn't happen.
+                obj.Erase()
+                new Xrecord(), true
+       | false -> new Xrecord(), true
+    xrec.XlateReferences <- true
+    xrec.Data <- rb
+    if xrecIsNew then
+        dict.SetAt(key, xrec) |> ignore
+        tr.AddNewlyCreatedDBObject(xrec, true)
+    tr.Commit()
+
+/// Returns a map from key to entry (where an entry is read using the given reader) under the given dictionary.
+/// An entry may be skipped if it's not an Xrecord or if the reader returns none, in which case the given skipper is notified.   
+let readDictionary skipper dictId reader =
+    let db = database()
+    use tr = db.TransactionManager.StartTransaction()
+    let dict = tr.GetObject(dictId, OpenMode.ForRead) :?> DBDictionary
+    let mutable map = Map.empty
+    for kv in dict do
+        let key = kv.Key
+        match tr.GetObject(kv.Value, OpenMode.ForRead) with
+        | :? Xrecord as xrec ->
+            match reader tr (xrec.Data.AsArray()) with
+            | None -> skipper key
+            | Some value -> map <- Map.add key value map
+        | _ -> skipper key
+    tr.Commit()
+    map
