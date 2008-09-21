@@ -153,7 +153,7 @@ module Compute =
             let f = segments.[si]
             nodesOfSegment si
          |> Seq.pairwise
-         |> Seq.map (fun (a,b) -> new FlowSegment(new LineSegment2d(a,b),f.Width))
+         |> Seq.map (fun (a,b) -> new FlowSegment(new LineSegment2d(a,b),f.Width,f.Entity))
         let allEdges =
             {0..(segments.Length-1)}
          |> Seq.map edgesOfSegment
@@ -351,8 +351,8 @@ let addValves (valves : Valve array) (rep : IFlowRepresentation) =
         let vp = f.Segment.GetClosestPointTo(vc).Point
         let sp, tp = f.Segment.StartPoint, f.Segment.EndPoint
         let sn, tn = point2node.[sp], point2node.[tp]
-        let ef = new FlowSegment(new LineSegment2d(sp, vp), f.Width)
-        let ef' = new FlowSegment(new LineSegment2d(vp, tp), f.Width)
+        let ef = new FlowSegment(new LineSegment2d(sp, vp), f.Width, f.Entity)
+        let ef' = new FlowSegment(new LineSegment2d(vp, tp), f.Width, f.Entity)
         edge2flowSegment.[e] <- ef
         edge2flowSegment.[e'] <- ef'
         node2edges.[tn] <- (node2edges.[tn].Remove e).Add e'

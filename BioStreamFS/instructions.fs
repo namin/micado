@@ -156,7 +156,7 @@ let rectangle (ext : Extents2d) =
     polyline.Closed <- true
     polyline
                  
-type Instruction (partial : bool, root: string, indices : int array, entity : Entity, used : Used) =
+type Instruction (partial : bool, root: string, indices : int array, entity : Entity option, used : Used) =
     let prettyIndices =
         if indices.Length=0
         then ""
@@ -168,252 +168,9 @@ type Instruction (partial : bool, root: string, indices : int array, entity : En
     member v.Name = name
     member v.Root = root
     member v.Indices = indices
-    member v.Extents = toExtents2d entity
+    member v.Extents = entity |> Option.map toExtents2d
     member v.Partial = partial
 
-/// The XML Serialization is loosely inspired by Expert F#, Chapter 9, 
-/// section Using XML As a Concrete Language Format (starting p.212)
-module Serialization =
-    open System.IO
-    open System.Xml
-    open BioStream.Micado.Plugin // for Database.readEntityFromHandle
-    
-    let promptSaveFilename() =
-        let sfd = new System.Windows.Forms.SaveFileDialog()
-        sfd.Filter <- "micado data (*.xml)|*.xml"
-        sfd.Title <- "Export Boxes & Instructions"
-        if sfd.ShowDialog() <> System.Windows.Forms.DialogResult.OK
-        then None
-        else Some sfd.FileName
-
-    let promptOpenFilename() =
-         let opf = new System.Windows.Forms.OpenFileDialog();
-         opf.Filter <- "micado data (*.xml)|*.xml|All files (*.*)|*.*"
-         opf.Title <- "Import Boxes & Instructions"
-         if opf.ShowDialog() <> System.Windows.Forms.DialogResult.OK
-         then None
-         else Some opf.FileName
-            
-    let exportInts (tw : StreamWriter) seq =
-        tw.Write("[")
-        tw.Write(System.String.Join(";", seq |> Seq.map (fun (i : int) -> i.ToString()) |> Seq.to_array))
-        tw.Write("]")
-        
-    let importInts (text : string) =
-        text.Split([|'[';']';';'|]) 
-     |> Array.map (fun s -> s.Trim()) 
-     |> Array.filter (fun s -> s <> "")
-     |> Array.map System.Int32.Parse
-    
-    let importIntSet = importInts >> Set.of_array
-    
-    let exportEntity (tw : StreamWriter) (entity : Entity) =
-        tw.Write(entity.Handle.Value.ToString())
-
-    let importEntity (text : string) =
-        let handle = System.Int64.Parse(text)
-        match Database.readEntityFromHandle handle with
-        | None -> null
-        | Some entity -> entity
-    
-    let exportPartial (tw : StreamWriter) partial =
-        tw.Write(if partial then "partial" else "complete")
-
-    let importPartial (text : string) =
-        match text with
-        | "partial" -> true
-        | "complete" -> false
-        | _ -> failwith "invalid instruction partial tag"
-                
-    let exportInstruction (tw : StreamWriter) (instruction : Instruction) =
-        exportPartial tw instruction.Partial
-        tw.Write(",")
-        tw.Write(instruction.Root)
-        tw.Write(",")
-        exportInts tw instruction.Indices
-        tw.Write(",")
-        exportEntity tw instruction.Entity
-        tw.Write(",")
-        exportInts tw instruction.Used.Edges
-        tw.Write(",")
-        exportInts tw instruction.Used.Valves
-
-    let importInstruction (text : string) =
-        match text.Split([|','|]) with
-        | [| partialText; root; indicesText; entityText; edgesText; valvesText |] ->
-            let partial = importPartial partialText
-            let indices = importInts indicesText
-            let entity = importEntity entityText
-            let edges = importIntSet edgesText
-            let valves = importIntSet valvesText
-            new Instruction (partial, root, indices, entity, used edges valves)
-        | _ ->
-            failwith "invalid instruction format"
-    
-    let exportInstructions (tw : StreamWriter) instructions =
-        instructions |> Seq.iter (exportInstruction tw >> (fun () -> tw.WriteLine("")))
-            
-    let importInstructions (text : string) =
-        text.Split([|'\r';'\n'|]) 
-     |> Array.filter (fun s -> s <> "") 
-     |> Array.map importInstruction
-
-    let extractIntOption attrName (attribs : XmlAttributeCollection) =
-        let item = attribs.GetNamedItem(attrName)
-        if item = null
-        then None
-        else Some (Int32.of_string(item.Value))
-
-    let extractAttachments (attribs : XmlAttributeCollection) =
-        let input = extractIntOption "input" attribs
-        let output = extractIntOption "output" attribs
-        Attachments.create input output
-    
-    let extractIntSet attrName (attribs : XmlAttributeCollection) =
-        importIntSet (attribs.GetNamedItem(attrName).Value)
-            
-    let extractUsed (attribs : XmlAttributeCollection) =
-        let edges = extractIntSet "edges" attribs
-        let valves = extractIntSet "valves" attribs
-        used edges valves
-        
-    let extractOrdering (attribs : XmlAttributeCollection) =
-        match attribs.GetNamedItem("ordering").Value with
-        | "horizontal" -> HorizontalOrdering
-        | "vertical" -> VerticalOrdering
-        | _ -> failwith "unrecognized ordering"
-          
-    let rec extractBox (node : XmlNode) =
-        let attribs = node.Attributes
-        let childNodes = node.ChildNodes
-        let attachments = extractAttachments(attribs)
-        let childBoxes() =
-            [| for child in childNodes -> extractBox(child) |]
-        match node.Name with
-        | "Primitive" ->
-            FlowBox.Primitive(attachments, extractUsed(attribs))
-        | "Extended" ->
-            FlowBox.Extended(attachments, extractUsed(attribs), extractBox (childNodes.Item(0)))           
-        | "Or" ->
-            FlowBox.Or(attachments, childBoxes(), extractOrdering(attribs))
-        | "And" ->
-            FlowBox.And(attachments, childBoxes())
-        | "Seq" ->
-            FlowBox.Seq(attachments, childBoxes())
-        | s ->
-            failwith ("unrecognized box type " ^ s)
-            
-    let extractName (attribs : XmlAttributeCollection) =
-        attribs.GetNamedItem("name").Value
-    
-    let extractBoxes (node : XmlNode) =
-        [for node in node.ChildNodes do
-            if node.Name = "Box"
-            then yield extractName node.Attributes, extractBox (node.ChildNodes.Item(0))
-        ]
-    
-    let extractInstructions (node : XmlNode) =
-        importInstructions node.InnerXml
-        
-    let extractBoxesAndInstructions (doc : XmlNode) =
-        let mutable boxes = None
-        let mutable instructions = None
-        for node in doc.ChildNodes do
-            match node.Name with
-            | "Boxes" -> boxes <- Some (extractBoxes(node))
-            | "Instructions" -> instructions <- Some (extractInstructions(node))
-            | _ -> ()
-        Option.get boxes, Option.get instructions
-
-    let rec exportBox (tw : StreamWriter) box =
-        let writeAttachment name att =
-            if Option.is_some att
-            then tw.Write(name ^ "='" ^ ((Option.get att) : int).ToString() ^ "' ")
-        let writeAttachments (a : Attachments.Attachments) =
-            writeAttachment "input" a.InputAttachment
-            writeAttachment "output" a.OutputAttachment
-        let writeIntSet name set =
-            tw.Write(name ^ "='")
-            exportInts tw set
-            tw.Write("' ")
-        let writeUsed (u : Used) =
-            writeIntSet "edges" u.Edges
-            writeIntSet "valves" u.Valves
-        let writeChildren childBoxes =
-            Seq.iter (exportBox tw) childBoxes
-        let writeAndSeq tag a childBoxes =
-            tw.Write("<" ^ tag ^ " ")
-            writeAttachments a
-            tw.WriteLine(">")
-            writeChildren childBoxes
-            tw.WriteLine("</" ^ tag ^ ">")
-        match box with
-        | FlowBox.Primitive (a,u) ->
-            tw.Write("<Primitive ")
-            writeAttachments a   
-            writeUsed u
-            tw.WriteLine("/>")
-        | FlowBox.Extended(a, u, childBox) ->
-            tw.Write("<Extended ")
-            writeAttachments a
-            writeUsed u
-            tw.WriteLine(">")
-            exportBox tw childBox
-            tw.WriteLine("</Extended>")         
-        | FlowBox.Or(a, childBoxes, ordering) ->
-            tw.Write("<Or ")
-            writeAttachments a
-            tw.Write("ordering='")
-            tw.Write(match ordering with
-                     | HorizontalOrdering -> "horizontal"
-                     | VerticalOrdering -> "vertical")
-            tw.Write("'")
-            tw.WriteLine(">")
-            writeChildren childBoxes
-            tw.WriteLine("</Or>")
-         | FlowBox.And(a, childBoxes) ->
-            writeAndSeq "And" a childBoxes
-         | FlowBox.Seq(a, childBoxes) ->
-            writeAndSeq "Seq" a childBoxes
-            
-    let exportNameBox (tw : StreamWriter) (name,box) =
-        tw.WriteLine("<Box name='" ^ name ^ "'>")
-        exportBox tw box
-        tw.WriteLine("</Box>")
-                
-    let exportBoxes (tw : StreamWriter) boxes =
-        boxes |> Seq.iter (exportNameBox tw)
-        
-    let export boxes instructions =
-        match promptSaveFilename() with
-        | None -> false
-        | Some filename ->
-            use tw = new StreamWriter(filename)
-            tw.WriteLine("<Micado>")
-            tw.WriteLine("<Boxes>")
-            exportBoxes tw boxes
-            tw.WriteLine("</Boxes>")
-            tw.WriteLine("<Instructions>")
-            exportInstructions tw instructions
-            tw.WriteLine("</Instructions>")
-            tw.WriteLine("</Micado>")
-            Editor.writeLine ("Micado boxes & instructions exported to " ^ filename ^ ".")
-            true
-    
-    let import() =
-        match promptOpenFilename() with
-        | None -> None
-        | Some filename ->
-            let text = use rw = new StreamReader(filename) in rw.ReadToEnd()
-            let doc = new XmlDocument()
-            doc.LoadXml(text)
-            try
-                Some (extractBoxesAndInstructions (doc.ChildNodes.Item(0)))
-            with
-                | err ->
-                    Editor.writeLine ("Error: The provided file is not a valid micado data file.")
-                    None
-                                           
 module Convert =
     open BioStream.Micado.Plugin // needed for Database.writeEntity
 
@@ -423,7 +180,7 @@ module Convert =
             seq {yield Instruction(partial, 
                                   root, 
                                   indices |> List.rev |> Array.of_list, 
-                                  extents |> rectangle |> Database.writeEntityAndReturn, 
+                                  extents |> rectangle |> Database.writeEntityAndReturn |> Some, 
                                   used)}
         | InstructionBox.Multi (ordering, boxes) ->
             let n = boxes.Length
@@ -452,7 +209,7 @@ module Convert =
     let box2instructions partial root box entity =
         match box with
         | InstructionBox.Single used ->
-            seq {yield Instruction(partial, root, [||], entity, used)} 
+            seq {yield Instruction(partial, root, [||], Some entity, used)} 
         | _ -> let extents = toExtents2d entity
                entity.Dispose()
                to_instructions partial root box extents []
@@ -465,38 +222,6 @@ type NodeType =
     | ValveNode of int
     | PunchNode of int
     | IntersectionNode of int
-
-type InferredChip =
-    { Chip : Chip; 
-      old2new : int -> int ; 
-      inferred2new : int -> int ; 
-      Default : bool;
-      OpenSets : Set<int> array
-    }
-    
-let defaultInferred ( chip ) =
-    let intid (i : int) = i
-    { Chip = chip; 
-      old2new = intid; 
-      inferred2new = intid; 
-      Default = true;
-      OpenSets = [||] 
-    }
-
-let computeOld2New newValves oldValves =
-    let equalEntities (e1 : # DBObject) (e2 : # DBObject) = e1.ObjectId.Equals(e2.ObjectId)
-    let newIndex oldValve = Array.find_index (equalEntities oldValve) newValves
-    let old2new = Array.map newIndex oldValves
-    fun i -> old2new.[i]
-    
-let makeInferred ( oldChip : Chip, newChip : Chip, inferredValves, openSets ) =
-    let computeMap = computeOld2New newChip.ControlLayer.Valves
-    { Chip = newChip;
-      old2new = computeMap oldChip.ControlLayer.Valves;
-      inferred2new = computeMap inferredValves;
-      Default = false;
-      OpenSets = openSets  
-    }
             
 type InstructionChip (chip : Chip) =
     let mutable disposed = false
@@ -528,14 +253,10 @@ type InstructionChip (chip : Chip) =
         if not disposed then 
             disposed <- true;
             (chip :> System.IDisposable).Dispose(); 
-    let mutable inferred = defaultInferred chip
     member v.Chip = chip
     member v.Representation = rep
     member v.ToNodeType node = node2type node
     member v.OfNodeType nt = type2node nt
-    member v.Inferred with get() = inferred //and set(value) = inferred <- value
-    member v.UpdateInferred (newChip, inferredValves, openSets) =
-        inferred <- makeInferred (v.Chip, newChip, inferredValves, openSets)
     interface System.IDisposable with
         member v.Dispose() = cleanup()
         
@@ -697,7 +418,509 @@ module Build =
         
     let OrBox (ic : InstructionChip) a boxes ordering =
         FlowBox.Or (a, extendBoxes ic a boxes, ordering)
+
+module Store =
+    
+    open BioStream.Micado.Plugin
+    
+    type Ratio = double
+    
+    type ClickedFlow = FlowSegment * double
+    
+    type FlowAnnotation = 
+        Path of ClickedFlow * ClickedFlow
+      | InputPunch of Punch
+      | OutputPunch of Punch
+      | InputOr of ClickedFlow * Ordering * Punch array
+      | OutputOr of ClickedFlow * Ordering * Punch array
+      | OrInput of ClickedFlow * Ordering * string array
+      | OrOutput of ClickedFlow * Ordering * string array
+      | OrIntermediary of (ClickedFlow * ClickedFlow) * Ordering * string array
+      | OrComplete of Ordering * string array
+      | AndInput of ClickedFlow * string array
+      | AndOutput of ClickedFlow *  string array
+      | AndIntermediary of (ClickedFlow * ClickedFlow)  * string array
+      | AndComplete of string array
+      | SeqInput of string array
+      | SeqOutput of string array
+      | SeqIntermediary of string array
+      | SeqComplete of string array
+      
+    let flowAnnotationKind = 
+        let intermediary() = Attachments.Intermediary (0,0)
+        let input() = Attachments.Input 0
+        let output() = Attachments.Output 0
+        let complete() = Attachments.Complete
+        function
+        | Path _ | OrIntermediary _ | AndIntermediary _ | SeqIntermediary _ -> intermediary()
+        | InputPunch _ | InputOr _ | OrInput _ | AndInput _ | SeqInput _ -> input()
+        | OutputPunch _ | OutputOr _ | OrOutput _ | AndOutput _ | SeqOutput _ -> output()
+        | OrComplete _ | AndComplete _ | SeqComplete _ -> complete()
+    
+    let containedFlowAnnotations =
+        function
+        | Path _
+        | InputPunch _
+        | OutputPunch _
+        | InputOr _
+        | OutputOr _ -> [||]
+        | OrInput (_,_,ns) 
+        | OrOutput (_,_,ns)
+        | OrIntermediary (_,_,ns)
+        | OrComplete (_,ns)
+        | AndInput (_,ns)
+        | AndOutput (_,ns)
+        | AndIntermediary (_,ns)
+        | AndComplete (ns)
+        | SeqInput (ns)
+        | SeqOutput (ns)
+        | SeqIntermediary (ns)
+        | SeqComplete (ns) -> ns
+            
+    let flowApp = "flow"
+    
+    let promptedEdgeToClickedFlow (ic : InstructionChip) (clickedPt : Point2d,e) =
+        let normalize (f : FlowSegment ) = ic.Chip.FlowLayer.Entity2Segment f.Entity |> Option.get
+        let f = ic.Representation.ToFlowSegment e |> normalize
+        let p = f.Segment.GetParameterOf(clickedPt)
+        let p' = if p<0.0 
+                 then 0.0 
+                 else if p>1.0
+                      then 1.0
+                      else p
+        (f,p') : ClickedFlow
+    
+    let clickedFlowToPromptedEdge (ic : InstructionChip) ((f,r) : ClickedFlow) =
+        let pt = f.Segment.EvaluatePoint(r)
+        let e = ic.Representation.ClosestEdge(pt)
+        (pt,e)
+    
+    let nodeIndexToClickedFlow (ic : InstructionChip) ni =
+        let p = ni |> ic.Representation.ToPoint
+        let e = p |> ic.Representation.ClosestEdge
+        promptedEdgeToClickedFlow ic (p,e)
+    
+    let clickedFlowToNodeIndex (ic : InstructionChip) ((f,r) : ClickedFlow) =
+        let pt,e = clickedFlowToPromptedEdge ic (f,r)
+        let a,b = FlowRepresentation.edge2nodes ic.Representation e
+        let ptA,ptB = ic.Representation.ToPoint a, ic.Representation.ToPoint b
+        let ni = if ptA.GetDistanceTo(pt) < ptB.GetDistanceTo(pt) then a else b
+        ni
+            
+    let attachmentsDispatch (ic : InstructionChip) (makeInput, makeOutput, makeIntermediary, makeComplete) (a : Attachments.Attachments) =
+        let toClickedFlow ni = ni |> nodeIndexToClickedFlow ic
+        match a.Kind with
+        | Attachments.Input ni -> makeInput (toClickedFlow ni)
+        | Attachments.Output ni -> makeOutput (toClickedFlow ni)
+        | Attachments.Intermediary (ni1,ni2) -> makeIntermediary (toClickedFlow ni1,toClickedFlow ni2)
+        | Attachments.Complete -> makeComplete()
+    
+    let orDispatcher names ordering =
+        let input cf = OrInput (cf,ordering,names)
+        let output cf = OrOutput (cf,ordering,names)
+        let intermediary cfs = OrIntermediary (cfs,ordering,names)
+        let complete() = OrComplete (ordering,names)
+        (input, output, intermediary, complete)
+
+    let andDispatcher names =
+        let input cf = AndInput (cf,names)
+        let output cf = AndOutput (cf,names)
+        let intermediary cfs = AndIntermediary (cfs,names)
+        let complete() = AndComplete (names)
+        (input, output, intermediary, complete)
+
+    let seqDispatcher names =
+        let input cf = SeqInput names
+        let output cf = SeqOutput names
+        let intermediary cfs = SeqIntermediary names
+        let complete() = SeqComplete names
+        (input, output, intermediary, complete)
         
+    let flowAnnotationToBox (ic : InstructionChip) findBoxByName ann =
+        let f2e f = clickedFlowToPromptedEdge ic f
+        let punchBox builder p = builder ic ((ic.Chip.FlowLayer.Punch2Index p) |> Option.get)
+        let inputAtts cf = Attachments.create None (Some (clickedFlowToNodeIndex ic cf))
+        let outputAtts cf  = Attachments.create (Some (clickedFlowToNodeIndex ic cf)) None
+        let intermediaryAtts (cf1,cf2) = Attachments.create (Some (clickedFlowToNodeIndex ic cf1)) (Some (clickedFlowToNodeIndex ic cf2))
+        let completeAtts() = Attachments.create None None
+        let putOrBox builder attachments ordering punches =
+            let boxes = punches |> Array.map (punchBox builder)
+            Build.OrBox ic attachments boxes ordering
+        let orBox attachments ordering names =
+            let boxes = Array.map findBoxByName names
+            Build.OrBox ic attachments boxes ordering
+        let andBox attachments names =
+            let boxes = Array.map findBoxByName names
+            Build.AndBox ic attachments boxes
+        let seqBox names =
+            let boxes = Array.map findBoxByName names
+            Build.SeqBox ic boxes
+        match ann with
+        | Path (f1,f2) -> Build.pathBox ic (f2e f1) (f2e f2)
+        | InputPunch p -> punchBox Build.inputBox p
+        | OutputPunch p -> punchBox Build.outputBox p
+        | InputOr (cf,o,ps) -> putOrBox (Build.inputBox) (inputAtts cf) o ps
+        | OutputOr (cf,o,ps) -> putOrBox (Build.outputBox) (outputAtts cf) o ps
+        | OrInput (cf,o,ns) -> orBox (inputAtts cf) o ns
+        | OrOutput (cf,o,ns) -> orBox (outputAtts cf) o ns
+        | OrIntermediary (cfs,o,ns) -> orBox (intermediaryAtts cfs) o ns
+        | OrComplete (o,ns) -> orBox (completeAtts()) o ns
+        | AndInput (cf,ns) -> andBox (inputAtts cf) ns
+        | AndOutput (cf,ns) -> andBox (outputAtts cf) ns
+        | AndIntermediary (cfs,ns) -> andBox (intermediaryAtts cfs) ns
+        | AndComplete (ns) -> andBox (completeAtts()) ns
+        | SeqInput (ns)
+        | SeqOutput (ns)
+        | SeqIntermediary (ns)
+        | SeqComplete (ns) -> seqBox ns
+
+    let rec to_instructions partial root box (entities : _ array) totals indices =
+        let rec get_index totals indices =
+            match totals,indices with
+            | [],[] -> 0
+            | t::t',i::i' -> 
+                i + t*(get_index t' i')
+            | _ -> failwith "totals and indices are not the same length!"
+        let getEntity i =
+            if entities.Length <= i
+            then None
+            else entities.[i]
+        match box with
+        | InstructionBox.Single used ->
+            seq {yield Instruction(partial, 
+                                  root, 
+                                  indices |> List.rev |> Array.of_list, 
+                                  getEntity (get_index totals indices), 
+                                  used)}
+        | InstructionBox.Multi (ordering, boxes) ->
+            let n = boxes.Length
+            let totals' = n::totals
+            seq { for i in 0..(n-1) do
+                      yield! to_instructions partial root boxes.[i] entities totals' (i::indices)
+                }
+        
+    let box2instructions partial root box (entities : _ array) =
+        match box with
+        | InstructionBox.Single used ->
+            seq {yield Instruction(partial, root, [||], entities.[0], used)} 
+        | _ -> to_instructions partial root box entities [] []
+    
+    let flowBox2instructions root flowBox entities =
+        let partial = FlowBox.attachmentKind flowBox <> Attachments.Complete
+        box2instructions partial root (InstructionBox.of_FlowBox flowBox) entities
+                             
+    let toDatabase key flowAnn =
+        let dictId = Database.getNamedObjectsDictionaryId true flowApp |> Option.get
+        let rb =
+            let rb = new ResultBuffer()
+            let wEntity (e : #Entity) =
+                rb.Add(new TypedValue((int)DxfCode.SoftPointerId, e.ObjectId))
+            let wClickedFlow ((f,r) : ClickedFlow) =
+                wEntity (f.Entity)
+                rb.Add(new TypedValue((int)DxfCode.Real, r))
+            let wStr str =
+                rb.Add(new TypedValue((int)DxfCode.Text, str))
+            let wOrdering o =
+                let s =
+                    match o with
+                    | HorizontalOrdering -> "h"
+                    | VerticalOrdering -> "v"
+                wStr s
+            let wArray w a =
+                for el in a do
+                    w el
+            let wPutOr cf o ps =
+                wClickedFlow cf
+                wOrdering o
+                wArray wEntity ps
+            match flowAnn with
+            | Path (cf1, cf2) -> wStr "path"; wClickedFlow cf1; wClickedFlow cf2
+            | InputPunch p -> wStr "inputPunch"; wEntity p
+            | OutputPunch p -> wStr "outputPunch"; wEntity p
+            | InputOr (cf,o,ps) -> wStr "inputOr"; wPutOr cf o ps
+            | OutputOr (cf,o,ps) -> wStr "outputOr"; wPutOr cf o ps
+            | OrInput (cf,o,ns) -> wStr "orInput"; wClickedFlow cf; wOrdering o; wArray wStr ns
+            | OrOutput (cf,o,ns) -> wStr "orOutput"; wClickedFlow cf; wOrdering o; wArray wStr ns
+            | OrIntermediary ((cf1,cf2),o,ns) -> wStr "orIntermediary"; wClickedFlow cf1; wClickedFlow cf2; wOrdering o; wArray wStr ns
+            | OrComplete (o,ns) -> wStr "orComplete"; wOrdering o; wArray wStr ns
+            | AndInput (cf,ns) -> wStr "andInput"; wClickedFlow cf; wArray wStr ns
+            | AndOutput (cf,ns) -> wStr "andOutput"; wClickedFlow cf; wArray wStr ns
+            | AndIntermediary ((cf1,cf2),ns) -> wStr "andIntermediary"; wClickedFlow cf1; wClickedFlow cf2; wArray wStr ns
+            | AndComplete (ns) -> wStr "andComplete"; wArray wStr ns
+            | SeqInput (ns) -> wStr "seqInput"; wArray wStr ns
+            | SeqOutput (ns) -> wStr "seqOutput"; wArray wStr ns
+            | SeqIntermediary (ns) -> wStr "seqIntermediary"; wArray wStr ns
+            | SeqComplete (ns) -> wStr "seqComplete"; wArray wStr ns
+            rb
+        Database.writeDictionaryEntry dictId key rb
+    
+    let instrApp = "instructions"
+    
+    let instructionSetReader (tr : Transaction) (key : string) (values : TypedValue array) =
+         let readEntity (v : TypedValue) =
+            match v.Value with
+            | :? ObjectId as objId when objId <> ObjectId.Null ->
+                try
+                    Some (tr.GetObject(objId, OpenMode.ForRead))
+                with _ -> 
+                    None
+                |> Option.bind (fun obj -> match obj with
+                                           | :? Entity as entity -> Some entity
+                                           | _ -> None)
+            | _ -> None 
+         Some (values |> Array.map readEntity)
+    
+    let readInstructionSetInDatabase (key : string) =
+        match Database.getNamedObjectsDictionaryId false instrApp with
+        | None -> None
+        | Some dictId ->
+            Database.readDictionaryEntry dictId instructionSetReader key
+    
+    /// Reads all the instruction sets in the database, 
+    /// returning a map from instruction/flow annotation key to an array of optional mapped entities.
+    let readAllInstructionSetsInDatabase() =
+        match Database.getNamedObjectsDictionaryId false instrApp with
+        | None -> Map.empty
+        | Some dictId -> 
+            let skipper = (fun key -> Editor.writeLine ("Skipped instruction " ^ key))
+            Database.readDictionary skipper dictId instructionSetReader
+                        
+    let updateInstructionSetInDatabase (key : string) entityValues =
+        let rb = new ResultBuffer(entityValues)
+        let dictId = Database.getNamedObjectsDictionaryId true instrApp |> Option.get
+        Database.writeDictionaryEntry dictId key rb
+    
+    let readInstructionReferenceInEntityUnchecked (entity : Entity) =
+        let reader _ _ (values : TypedValue array) =
+            if values.Length<>1
+            then None
+            else
+            match values.[0].Value with
+            | :? int as i -> Some i
+            | _ -> None
+        let skipper _ = ()
+        let read dictId =
+            let map = Database.readDictionary skipper dictId reader |> Map.to_array
+            if map.Length=1
+            then Some map.[0]
+            else None
+        Database.getExtensionDictionaryId false instrApp entity |> Option.bind read
+    
+    let entitiesToValues entities =
+        let tv id = new TypedValue((int)DxfCode.SoftPointerId, id)
+        entities 
+        |> Array.map ((function
+                       | None -> ObjectId.Null
+                       | Some (e : Entity) -> e.ObjectId) >> tv)
+
+    let checkOrDeleteEntityReferenceInInstruction delete (entity : Entity) (key,i) =
+        match readInstructionSetInDatabase key with
+        | None -> None
+        | Some entities ->
+            if i >= entities.Length
+            then None
+            else
+            match entities.[i] with
+            | None -> None
+            | Some entity' ->
+                if entity <> entity'
+                then None
+                else
+                if delete
+                then entities.[i] <- None
+                     let values = entities |> entitiesToValues
+                     updateInstructionSetInDatabase key values    
+                Some (key,i)
+    
+    let checkEntityReferenceInInstruction = checkOrDeleteEntityReferenceInInstruction false
+    let deleteEntityReferenceInstruction entity v = checkOrDeleteEntityReferenceInInstruction true entity v |> ignore    
+    
+    /// Returns the instruction key and index to which this entity is mapped.
+    let readInstructionReferenceInEntity (entity : Entity) =
+        entity |> readInstructionReferenceInEntityUnchecked 
+        |> Option.bind (checkEntityReferenceInInstruction entity)
+    
+    let deleteAnyInstructionReferenceInEntity (entity : Entity) =
+        match readInstructionReferenceInEntityUnchecked entity with
+        | None -> ()
+        | Some (key,i) -> 
+            deleteEntityReferenceInstruction entity (key,i)
+            let dictId = Database.getExtensionDictionaryId false instrApp entity |> Option.get
+            Database.deleteDictionaryEntries dictId (seq { yield key })
+                                
+    let writeInstructionReferenceInEntity (key : string) (entity : Entity) (i : int) =
+        let dictId = Database.getExtensionDictionaryId true instrApp entity |> Option.get
+        let rb = new ResultBuffer([|new TypedValue((int)DxfCode.Int32, i)|])
+        Database.writeDictionaryEntry dictId key rb
+    
+    let writeInstructionReferenceInEntityCautiously key entity i =
+        deleteAnyInstructionReferenceInEntity entity
+        writeInstructionReferenceInEntity key entity i
+    
+    /// Writes the instructions to the database, also updating the mapped entities.                   
+    let writeInstructionSetToDatabase (key : string) (instructions : seq<Instruction>) =
+        let entities = instructions |> Seq.map (fun (i : Instruction) -> i.Entity) |> Array.of_seq
+        if entities.Length = 1
+        then entities.[0] |> Option.iter (fun entity -> writeInstructionReferenceInEntityCautiously key entity 0)
+        else for i in [0..entities.Length-1] do
+                entities.[i] |> Option.iter (fun entity -> writeInstructionReferenceInEntity key entity i)                
+        let entityValues = entitiesToValues entities 
+        updateInstructionSetInDatabase key entityValues            
+                              
+    let fromDatabaseCustom (ic : InstructionChip) skipper =
+        let reader (ic : InstructionChip) (tr : Transaction) (key : string) (values : TypedValue array) =
+            let c f x y =
+                match y with
+                | None -> None
+                | Some y -> f x |> Option.map (fun r -> y,r)
+            let readEntity (v : TypedValue) =
+                match v.Value with
+                | :? ObjectId as objId ->
+                    try
+                        Some (tr.GetObject(objId, OpenMode.ForRead))
+                    with _ -> 
+                        None
+                    |> Option.bind (fun obj -> match obj with
+                                               | :? Entity as entity -> Some entity
+                                               | _ -> None)
+                | _ -> None 
+            let readArray readEl a =
+                let arrayOfRevList = Routing.arrayOfRevList
+                let n = Array.length a
+                let rec helper i lst =
+                    if i=n
+                    then Some (arrayOfRevList lst)
+                    else 
+                    match readEl a.[i] with
+                    | None -> None
+                    | Some el -> helper (i+1) (el::lst)
+                helper 0 []
+            let readFlowSegment (v : TypedValue) =
+                v |> readEntity |> Option.bind ic.Chip.FlowLayer.Entity2Segment
+            let readPunch (v : TypedValue) =
+                v |> readEntity |> Option.bind (function 
+                                                | :? Punch as p -> Some p
+                                                | _ -> None)
+            let readRatio (v : TypedValue) =
+                match v.Value with
+                | :? float as f -> 
+                    if 0.0<=f && f<=1.0 then Some f else None
+                | _ -> None
+            let readStr (v : TypedValue) =
+                match v.Value with
+                | :? string as s -> Some s
+                | _ -> None
+            let readOrdering (v : TypedValue) =
+                v |> readStr |> Option.bind (function 
+                                             | "h" -> Some HorizontalOrdering
+                                             | "v" -> Some VerticalOrdering
+                                             | _ -> None)     
+            let readPath() =
+                match values with
+                | [|_;f1;r1;f2;r2 |] ->
+                    readFlowSegment f1 |> c readRatio r1 |> c readFlowSegment f2 |> c readRatio r2
+                    |> Option.map (fun (((f1,r1),f2),r2) -> Path ((f1,r1), (f2,r2)))
+                | _ -> None
+            let readJustOnePunch makeStore =
+                match values with
+                | [|_;p|] -> p |> readPunch |> Option.map makeStore
+                | _ -> None
+            let readPutOr makeStore =
+                if values.Length < 4
+                then None
+                else 
+                readFlowSegment values.[1] |> c readRatio values.[2] |> c readOrdering values.[3]
+                |> Option.bind (fun ((f,r),o) -> readArray readPunch values.[4..] |> Option.map (fun ps -> makeStore ((f,r),o,ps)))
+            let iReadClickedFlow i =
+                readFlowSegment values.[i] |> c readRatio values.[i+1]
+            let iReadClickedFlows i =
+                iReadClickedFlow i |> c iReadClickedFlow (i+2)
+            let iReadOrdering i =
+                readOrdering values.[i]
+            let iReadNames i =
+                readArray readStr values.[i..]        
+            let readSeq makeStore =
+                readArray readStr values.[1..]
+                |> Option.map makeStore
+            let readOrPut makeStore =
+                if values.Length < 4 
+                then None 
+                else iReadClickedFlow 1 |> c iReadOrdering 3 |> c iReadNames 4 |> Option.map (fun ((cf,o),ns) -> makeStore (cf,o,ns))
+            let readAndPut makeStore =
+                if values.Length < 3 
+                then None 
+                else iReadClickedFlow 1 |> c iReadNames 3 |> Option.map (fun (cf,ns) -> makeStore (cf,ns))
+            if values.Length=0
+            then None
+            else
+            match values.[0].Value with
+            | :? string as t ->
+                match t with
+                | "path" -> readPath()
+                | "inputPunch" -> readJustOnePunch InputPunch
+                | "outputPunch" -> readJustOnePunch OutputPunch
+                | "inputOr" -> readPutOr InputOr
+                | "outputOr" -> readPutOr OutputOr
+                | "orInput" -> readOrPut OrInput
+                | "orOutput" -> readOrPut OrOutput
+                | "orIntermediary" ->
+                    if values.Length < 6 
+                    then None 
+                    else iReadClickedFlows 1 |> c iReadOrdering 5 |> c iReadNames 6 |> Option.map (fun ((cfs,o),ns) -> OrIntermediary (cfs,o,ns))                
+                | "orComplete" ->
+                    if values.Length < 2 
+                    then None 
+                    else iReadOrdering 1 |> c iReadNames 2 |> Option.map OrComplete                
+                | "andInput" -> readAndPut AndInput
+                | "andOutput" -> readAndPut AndOutput
+                | "andIntermediary" ->
+                    if values.Length < 5 
+                    then None 
+                    else iReadClickedFlows 1 |> c iReadNames 5 |> Option.map AndIntermediary                
+                | "andComplete" ->
+                    iReadNames 1 |> Option.map AndComplete
+                | "seqInput" -> readSeq SeqInput
+                | "seqOutput" -> readSeq SeqOutput
+                | "seqIntermediary" -> readSeq SeqIntermediary
+                | "seqComplete" -> readSeq SeqComplete
+                | _ -> None
+            | _ -> None
+        match Database.getNamedObjectsDictionaryId false flowApp with
+        | None -> Map.empty
+        | Some dictId ->
+            Database.readDictionary skipper dictId (reader ic) 
+            
+    let fromDatabase ic = fromDatabaseCustom ic (fun key -> Editor.writeLine ("Skipped flow annotation " ^ key))
+    
+    let purgeFlowAnnotations (ic : InstructionChip) =
+        let toDelete = ref []
+        let skipper key = toDelete := key :: !toDelete
+        let store = fromDatabaseCustom ic skipper
+        let boxDict = new Dictionary<string,FlowBox.FlowBox>()
+        let rec findBoxByName name =
+            match boxDict.TryGetValue name with
+            | true, box -> box
+            | false, _ ->
+                let ann = Map.find name store
+                let box = flowAnnotationToBox ic findBoxByName ann
+                boxDict.[name] <- box
+                box 
+        for kv in store do
+            try
+                flowAnnotationToBox ic findBoxByName (kv.Value) |> ignore
+            with NoPathFound _ | :? System.ArgumentException ->
+                toDelete := (kv.Key) :: !toDelete      
+        toDelete := List.sort compare !toDelete
+        for key in !toDelete do
+            Editor.writeLine ("flow annotation " ^ key ^ " scheduled for deletion")
+        let n = (!toDelete).Length
+        let doDelete = n>0 && Editor.promptYesOrNo false ("Are you sure you want to delete " ^ n.ToString() ^ " flow annotations?")
+        if doDelete
+        then Database.deleteDictionaryEntries (Database.getNamedObjectsDictionaryId false flowApp |> Option.get) !toDelete
+             Database.deleteDictionaryEntries (Database.getNamedObjectsDictionaryId false instrApp |> Option.get) !toDelete
+             Editor.writeLine (n.ToString() ^ " flow annotations deleted.")
+        else Editor.writeLine "Purge cancelled -- no flow annotations were deleted."
+                                                         
 module Interactive =
 
     open BioStream.Micado.Plugin
@@ -710,32 +933,33 @@ module Interactive =
     type BioStream.Micado.Core.FlowRepresentation.IFlowRepresentation with
         member v.promptEdge message = promptEdge v message
     
-    let promptAnyPunchBox (ic : InstructionChip) makeBox message =
+    let promptAnyPunchBox (ic : InstructionChip) makeStore makeBox message =
         ic.Chip.FlowLayer.promptPunch message
-     |> Option.map (makeBox ic)
+     |> Option.map (fun pi -> (makeStore (ic.Chip.FlowLayer.Punches.[pi])),(makeBox ic pi))
 
     let arrayOfRevList = Routing.arrayOfRevList
     
     let promptAnyPunchBoxes (ic : InstructionChip) makeBox baseMessage =
         let message (i : int) = baseMessage ^ " " ^ "#" ^ i.ToString()
-        let rec acc pickedSet boxes i =
+        let rec acc pickedSet punches boxes i =
             match ic.Chip.FlowLayer.promptPunch (message i) with
-            | None -> arrayOfRevList boxes
+            | None -> (arrayOfRevList punches, arrayOfRevList boxes)
             | Some pi ->
                 if Set.mem pi pickedSet
                 then Editor.writeLine "Punch already selected."
-                     acc pickedSet boxes i
+                     acc pickedSet punches boxes i
                 else
                 Editor.writeLine ""
                 let box = makeBox ic pi
-                acc (Set.add pi pickedSet) (box::boxes) (i+1)
-        acc Set.empty [] 1
+                let punch = ic.Chip.FlowLayer.Punches.[pi]
+                acc (Set.add pi pickedSet) (punch::punches) (box::boxes) (i+1)
+        acc Set.empty [] [] 1
         
     let promptInputBox ic =
-        promptAnyPunchBox ic Build.inputBox "Select an input flow punch: "
+        promptAnyPunchBox ic Store.InputPunch Build.inputBox "Select an input flow punch: "
 
     let promptOutputBox ic =
-        promptAnyPunchBox ic Build.outputBox "Select an output flow punch: "
+        promptAnyPunchBox ic Store.OutputPunch Build.outputBox "Select an output flow punch: "
         
     let promptPathBox (ic : InstructionChip) =
         let promptInputEdge() = ic.Representation.promptEdge "Select an input point on the flow: "
@@ -744,12 +968,16 @@ module Interactive =
         | Some inputEdge ->
             match promptOutputEdge() with
             | Some outputEdge -> 
-               try
-                Some (Build.pathBox ic inputEdge outputEdge)
-               with 
-                | NoPathFound(msg) -> 
-                    Editor.writeLine ("Error: " ^ msg ^ ".")
-                    None
+               let box =
+                   try
+                    Some (Build.pathBox ic inputEdge outputEdge)
+                   with 
+                    | NoPathFound(msg) -> 
+                        Editor.writeLine ("Error: " ^ msg ^ ".")
+                        None
+               box |> Option.map (fun box -> 
+                                    let f = Store.promptedEdgeToClickedFlow ic 
+                                    (Store.Path ((f inputEdge), (f outputEdge)), box))
             | None -> None
         | None -> None
 
@@ -842,14 +1070,29 @@ module Interactive =
         match promptAttachments ic boxes with
         | None -> None
         | Some a ->
-            promptOrdering() |> Option.bind (build a) 
+            promptOrdering() |> Option.bind (build a)
 
     let promptOrAnyPunchBox (ic : InstructionChip) makeBox baseMessage =
-        let boxes = promptAnyPunchBoxes (ic : InstructionChip) makeBox baseMessage
+        let punches,boxes = promptAnyPunchBoxes (ic : InstructionChip) makeBox baseMessage
+        let intermediary cfs = failwith "input/output cannot be intermediary"
+        let complete cf = failwith "input/output cannot be complete"
         match boxes.Length with
         | 0 -> None
-        | 1 -> Some boxes.[0]
-        | _ -> promptOrBox ic boxes
+        | 1 -> 
+            let makeStore box =
+                let input cf = Store.InputPunch punches.[0]
+                let output cf = Store.OutputPunch punches.[0]
+                Store.attachmentsDispatch ic (input, output, intermediary, complete) (FlowBox.attachment box)
+            Some ((makeStore boxes.[0]), boxes.[0])
+        | _ ->
+            let makeStore box =
+                match box with
+                | FlowBox.Or (a,_,o) ->
+                    let input cf = Store.InputOr (cf,o,punches)
+                    let output cf = Store.OutputOr (cf,o,punches)
+                    Store.attachmentsDispatch ic (input, output, intermediary, complete) a
+                | _ -> failwith "Not an OR box." 
+            promptOrBox ic boxes |> Option.map (fun box -> ((makeStore box), box))
              
     let promptOrInputBox ic =
         promptOrAnyPunchBox ic Build.inputBox "Select input flow punch"

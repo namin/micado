@@ -307,15 +307,7 @@ module Plugin =
         let valves = valves
                   |> Array.map (Database.writeEntityAndReturn >> (fun entity -> entity :?> Valve))
         let others = others |> Database.writeEntitiesAndReturn
-        let newChip = Chip.FromDatabase.create()
-        try
-            ic.UpdateInferred (newChip, valves, openSets)
-            Editor.writeLine "Control generation succeeded."
-        with :? System.Collections.Generic.KeyNotFoundException ->
-            Editor.writeLine "The generation could not complete, because some old valves could not be found."
-            Editor.writeLine "Undoing inferred valves..."
-            valves |> Database.eraseEntities
-            others |> Database.eraseEntities
+        Editor.writeLine "Control generation succeeded."
             
     let generate (ic : Instructions.InstructionChip) (instructions : Instructions.Instruction array) =
         if not (currentLayerOK())

@@ -154,8 +154,8 @@ let collectChipEntities () =
 /// Registered Developer Symbol for Micado    
 let rds = "MIDO"
 
-/// Gets the id of the nested dictionary starting with the given dictionary id.
-/// May optionally creates the nested dictionaries if they don't exist.
+/// Gets the id of a nested dictionary starting with the given dictionary id.
+/// May optionally creates the dictionaries if they don't exist.
 /// The lookup sequence is: read given dictionary -> search for rds dictionary -> search for app dictionary.
 let getDictionaryId createIfNotExisting app dictId =
     let db = database()
@@ -181,9 +181,11 @@ let getDictionaryId createIfNotExisting app dictId =
     tr.Commit()
     appDictId
 
-/// Gets the id of the nested dictionary in the extension dictionary for the given object.
-/// May optionally creates the dictionaries if they don't exist.
-/// The lookup sequence is: search for extension dictionary -> search for rds dictionary -> search for app dictionary.
+/// Gets the id of a nested dictionary starting with the named objects dictionary.
+let getNamedObjectsDictionaryId createIfNotExisting app =
+    getDictionaryId createIfNotExisting app (database().NamedObjectsDictionaryId)
+        
+/// Gets the id of a nested dictionary starting with the extension dictionary for the given object.
 let getExtensionDictionaryId createIfNotExisting app (dbObject : #DBObject) =
     match dbObject.ExtensionDictionary <> ObjectId.Null, createIfNotExisting with
     | true, _ -> getDictionaryId createIfNotExisting app (dbObject.ExtensionDictionary)
@@ -196,12 +198,11 @@ let getExtensionDictionaryId createIfNotExisting app (dbObject : #DBObject) =
         tr.Commit()
         getDictionaryId createIfNotExisting app (dbObjectW.ExtensionDictionary)
 
-/// Writes the given values in an Xrecord under the given key in the given dictionary.
-let writeDictionaryEntry dictId (key : string) values =
+/// Writes the given buffer in an Xrecord under the given key in the given dictionary.
+let writeDictionaryEntry dictId (key : string) rb =
     let db = database()
     use tr = db.TransactionManager.StartTransaction()
     let dict = tr.GetObject(dictId, OpenMode.ForWrite) :?> DBDictionary
-    let rb = new ResultBuffer(values)
     let xrec, xrecIsNew =
         match dict.Contains(key) with
         | true ->
@@ -231,9 +232,34 @@ let readDictionary skipper dictId reader =
         let key = kv.Key
         match tr.GetObject(kv.Value, OpenMode.ForRead) with
         | :? Xrecord as xrec ->
-            match reader tr (xrec.Data.AsArray()) with
+            match reader tr key (xrec.Data.AsArray()) with
             | None -> skipper key
             | Some value -> map <- Map.add key value map
         | _ -> skipper key
     tr.Commit()
     map
+
+/// Reads one dictionary entry under the given dictionary.
+let readDictionaryEntry dictId reader (key : string) =
+    let db = database()
+    use tr = db.TransactionManager.StartTransaction()
+    let dict = tr.GetObject(dictId, OpenMode.ForRead) :?> DBDictionary
+    let result = 
+        if not (dict.Contains(key))
+        then None
+        else
+        match tr.GetObject(dict.GetAt(key), OpenMode.ForRead) with
+        | :? Xrecord as xrec -> reader tr key (xrec.Data.AsArray())
+        | _ -> None
+    tr.Commit()
+    result
+    
+/// Deletes the entries associated with the given keys in the given dictionary.
+let deleteDictionaryEntries dictId keys =
+    let db = database()
+    use tr = db.TransactionManager.StartTransaction()
+    let dict = tr.GetObject(dictId, OpenMode.ForWrite) :?> DBDictionary
+    for key in keys do
+        let obj = tr.GetObject(dict.GetAt(key),OpenMode.ForWrite)
+        obj.Erase();
+    tr.Commit()
