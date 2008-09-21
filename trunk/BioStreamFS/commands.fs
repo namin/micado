@@ -64,7 +64,7 @@ let connectValvesToPunches() =
         let solution = iterativeSolver.Solution
         solution |> presenter |> Database.writeEntities |> ignore
         Editor.writeLine ("Routing succeeded: " ^ solution.Length.ToString() ^ " new connections.")
-
+        
 module Instructions = begin
     open BioStream.Micado.Core.Instructions
     open BioStream.Micado.Plugin.Editor.Extra
@@ -74,6 +74,12 @@ module Instructions = begin
     
     open System.Collections.Generic
     
+    [<CommandMethod("micado_number_control_lines")>]    
+    /// prompts the user to number the control lines by selecting them in turn
+    let micado_number_control_lines() =
+        use chip = Chip.FromDatabase.create()
+        chip.ControlLayer.numberLines()
+    
     let doc() =
         Database.doc()
 
@@ -82,141 +88,84 @@ module Instructions = begin
                 
     type CacheEntry() =
         let instructionChip = computeInstructionChip()
+        let flowAnnotations = Store.fromDatabase instructionChip
         let mutable boxes = Map.empty : Map<string, FlowBox.FlowBox>
-        let mutable unsavedChanges = false
-        let instructions = new Dictionary<Entity, Instruction>()
+        let rec findBox name =
+            match boxes.TryFind name with
+            | Some box -> box
+            | None ->
+                let ann = Map.find name flowAnnotations
+                let box = Store.flowAnnotationToBox instructionChip findBox ann
+                boxes <- Map.add name box boxes
+                box            
         let cleanup() =
             (instructionChip :> System.IDisposable).Dispose()
-            for kv in instructions do
-                kv.Key.Dispose()
         member v.InstructionChip = instructionChip
-        member v.Boxes with get() = boxes 
-                        and set(value) = boxes <- value
-                                         unsavedChanges <- true
-        member v.AddInstruction (instruction : Instruction) =
-            // if entity is already in the instructions map,
-            // sounds risky to dispose of it?
-            instructions.[instruction.Entity] <- instruction
-            unsavedChanges <- true
+        member v.FlowAnnotations = flowAnnotations
+        member v.Box name = findBox name
+        member v.Boxes with get() = flowAnnotations |> Map.mapi (fun name ann -> v.Box name)
         member v.GetInstruction entity =
-            if instructions.ContainsKey entity |> not
-            then Editor.writeLine "No instruction associated with entity."
-                 None
-            else Some instructions.[entity]
-        member v.Instructions with get() = let a = instructions.Values |> Array.of_seq
-                                           a |> Array.sort (fun (i : Instruction) (i' : Instruction) -> 
-                                                                compare i.Name i'.Name)
-                                           a
-        member v.SimilarInstructions (instruction : Instruction) =
-            instructions.Values
-         |> Seq.filter (fun (instruction' : Instruction) -> 
-                            instruction'.Entity.ObjectId = instruction.Entity.ObjectId 
-                         || instruction'.Name = instruction.Name)                         
-        member v.UnsavedChanges with get() = unsavedChanges and set(value) = unsavedChanges <- value
+            match Store.readInstructionReferenceInEntity entity with
+            | None -> Editor.writeLine "No instruction associated with entity."; None
+            | Some (key,i) ->
+                let entities = Store.readInstructionSetInDatabase key |> Option.get
+                let instructions = Store.flowBox2instructions key (v.Box key) entities |> Array.of_seq
+                Some instructions.[i]
+        member v.Instructions with get() = Store.readAllInstructionSetsInDatabase() |> Map.to_seq |> Seq.map_concat (fun (name,entities) -> Store.flowBox2instructions name (v.Box name) entities) |> Array.of_seq                  
         interface System.IDisposable with
             member v.Dispose() = cleanup()
-                        
-    let globalCache = new Dictionary<Document, CacheEntry>()
-
-    let deleteCacheEntry(d) =
-        let ok,entry = globalCache.TryGetValue(d)
-        if ok then globalCache.Remove(d) |> ignore; (entry :> System.IDisposable).Dispose()             
-                    
-    let activeCacheEntry() =
-        let d = doc()
-        let ok,res = globalCache.TryGetValue(d)
-        if ok
-        then res
-        else let res = new CacheEntry()
-             globalCache.[d] <- res
-             d.BeginDocumentClose.Add (fun args -> deleteCacheEntry(d))
-             res
-        
-    let activeInstructionChip() =
-        activeCacheEntry().InstructionChip
-        
-    let activeBoxes() = activeCacheEntry().Boxes
-        
-    let activeInstructions() = activeCacheEntry().Instructions
-        
-    let addInstruction instruction = activeCacheEntry().AddInstruction instruction
-    
-    let getInstruction entity = activeCacheEntry().GetInstruction entity
-        
-    let savedActiveCache() = activeCacheEntry().UnsavedChanges |> not
-
-    let savingActiveCache() = activeCacheEntry().UnsavedChanges <- false
-            
-    let setActiveBoxes map =
-        activeCacheEntry().Boxes <- map
-    
-    [<CommandMethod("micado_clear_cache")>]    
-    /// clears the cache entry of the active document
-    let micado_clear_cache() =
-        let d = doc()
-        if not (globalCache.ContainsKey d)
-        then Editor.writeLine "(No Cache to clear.)"
-        else
-        if savedActiveCache() ||
-           Editor.promptYesOrNo false 
-                                "Are you sure you want to clear unsaved boxes and instructions associated with this drawing?"
-        then deleteCacheEntry d;
-             Editor.writeLine "(Cache cleared.)"
-        else Editor.writeLine "(Cache kept.)"
-
-    // won't be able to create a ChipInstruction if the flow representation fails
-    // because there is no flow segments
+                                        
     let tryCommand command =
         try
-            command()
-        with Failure(msg) ->
-            Editor.writeLine msg
-                    
-    [<CommandMethod("micado_number_control_lines")>]    
-    /// prompts the user to number the control lines by selecting them in turn
-    let micado_number_control_lines() = tryCommand (fun () ->
-        activeInstructionChip().Inferred.Chip.ControlLayer.numberLines()        
-     |> ignore)
-
-    let addBox (name,box) =
-        setActiveBoxes(Map.add name box (activeBoxes()))
-        
-    let markSaveClear ic box =
-        let save name = addBox (name,box)            
+            use ce = new CacheEntry()
+            try
+                command(ce)
+            with
+                | NoPathFound _ | :? KeyNotFoundException | :? System.ArgumentException ->
+                    // the store is out of date with the drawing
+                    if Editor.promptYesOrNo false "Command aborted because the flow annotations are out of date with the drawing.\nWould you like to delete out-of-date flow annotations?"
+                    then Store.purgeFlowAnnotations (ce.InstructionChip)
+        with
+            | Failure(msg) ->
+                // if there is no flow segments, the creation of the flow representation might fail
+                // thus aborting the creation of the instruction chip          
+                Editor.writeLine msg
+                
+    let markSaveClear ic (store,box) =
+        let save name = Store.toDatabase name store            
         Debug.drawFlowBox ic box
         Editor.promptIdNameNotEmpty "Name box: " |> Option.map save |> ignore
         Editor.clearMarks()
         
-    let promptNewBox makeBox =
-        let ic = activeInstructionChip()
+    let promptNewBox ic makeBox =
         makeBox ic
      |> Option.map (markSaveClear ic)
      |> ignore
 
     [<CommandMethod("micado_new_box_input")>]    
     /// prompts the user to create a new input box
-    let micado_new_box_input() = tryCommand (fun () ->
-        promptNewBox Interactive.promptInputBox)
+    let micado_new_box_input() = tryCommand (fun (ce) ->
+        promptNewBox (ce.InstructionChip) Interactive.promptInputBox)
 
     [<CommandMethod("micado_new_box_output")>]    
     /// prompts the user to create a new output box
-    let micado_new_box_output() = tryCommand (fun () ->
-        promptNewBox Interactive.promptOutputBox)
+    let micado_new_box_output() = tryCommand (fun (ce) ->
+        promptNewBox (ce.InstructionChip) Interactive.promptOutputBox)
     
     [<CommandMethod("micado_new_box_or_input")>]    
     /// prompts the user to create a new or box made of input boxes
-    let micado_new_box_or_input() = tryCommand (fun () ->
-        promptNewBox Interactive.promptOrInputBox)
+    let micado_new_box_or_input() = tryCommand (fun (ce) ->
+        promptNewBox (ce.InstructionChip) Interactive.promptOrInputBox)
 
     [<CommandMethod("micado_new_box_or_output")>]    
     /// prompts the user to create a new or box made of output boxes
-    let micado_new_box_or_output() = tryCommand (fun () ->
-        promptNewBox Interactive.promptOrOutputBox)
+    let micado_new_box_or_output() = tryCommand (fun (ce) ->
+        promptNewBox (ce.InstructionChip) Interactive.promptOrOutputBox)
 
     [<CommandMethod("micado_new_box_path")>]    
     /// prompts the user to create a new path box        
-    let micado_new_box_path() = tryCommand (fun () ->
-        promptNewBox Interactive.promptPathBox)
+    let micado_new_box_path() = tryCommand (fun (ce) ->
+        promptNewBox (ce.InstructionChip) Interactive.promptPathBox)
                          
     let displayAttachmentKind = function
         | Instructions.Attachments.Complete -> "complete"
@@ -224,31 +173,34 @@ module Instructions = begin
         | Instructions.Attachments.Output _ -> "output"
         | Instructions.Attachments.Intermediary (_,_) -> "intermediary"
     
-    let boxDisplayName name box =
-        (FlowBox.attachmentKind box |> displayAttachmentKind) ^ " " ^ name
-        
-    let activeBoxesProperties() =
-        let boxes =
-            [for kv in activeBoxes() do
-                let name = kv.Key
-                let box = kv.Value
-                let kind = FlowBox.attachmentKind box
-                yield boxDisplayName name box, name, kind, box]
-        List.sort compare boxes
+    let displayName name kind = (displayAttachmentKind kind) ^ " " ^ name
     
-    let boxPropDisplayName (x,_,_,_) = x
-    let boxPropName (_,x,_,_) = x
-    let boxPropKind (_,_,x,_) = x
-    let boxPropBox (_,_,_,x) = x
+    let boxDisplayName name box = displayName name (FlowBox.attachmentKind box)
+    
+    let annDisplayName name entry = displayName name (Store.flowAnnotationKind entry)
+        
+    let flowAnnProperties (ce : CacheEntry) =
+        let entries =
+            [for kv in ce.FlowAnnotations do
+                let name = kv.Key
+                let entry = kv.Value
+                let kind = Store.flowAnnotationKind entry
+                yield name, annDisplayName name entry, kind, entry]
+        List.sort compare entries
+    
+    let annPropDisplayName (_,x,_,_) = x
+    let annPropName (x,_,_,_) = x
+    let annPropKind (_,_,x,_) = x
+    let annPropAnn (_,_,_,x) = x
     
     let allGood x = true
     
-    let promptSelectBoxAndName kindFilter boxFilter message =
-        let map = activeBoxes()
-        let keys = activeBoxesProperties() 
-                |> List.filter (boxPropKind >> kindFilter)
-                |> List.filter (boxPropBox >> boxFilter)
-                |> List.map boxPropName
+    let promptSelectAnnAndName (ce : CacheEntry) kindFilter boxFilter message =
+        let map = ce.FlowAnnotations
+        let keys = flowAnnProperties ce 
+                |> List.filter (annPropKind >> kindFilter)
+                |> List.filter (annPropAnn >> boxFilter)
+                |> List.map annPropName
         if keys.Length=0
         then Editor.writeLine "(None)"
              None
@@ -257,48 +209,43 @@ module Instructions = begin
      |> Option.bind (fun (s) ->
                         match map.TryFind(s) with
                         | Some res -> Some (res, s)
-                        | None -> Editor.writeLine "No such box."
+                        | None -> Editor.writeLine "No such flow annotation."
                                   None)
     
-    let promptSelectBox kindFilter boxFilter message = 
-        promptSelectBoxAndName kindFilter boxFilter message
-     |> Option.map fst
-    
-    let promptSelectAnyBoxAndName = promptSelectBoxAndName allGood allGood
-    let promptSelectAnyBox = promptSelectBox allGood allGood
+    let promptSelectAnyAnnAndName ce = promptSelectAnnAndName ce allGood allGood
             
     [<CommandMethod("micado_mark_box")>]    
-    /// prompts the user to select a box, marking it on the drawing
-    let micado_mark_box() = tryCommand (fun () ->
-        match promptSelectAnyBoxAndName "Box " with
+    /// prompts the user to select an annotation, marking it on the drawing
+    let micado_mark_box() = tryCommand (fun (ce) ->
+        match promptSelectAnyAnnAndName ce "Annotation " with
         | None -> ()
-        | Some (box, name) ->
-            Debug.drawFlowBox (activeInstructionChip()) box
-            Editor.writeLine (boxDisplayName name box))
+        | Some (ann, name) ->
+            Debug.drawFlowBox (ce.InstructionChip) (ce.Box name)
+            Editor.writeLine (annDisplayName name ann))
  
     [<CommandMethod("micado_list_boxes")>]
     /// prints out the list of boxes for active drawing
-    let micado_list_boxes() = tryCommand (fun () ->
-        activeBoxesProperties() 
-     |> List.iter (fun prop -> Editor.writeLine (boxPropDisplayName prop)))
+    let micado_list_boxes() = tryCommand (fun (ce) ->
+        flowAnnProperties ce
+     |> List.iter (fun prop -> Editor.writeLine (annPropDisplayName prop)))
 
     let selectBoxesMessage (i : int) = "Box #" ^ i.ToString()
     
     let arrayOfRevList = Routing.arrayOfRevList
     
-    let promptSelectBoxesOfSameKind() =
+    let promptSelectAnnsOfSameKind ce =
         let message = selectBoxesMessage
-        let rec acc kindFilter boxes i =
-            let boxFilter box = List.mem box boxes |> not
-            match promptSelectBox kindFilter boxFilter (message i) with
-            | None -> Some (boxes |> arrayOfRevList)
-            | Some box -> acc kindFilter (box::boxes) (i+1)
-        match promptSelectAnyBox (message 1) with
+        let rec acc kindFilter anns names i =
+            let annFilter ann = List.mem ann anns |> not
+            match promptSelectAnnAndName ce kindFilter annFilter (message i) with
+            | None -> Some ((anns |> arrayOfRevList), (names |> arrayOfRevList))
+            | Some (ann,name) -> acc kindFilter (ann::anns) (name::names) (i+1)
+        match promptSelectAnyAnnAndName ce (message 1) with
         | None -> None
-        | Some box ->
-            acc (Attachments.sameKind (FlowBox.attachmentKind box)) [box] 2
+        | Some (ann,name) ->
+            acc (Attachments.sameKind (Store.flowAnnotationKind ann)) [ann] [name] 2
     
-    let promptSelectBoxesForSeq() =
+    let promptSelectAnnsForSeq ce =
         let message = selectBoxesMessage
         let hasInputAttachment kind =
             match kind with
@@ -308,162 +255,106 @@ module Instructions = begin
             match kind with
             | Attachments.Complete | Attachments.Output _ -> false
             | _ -> true
-        let rec acc boxes i =
-            match promptSelectBox hasInputAttachment allGood (message i) with
-            | None -> Some (boxes |> arrayOfRevList)
-            | Some box -> 
-                let boxes' = box :: boxes
-                if box |> FlowBox.attachmentKind |> hasOutputAttachment |> not
+        let rec acc anns names i =
+            let result anns names = Some ((anns |> arrayOfRevList), (names |> arrayOfRevList)) 
+            match promptSelectAnnAndName ce hasInputAttachment allGood (message i) with
+            | None -> result anns names
+            | Some (ann,name) -> 
+                let anns' = ann :: anns
+                let names' = name :: names
+                if ann |> Store.flowAnnotationKind |> hasOutputAttachment |> not
                 then Editor.writeLine "(Stopping at Output)"
-                     Some (boxes' |> arrayOfRevList)
-                else acc boxes' (i+1)
-        match promptSelectBox hasOutputAttachment allGood (message 1) with
+                     result anns' names'
+                else acc anns' names' (i+1)
+        match promptSelectAnnAndName ce hasOutputAttachment allGood (message 1) with
         | None -> None
-        | Some box ->
-            acc [box] 2
+        | Some (ann,name) ->
+            acc [ann] [name] 2
             
-    let promptNewCombinationBox selectBoxes makeBox =
-        selectBoxes()
-     |> Option.map (let ic = activeInstructionChip()
-                    makeBox ic >> Option.map (markSaveClear ic))
-     |> ignore
+    let promptNewCombinationBox (ce : CacheEntry) selectAnns makeBox =
+        match selectAnns ce with
+        | None -> ()
+        | Some (anns,names) ->
+            let ic = ce.InstructionChip
+            let boxes = Array.map ce.Box names
+            match makeBox ic boxes with
+            | None -> ()
+            | Some box ->
+                let dispatcher =
+                    match box with
+                    | FlowBox.Or (a,c,o) -> Store.orDispatcher names o
+                    | FlowBox.And (a,c) -> Store.andDispatcher names
+                    | FlowBox.Seq (a,c) -> Store.seqDispatcher names
+                    | FlowBox.Primitive _ | FlowBox.Extended _ -> failwith "Not a combination box"
+                let ann = Store.attachmentsDispatch ic dispatcher (FlowBox.attachment box)
+                markSaveClear ic (ann,box)
 
     [<CommandMethod("micado_new_box_or")>]    
     /// prompts the user to create a new or box
-    let micado_new_box_or() = tryCommand (fun () ->
-        promptNewCombinationBox promptSelectBoxesOfSameKind Interactive.promptOrBox)
+    let micado_new_box_or() = tryCommand (fun (ce) ->
+        promptNewCombinationBox ce promptSelectAnnsOfSameKind Interactive.promptOrBox)
         
     [<CommandMethod("micado_new_box_and")>]    
     /// prompts the user to create a new and box
-    let micado_new_box_and() = tryCommand (fun () ->
-        promptNewCombinationBox promptSelectBoxesOfSameKind Interactive.promptAndBox)
+    let micado_new_box_and() = tryCommand (fun (ce) ->
+        promptNewCombinationBox ce promptSelectAnnsOfSameKind Interactive.promptAndBox)
 
     [<CommandMethod("micado_new_box_seq")>]    
     /// prompts the user to create a new seq box
-    let micado_new_box_seq() = tryCommand (fun () ->
-        promptNewCombinationBox promptSelectBoxesForSeq Interactive.promptSeqBox)
-
-    [<CommandMethod("micado_rename_box")>]    
-    /// prompts the user to select a box and rename it
-    let micado_rename_box() = tryCommand (fun () ->
-        match promptSelectAnyBoxAndName "Box to rename " with
-        | None -> ()
-        | Some (box, name) ->
-            Editor.promptIdNameNotEmpty "New name for box: "
-         |> Option.map (fun name' ->
-                            setActiveBoxes(activeBoxes() |> Map.remove name |> Map.add name' box)
-                            Editor.writeLine ("Renamed box " ^ name ^ " to " ^ name'))
-         |> ignore)
+    let micado_new_box_seq() = tryCommand (fun (ce) ->
+        promptNewCombinationBox ce promptSelectAnnsForSeq Interactive.promptSeqBox)
             
     [<CommandMethod("micado_new_instruction_set")>]
     /// prompts the user to select a box and builds an instruction set out of it
-    let micado_new_instruction_set() = tryCommand (fun () ->
-        let ic = activeInstructionChip()
-        match promptSelectAnyBoxAndName "Box " with
+    let micado_new_instruction_set() = tryCommand (fun (ce) ->
+        match promptSelectAnyAnnAndName ce "Box " with
         | None -> ()
-        | Some (box, name) ->
+        | Some (ann, name) ->
+            let ic = ce.InstructionChip
+            let box = ce.Box name
             Debug.drawFlowBox ic box
             let instructions = Instructions.Interactive.promptInstructions ic name box
             Editor.clearMarks()
             match instructions with
             | None -> ()
-            | Some instructions -> Seq.iter addInstruction instructions)
-
-    let markInstruction (instruction : Instruction) =
+            | Some instructions -> Store.writeInstructionSetToDatabase name instructions
+    )
+    
+    let markInstruction (ce : CacheEntry) (instruction : Instruction) =
         Editor.writeLine ((if instruction.Partial then "partial" else "complete")
-                          ^ " instruction " ^ instruction.Name)
-        Debug.drawExtents instruction.Extents
-        Debug.drawUsed (activeInstructionChip()) instruction.Used
-        
+                      ^ " instruction " ^ instruction.Name)
+        instruction.Extents |> Option.map Debug.drawExtents |> ignore
+        Debug.drawUsed ce.InstructionChip instruction.Used    
+                
     [<CommandMethod("micado_mark_instruction")>]
     /// prompts the user to select an entity associated with an instruction and marks the instruction on the drawing
-    let micado_mark_instruction() = tryCommand (fun () ->
+    let micado_mark_instruction() = tryCommand (fun (ce) ->
         Editor.promptSelectEntity "Select an entity associated with the extents of an instruction: "
-     |> Option.bind getInstruction
-     |> Option.map markInstruction
+     |> Option.bind ce.GetInstruction
+     |> Option.map (markInstruction ce)
      |> ignore)
 
     [<CommandMethod("micado_list_instructions")>]
     /// mark the instructions one after the other
-    let micado_list_instructions() = tryCommand (fun () ->
+    let micado_list_instructions() = tryCommand (fun (ce) ->
         Editor.clearMarks()
-        let instructions = activeInstructions()
-        if instructions.Length = 0
+        let instructions = ce.Instructions
+        if Seq.is_empty instructions
         then Editor.writeLine "(None)"
         else
         for instruction in instructions do
-            markInstruction instruction)
+            markInstruction ce instruction)
             
     [<CommandMethod("micado_export_to_gui")>]
     /// export files for the java GUI
-    let micado_export_to_gui() = tryCommand (fun () ->
-        let ic = activeInstructionChip()
-        let instructions = activeInstructions()
-        if ic.Inferred.Default || instructions.Length = ic.Inferred.OpenSets.Length
-        then Export.GUI.prompt ic instructions |> ignore
-        else Editor.writeLine "Cannot export GUI because control generation is out of date with instructions."
+    let micado_export_to_gui() = tryCommand (fun (ce) ->
+        let ic = ce.InstructionChip
+        let instructions = ce.Instructions
+        Export.GUI.prompt ic instructions |> ignore
     )
-        
-    [<CommandMethod("micado_export_boxes_and_instructions")>]
-    /// export boxes and instructions in order to import them back later
-    let micado_export_boxes_and_instructions() = tryCommand (fun () ->
-        let boxes = 
-            activeBoxesProperties() 
-         |> Seq.map (fun prop -> boxPropName prop, boxPropBox prop)
-        if Serialization.export boxes (activeInstructions())
-        then savingActiveCache())
-        
-    [<CommandMethod("micado_import_boxes_and_instructions")>]
-    /// import boxes and instructions from an earlier exported file
-    let micado_import_boxes_and_instructions() = tryCommand (fun () ->
-        let entry = activeCacheEntry()
-        let ic = activeInstructionChip()
-        let currentBoxes = activeBoxes()
-        let checkUsed (used : Used) =
-            (used.Edges.IsEmpty || Set.max_elt used.Edges < ic.Representation.EdgeCount)
-         && (used.Valves.IsEmpty || Set.min_elt used.Valves < ic.Chip.ControlLayer.Valves.Length)            
-        let checkInstruction (instruction : Instruction) =
-            if instruction.Entity = null
-            then Editor.writeLine ("Skipping instruction " ^ instruction.Name ^ " because associated entity doesn't exist in drawing.")
-                 false
-            else
-            if checkUsed instruction.Used |> not
-            then Editor.writeLine ("Skipping instruction " ^ instruction.Name ^ " because it doesn't fit with current flow representation.")
-                 false
-            else
-            let sims = entry.SimilarInstructions instruction
-            if Seq.nonempty sims
-            then let sim = Seq.hd sims
-                 if sim.Entity.ObjectId = instruction.Entity.ObjectId
-                 then Editor.writeLine ("Skipping instruction " ^ instruction.Name ^ " because associated entity is already in use.")
-                 else Editor.writeLine ("Skipping instruction " ^ instruction.Name ^ " because its name is already in use.")
-                 false
-            else Editor.writeLine ("Adding instruction " ^ instruction.Name ^ ".")
-                 true
-        let checkNameBox (name,box) =
-           if currentBoxes.ContainsKey name
-           then Editor.writeLine ("Skipping box " ^ name ^ "because its name is already in use.")
-                false
-           else
-           if checkUsed (FlowBox.mentionedUsed box) |> not
-           then Editor.writeLine ("Skipping box " ^ name ^ "because it doesn't fit with current flow representation.")
-                false
-           else Editor.writeLine ("Adding box " ^ name ^ ".")
-                true
-        match Serialization.import() with
-        | None -> ()
-        | Some (boxes, instructions) ->
-            let keepBoxes = boxes |> List.filter checkNameBox
-            let keepInstructions = instructions |> Array.filter checkInstruction
-            keepBoxes |> Seq.iter addBox
-            keepInstructions |> Seq.iter addInstruction
-            Editor.writeLine ("Summary")
-            Editor.writeLine ("Added " ^ keepBoxes.Length.ToString() ^ " boxes (out of " ^ boxes.Length.ToString() ^ ").")
-            Editor.writeLine ("Added " ^ keepInstructions.Length.ToString() ^ " instructions (out of " ^ instructions.Length.ToString() ^ ")."))    
-    
+            
     // micado_
     //        new_
-    //            box (?)
     //            box_
     //                input (v)
     //                output (v)
@@ -480,38 +371,34 @@ module Instructions = begin
     //        list_
     //             boxes (v)
     //             instructions (v)
-    //        rename_box (v)
-    //        export_
-    //               to_gui (v)
-    //               boxes_and_instructions
-    //        import_boxes_and_instructions
+    //        export_to_gui (v)
     //        number_control_lines (v)
-    //        clear_cache (v)
     
     [<CommandMethod("micado_generate_control")>]
     /// generate the control lines from the instructions
-    let micado_generate_control() = tryCommand (fun () ->
-        let ic = activeInstructionChip()
-        let instructions = activeInstructions()
+    let micado_generate_control() = tryCommand (fun (ce) ->
+        let ic = ce.InstructionChip
+        let instructions = ce.Instructions
         ControlInference.Plugin.generate ic instructions
     )
 
     [<CommandMethod("micado_generate_multiplexed_control")>]
     /// generate the control lines with multiplexers from the instructions and boxes
-    let micado_generate_multiplexed_control() = tryCommand (fun () ->
-        let ic = activeInstructionChip()
-        let instructions = activeInstructions()
-        let boxes = activeBoxes() |> Map.to_seq |> Seq.map snd
+    let micado_generate_multiplexed_control() = tryCommand (fun (ce) ->
+        let ic = ce.InstructionChip
+        let instructions = ce.Instructions
+        let boxes =  ce.Boxes |> Map.to_seq |> Seq.map snd
         ControlInference.Plugin.generateWithMultiplexers ic instructions boxes
     )
      
     [<CommandMethod("micado_generate_multiplexer")>]
     /// prompts the user for a flow box and, if possible, generates a related multiplexer
-    let micado_generate_multiplexer() = tryCommand (fun () ->
-        let ic = activeInstructionChip()
-        match promptSelectAnyBox "Box " with
+    let micado_generate_multiplexer() = tryCommand (fun (ce) ->
+        let ic = ce.InstructionChip
+        match promptSelectAnyAnnAndName ce "Annotation " with
         | None -> ()
-        | Some box ->
+        | Some (ann,name) ->
+            let box = ce.Box name
             ControlInference.Plugin.generateMultiplexer ic box
     )
     

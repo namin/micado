@@ -63,7 +63,7 @@ type ChipEntities (flowEntities : Entity list, controlEntities : Entity list) =
 type SegmentSlope = Horizontal | Vertical | Tilted
 
 /// a flow segment
-type FlowSegment (segment : LineSegment2d, width : double) =
+type FlowSegment (segment : LineSegment2d, width : double, entity : Entity) =
     let pointComparisonFunction = ref None : (Point2d -> Point2d -> int) option ref
     let computePointComparisonFunction() =
         let angle = segment.Direction.Angle
@@ -93,6 +93,7 @@ type FlowSegment (segment : LineSegment2d, width : double) =
      |> Array.map (fun (s,e) -> new LineSegment2d(s,e))          
     member v.Segment = segment
     member v.Width = width
+    member v.Entity = entity
     member v.PointComparisonFunction with get() = lazyGet computePointComparisonFunction pointComparisonFunction
     member v.getDistanceTo (point : Point2d) =
         let d = v.Segment.GetDistanceTo(point)
@@ -129,7 +130,7 @@ type FlowSegment (segment : LineSegment2d, width : double) =
     member v.Slope with get() = lazyGet computeSlope slope
     member v.WidthIndicatorSegments with get() = lazyGet computeWidthIndicatorSegments widthIndicatorSegments
 
-let dictionaryArray (s : #('a seq)) =
+let dictionaryArray s =
     let d = new Dictionary<'a,int>()
     let add i key =
         if not (d.ContainsKey(key))
@@ -145,9 +146,20 @@ type Flow ( segments : FlowSegment list, punches : Punch list) =
     let punch2index (punch : Punch) =
         let ok, res = getPunchDictionaryArray().TryGetValue(punch)
         if ok then Some res else None
+    let entity2segmentDictionary = ref None
+    let computeEntity2SegmentDictionary() =
+        let d = new Dictionary<Entity,FlowSegment>()
+        for s in segments do
+            d.[s.Entity] <- s
+        d
+    let getEntity2SegmentDictionary() = lazyGet computeEntity2SegmentDictionary entity2segmentDictionary
+    let entity2segment entity =
+        let ok, res = getEntity2SegmentDictionary().TryGetValue(entity)
+        if ok then Some res else None
     member v.Segments = Array.of_list segments
     member v.Punches = Array.of_list punches
     member v.Punch2Index punch = punch2index punch
+    member v.Entity2Segment entity = entity2segment entity
 
 /// acceptable entity type for any control entity other than valve and punch
 type RestrictedEntity = Polyline
