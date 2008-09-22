@@ -659,7 +659,7 @@ module Store =
     let instructionSetReader (tr : Transaction) (key : string) (values : TypedValue array) =
          let readEntity (v : TypedValue) =
             match v.Value with
-            | :? ObjectId as objId when objId <> ObjectId.Null ->
+            | :? ObjectId as objId ->
                 try
                     Some (tr.GetObject(objId, OpenMode.ForRead))
                 with _ -> 
@@ -708,10 +708,11 @@ module Store =
     
     let entitiesToValues entities =
         let tv id = new TypedValue((int)DxfCode.SoftPointerId, id)
+        let tv0 () = new TypedValue((int)DxfCode.Int8, 0)
         entities 
-        |> Array.map ((function
-                       | None -> ObjectId.Null
-                       | Some (e : Entity) -> e.ObjectId) >> tv)
+        |> Array.map (function
+                      | None -> tv0()
+                      | Some (e : Entity) -> e.ObjectId |> tv)
 
     let checkOrDeleteEntityReferenceInInstruction delete (entity : Entity) (key,i) =
         match readInstructionSetInDatabase key with
