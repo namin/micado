@@ -1,0 +1,4 @@
+(arxload "C:/micado/BioStreamDB.dbx")
+(command "Netload" "C:/micado/BioStreamMg.dll")
+(command "Netload" "C:/micado/BioStreamCS.dll")
+(command "Netload" "C:/micado/biostreamfs.dll")
