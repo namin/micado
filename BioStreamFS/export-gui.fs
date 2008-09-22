@@ -112,7 +112,7 @@ let exportJavaData (ic : Instructions.InstructionChip)
         | None -> ()
         | Some extents ->
             for pt in toPoints(extents) do
-            tw.WriteLine(toPixelCoordinates(pt))
+                tw.WriteLine(toPixelCoordinates(pt))
         tw.WriteLine("},")
     tw.WriteLine("// END port locations")
     tw.WriteLine("// BEGIN instructions")

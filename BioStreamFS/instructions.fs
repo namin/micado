@@ -908,7 +908,7 @@ module Store =
         for kv in store do
             try
                 flowAnnotationToBox ic findBoxByName (kv.Value) |> ignore
-            with NoPathFound _ | :? System.ArgumentException ->
+            with :? NoPathFoundException | :? System.ArgumentException ->
                 toDelete := (kv.Key) :: !toDelete      
         toDelete := List.sort compare !toDelete
         for key in !toDelete do

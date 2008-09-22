@@ -121,7 +121,7 @@ module Instructions = begin
             try
                 command(ce)
             with
-                | NoPathFound _ | :? KeyNotFoundException | :? System.ArgumentException ->
+                | :? NoPathFoundException | :? KeyNotFoundException | :? System.ArgumentException ->
                     // the store is out of date with the drawing
                     if Editor.promptYesOrNo false "Command aborted because the flow annotations are out of date with the drawing.\nWould you like to delete out-of-date flow annotations?"
                     then Store.purgeFlowAnnotations (ce.InstructionChip)
