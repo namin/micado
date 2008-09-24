@@ -175,6 +175,9 @@ user.</p>
 <p>Once the flow is annotated with names, you create an instruction set by specifying a named flow and an entity on the drawing. The drawing entity becomes the button or set of buttons to run the instruction set.
 </p>
 
+<p>To support iterative development,  flow annotations and instructions are fully re-entrant. You should feel free to edit the drawing and the flow annotations simultaneously.
+</p>
+
 <h3><a name="GenerationCommands"></a>Commands</h3>
 
 <ul>
@@ -207,8 +210,6 @@ user.</p>
  <li><a name="ClearMarks"></a>Clear highlighting<br><i>Clears the temporary drawings made to highlight flows and instructions.</i></li>
  <li><a name="FileCommand">File
  <ul>
-    <li><a name="ImportBoxesAndInstructions"></a><img src="doc/images/icons/ImportBoxesAndInstructions.png"></img> Open<br><i>Open an XML file, saved previously, containing named flows and instructions.</i></li>
-   <li><a name="ExportBoxesAndInstructions"></a><img src="doc/images/icons/ExportBoxesAndInstructions.png"></img> Save<br><i>Save the named flows and instructions to an XML file.</i></li>
    <li><a name="ExportToGUI"></a><img src="doc/images/icons/ExportToGui.png"></img> Export to Java GUI<br><i>Creates a Java GUI with the drawing and instructions. The exported files should be saved, as <code>AppName.png</code> and <code>AppName.dat</code> in <code>javagui/src/</code>, so that the Java application can be built by simply calling <code>build.bat AppName</code> in that directory.</i></li>   
    <li><a name="NumberControlLines"></a><img src="doc/images/icons/NumberControlLines.png"></img> Number Control Lines<br><i>Specify the numbering of the control lines to be used in the Java GUI. The custom numbering is to make it easy to map the logical ports to the physical ports on the chip.</i></li>  
  </ul></li>
