@@ -78,7 +78,7 @@ module Instructions = begin
     /// prompts the user to number the control lines by selecting them in turn
     let micado_number_control_lines() =
         use chip = Chip.FromDatabase.create()
-        chip.ControlLayer.numberLines()
+        chip.ControlLayer.numberLines() |> ignore
     
     let doc() =
         Database.doc()
