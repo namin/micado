@@ -320,20 +320,14 @@ module Plugin =
         let others = others |> Database.writeEntitiesAndReturn
         Editor.writeLine "Control generation succeeded."        
                 
-    let generate (ic : Instructions.InstructionChip) (instructions : Instructions.Instruction array) =
+    let generate withMultiplexers (ic : Instructions.InstructionChip) (instructions : Instructions.Instruction array) boxes =
         if not (currentLayerOK())
         then ()
         else
-        let allInferredValves, stateTable = calculate ic instructions
-        let valves = createValves ic allInferredValves 
-        let openSets = stateTable |> Array.map states2openSet
-        updateChipWith ic valves openSets Seq.empty
-        
-    let generateWithMultiplexers (ic : Instructions.InstructionChip) (instructions : Instructions.Instruction array) boxes =
-        if not (currentLayerOK())
-        then ()
-        else
-        let mValves, mLines, edge2valves = generateAllMultiplexers ic boxes
+        let mValves, mLines, edge2valves = 
+            match withMultiplexers with
+            | true -> generateAllMultiplexers ic boxes
+            | false -> (Array.empty, Array.empty, Map.empty)
         let iValves, stateTable = calculate ic instructions
         let baseNeeded = mValves.Length
         let iNeeded = inferNeededValves ic instructions iValves stateTable edge2valves
@@ -379,6 +373,4 @@ module Plugin =
                 
     let generateFromBoxes withMultiplexers ic boxes =
         let instructions = flowBoxes2instructions boxes |> Array.of_seq
-        match withMultiplexers with
-        | false -> generate ic instructions
-        | true -> generateWithMultiplexers ic instructions boxes
+        generate withMultiplexers ic instructions boxes
