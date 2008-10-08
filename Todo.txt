@@ -1,7 +1,3 @@
 TODO list
 * Support mixing / pumping instructions.
-* Re-think control inference to support iterative development.
-  * In particular, re-inference after inference should leave control logic unchanged.
-  * More generally, inference should take into account already placed control logic.
-* Inference should use flow annotations only, not instructions.
-* Add buttons for inference commands, when ready.
+* Add buttons for inference commands.

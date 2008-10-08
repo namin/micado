@@ -19,6 +19,10 @@ type inferredValve = { Edge : int; Node : int }
 
 type valveState = Open | Closed | Don'tCare
 
+let edgeHasDesignedValve (ic : Instructions.InstructionChip) edge =
+    let a,b = FlowRepresentation.edge2nodes ic.Representation edge
+    ic.isValve a || ic.isValve b
+    
 let calculate (ic : Instructions.InstructionChip) (instructions : Instructions.Instruction array) =
     let nodesOfEdge = FlowRepresentation.edge2nodes ic.Representation
     let inferClosed (instruction : Instructions.Instruction) =
@@ -89,18 +93,23 @@ let inferMultiplexer (ic : Instructions.InstructionChip) nodes =
         let nodesOfEdge = FlowRepresentation.edge2nodes rep
         let otherNode (a,e) = FlowRepresentation.differentFrom a (nodesOfEdge edge)
         let reverseSeg (a,e) = a <> rep.OfPoint ((rep.ToFlowSegment e).Segment.StartPoint)
-        let next (a,e) =
+        let rec helper a e acc =
+            if edgeHasDesignedValve ic e
+            then None
+            else
+            let acc' = (e,reverseSeg(a,e)) :: acc
+            let ret() = Some (List.rev acc' : MultiplexerPath)
             let b = otherNode (a,e)
             let es = Set.remove e (rep.NodeEdges b)
             if es.Count <> 1
-            then None
+            then ret()
             else
             let e' = Set.choose es
             let f,f' = rep.ToFlowSegment e, rep.ToFlowSegment e'
             if withinMultiplexerPath f f'
-            then Some ((e',reverseSeg(b,e')), (b,e'))
-            else None
-        Some (((edge,reverseSeg(node,edge)) :: (Seq.unfold next (node, edge) |> List.of_seq)) : MultiplexerPath)
+            then helper b e' acc'
+            else ret()
+        helper node edge []
     let opaths = nodes |> Array.map calculatePath
     if Array.for_all Option.is_some opaths
     then Some ((opaths |> Array.map Option.get) : Multiplexer)
@@ -276,10 +285,8 @@ let inferNeededValves (ic : Instructions.InstructionChip) (instructions : Instru
             else
             let ivss =
                 ivs
-             |> Set.filter (fun iv -> 
-                             not ((edge2valves.ContainsKey iv.Edge) ||
-                                  (let a,b = FlowRepresentation.edge2nodes rep iv.Edge
-                                   ic.isValve a || ic.isValve b)))
+             |> Set.filter (fun iv -> not (edge2valves.ContainsKey iv.Edge || 
+                                           edgeHasDesignedValve ic iv.Edge))
              |> Set.map nextInferredValves
             if ivss |> Set.exists (fun set -> Set.is_empty set)
             then true
