@@ -39,6 +39,9 @@
     <StartArguments>/b "C:\Program Files\Autodesk\Acade 2008\UserDataCache\micado-debug"</StartArguments>
     <StartWorkingDirectory>C:\Program Files\Autodesk\Acade 2008\UserDataCache\</StartWorkingDirectory>
   </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <OtherFlags>--standalone</OtherFlags>
+  </PropertyGroup>
   <!-- References -->
   <ItemGroup>
     <Reference Include="acdbmgd, Version=17.1.0.0, Culture=neutral, PublicKeyToken=null">
@@ -53,10 +56,6 @@
     <Reference Include="BioStreamMg" />
     <Reference Include="BioStreamCS" />
     <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Xml" />
-    <Reference Include="System.Drawing" />
-    <Reference Include="System.Windows.Forms" />
     <Reference Include="FSharp.PowerPack" />
     <Reference Include="acmgd" />
     <Reference Include="MgCS2" />
@@ -64,11 +63,15 @@
     <Reference Include="BioStreamCS" />
     <Reference Include="acdbmgd" />
     <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Xml" />
-    <Reference Include="System.Drawing" />
-    <Reference Include="System.Windows.Forms" />
     <Reference Include="FSharp.PowerPack" />
+    <Reference Include="System.Drawing, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+      <Name>System.Drawing</Name>
+      <AssemblyName>System.Drawing.dll</AssemblyName>
+    </Reference>
+    <Reference Include="System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
+      <Name>System.Windows.Forms</Name>
+      <AssemblyName>System.Windows.Forms.dll</AssemblyName>
+    </Reference>
   </ItemGroup>
   <!-- Files -->
   <ItemGroup>
