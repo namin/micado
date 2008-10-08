@@ -613,7 +613,7 @@ module Store =
         let dictId = Database.getNamedObjectsDictionaryId true flowApp |> Option.get
         let rb =
             let rb = new ResultBuffer()
-            let wEntity (e : #Entity) =
+            let wEntity (e : Entity) =
                 rb.Add(new TypedValue((int)DxfCode.SoftPointerId, e.ObjectId))
             let wClickedFlow ((f,r) : ClickedFlow) =
                 wEntity (f.Entity)
