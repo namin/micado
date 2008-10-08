@@ -250,6 +250,17 @@ To access the Customize User Interface dialog box, click the Tools menu > Custom
           <LargeImage Name="C:\micado\Icons\NumberControlLines.BMP" />
         </Macro>
       </MenuMacro>
+      <MenuMacro UID="MMU_0022">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+          <Name xlate="true" UID="XLS_6496">GenerateControlLogic</Name>
+          <Command>^C^C_micado_generate_multiplexed_control</Command>
+          <HelpString xlate="true" UID="XLS_6497">Generate control logic (multiplexers and single valves)</HelpString>
+          <SmallImage Name="C:\micado\Icons\ControlLogic.BMP" />
+          <LargeImage Name="C:\micado\Icons\ControlLogic.BMP" />
+        </Macro>
+      </MenuMacro>
     </MacroGroup>
     <MenuRoot>
       <AcceleratorRoot />
@@ -411,6 +422,13 @@ To access the Customize User Interface dialog box, click the Tools menu > Custom
             <NameRef UID="XLS_6482" xlate="true">Connect</NameRef>
             <MenuItem>
               <MacroRef MenuMacroID="MMU_0003" />
+            </MenuItem>
+          </PopMenuItem>
+          <PopMenuItem IsSeparator="false" hasDiesel="false" UID="PMIU_0024">
+            <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+            <NameRef UID="XLS_6499" xlate="true">Control Logic</NameRef>
+            <MenuItem>
+              <MacroRef MenuMacroID="MMU_0022" />
             </MenuItem>
           </PopMenuItem>
           <PopMenuItem IsSeparator="false" hasDiesel="false" UID="PMIU_0006">
@@ -590,6 +608,13 @@ To access the Customize User Interface dialog box, click the Tools menu > Custom
             <Name xlate="true" UID="XLS_0005">Connect</Name>
             <MenuItem>
               <MacroRef MenuMacroID="MMU_0003" />
+            </MenuItem>
+          </ToolbarButton>
+          <ToolbarButton IsSeparator="false" UID="TBBU_0030">
+            <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+            <Name xlate="true" UID="XLS_6498">GenerateControlLogic</Name>
+            <MenuItem>
+              <MacroRef MenuMacroID="MMU_0022" />
             </MenuItem>
           </ToolbarButton>
           <ToolbarButton IsSeparator="false" UID="TBBU_0005">
