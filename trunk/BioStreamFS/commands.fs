@@ -374,22 +374,19 @@ module Instructions = begin
     //        export_to_gui (v)
     //        number_control_lines (v)
     
-    [<CommandMethod("micado_generate_control")>]
-    /// generate the control lines from the instructions
-    let micado_generate_control() = tryCommand (fun (ce) ->
+    let generate_control withMultiplexers = tryCommand (fun (ce) ->
         let ic = ce.InstructionChip
-        let instructions = ce.Instructions
-        ControlInference.Plugin.generate ic instructions
+        let boxes =  ce.Boxes |> Map.to_seq |> Seq.map snd
+        ControlInference.Plugin.generateFromBoxes withMultiplexers ic boxes
     )
+    
+    [<CommandMethod("micado_generate_control")>]
+    /// generate the control lines
+    let micado_generate_control() = generate_control false
 
     [<CommandMethod("micado_generate_multiplexed_control")>]
-    /// generate the control lines with multiplexers from the instructions and boxes
-    let micado_generate_multiplexed_control() = tryCommand (fun (ce) ->
-        let ic = ce.InstructionChip
-        let instructions = ce.Instructions
-        let boxes =  ce.Boxes |> Map.to_seq |> Seq.map snd
-        ControlInference.Plugin.generateWithMultiplexers ic instructions boxes
-    )
+    /// generate the control lines with multiplexers
+    let micado_generate_multiplexed_control() = generate_control true
      
     [<CommandMethod("micado_generate_multiplexer")>]
     /// prompts the user for a flow box and, if possible, generates a related multiplexer
