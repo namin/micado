@@ -242,7 +242,7 @@ let generateAllMultiplexers (ic : Instructions.InstructionChip) boxes =
      |> ignore
     !valves |> Array.of_seq, !lines |> Array.of_seq, !edge2valves
 
-let inferNeededValves (ic : Instructions.InstructionChip) (instructions : Instructions.Instruction array) inferredValves (stateTable : valveState array array) (edge2valves : Map<_,_>) baseNeeded =
+let inferNeededValves (ic : Instructions.InstructionChip) (instructions : Instructions.Instruction array) inferredValves (stateTable : valveState array array) (edge2valves : Map<_,_>) =
     // A valve is filtered out (not needed) _only_ if it's redundant with respect to the multiplexers.
     // In particular, 
     // if an inferred valve is only redundant with respect to another inferred valve, 
@@ -325,7 +325,7 @@ module Plugin =
         let mValves, mLines, edge2valves = generateAllMultiplexers ic boxes
         let iValves, stateTable = calculate ic instructions
         let baseNeeded = mValves.Length
-        let iNeeded = inferNeededValves ic instructions iValves stateTable edge2valves baseNeeded
+        let iNeeded = inferNeededValves ic instructions iValves stateTable edge2valves
         let neededIndices = [|0..iNeeded.Length-1|] |> Array.filter (fun i -> iNeeded.[i])
         let o2n = Array.create iNeeded.Length None
         neededIndices |> Array.iteri (fun n o -> o2n.[o] <- Some n)
