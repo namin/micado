@@ -60,10 +60,12 @@ let states2openSet (states : valveState array) =
 let createValve (ic : Instructions.InstructionChip) (iv : inferredValve) =
     let flowSegment = ic.Representation.ToFlowSegment iv.Edge
     let nodePoint = ic.Representation.ToPoint iv.Node
-    let dir = 
-        let seg = flowSegment.Segment
-        if seg.StartPoint = nodePoint then seg.Direction else seg.Direction.Negate()
-    let clickedPoint = nodePoint+dir.MultiplyBy(0.7*Settings.Current.ValveRelativeHeight)
+    let seg = flowSegment.Segment
+    let dir = if seg.StartPoint = nodePoint then seg.Direction else seg.Direction.Negate()
+    let absDir = dir.MultiplyBy(0.55*Settings.Current.ValveRelativeHeight)
+    let relDir = dir.MultiplyBy(0.5*seg.Length)
+    let bestDir = if absDir.LengthSqrd > relDir.LengthSqrd then relDir else absDir
+    let clickedPoint = nodePoint + bestDir
     Creation.valve flowSegment clickedPoint
         
 let createValves (ic : Instructions.InstructionChip) (ivs : inferredValve array) =
