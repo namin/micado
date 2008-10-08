@@ -276,7 +276,10 @@ let inferNeededValves (ic : Instructions.InstructionChip) (instructions : Instru
             else
             let ivss =
                 ivs
-             |> Set.filter (fun iv -> not (edge2valves.ContainsKey iv.Edge))
+             |> Set.filter (fun iv -> 
+                             not ((edge2valves.ContainsKey iv.Edge) ||
+                                  (let a,b = FlowRepresentation.edge2nodes rep iv.Edge
+                                   ic.isValve a || ic.isValve b)))
              |> Set.map nextInferredValves
             if ivss |> Set.exists (fun set -> Set.is_empty set)
             then true
