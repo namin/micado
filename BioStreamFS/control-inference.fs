@@ -291,6 +291,17 @@ let inferNeededValves (ic : Instructions.InstructionChip) (instructions : Instru
         needed
     inferredValves |> Array.mapi inferNeeded
 
+let flowBoxes2instructions flowBoxes =
+    seq { for flowBox in flowBoxes do
+            match Instructions.FlowBox.attachmentKind flowBox with
+            | Instructions.Attachments.Complete -> 
+                yield! (Instructions.Store.flowBox2instructions "" flowBox Array.empty)
+            | Instructions.Attachments.Input _ 
+            | Instructions.Attachments.Output _ 
+            | Instructions.Attachments.Intermediary _ -> 
+                yield! []
+        }
+
 module Plugin =
     open BioStream.Micado.Plugin
     
@@ -307,8 +318,8 @@ module Plugin =
         let valves = valves
                   |> Array.map (Database.writeEntityAndReturn >> (fun entity -> entity :?> Valve))
         let others = others |> Database.writeEntitiesAndReturn
-        Editor.writeLine "Control generation succeeded."
-            
+        Editor.writeLine "Control generation succeeded."        
+                
     let generate (ic : Instructions.InstructionChip) (instructions : Instructions.Instruction array) =
         if not (currentLayerOK())
         then ()
@@ -366,4 +377,8 @@ module Plugin =
                 Database.writeEntities valves |> ignore
                 Database.writeEntities polylines |> ignore
                 
-        
+    let generateFromBoxes withMultiplexers ic boxes =
+        let instructions = flowBoxes2instructions boxes |> Array.of_seq
+        match withMultiplexers with
+        | false -> generate ic instructions
+        | true -> generateWithMultiplexers ic instructions boxes
