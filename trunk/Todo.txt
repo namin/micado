@@ -1,3 +1,2 @@
 TODO list
 * Support mixing / pumping instructions.
-* Add buttons for inference commands.
