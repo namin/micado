@@ -158,7 +158,8 @@ let createMultiplexer (ic : Instructions.InstructionChip) (multiplexer : Multipl
             let li' = li+1
             if li'<nLines
             then fill1 li' (fillLength + lengthPerLine) curLength curSegIndex
-        fill1 0 (startLength+lengthPerLine2) 0.0 0
+        if lengthPerLine > 0.0
+        then fill1 0 (startLength+lengthPerLine2) 0.0 0
     Array.iteri fillForPath multiplexer
     let valveExtra = Settings.Current.ValveExtraWidth
     let enoughSpace pi =
