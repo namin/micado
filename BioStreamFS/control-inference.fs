@@ -95,11 +95,12 @@ let inferMultiplexer (ic : Instructions.InstructionChip) nodes =
         let nodesOfEdge = FlowRepresentation.edge2nodes rep
         let otherNode (a,e) = FlowRepresentation.differentFrom a (nodesOfEdge edge)
         let reverseSeg (a,e) = a <> rep.OfPoint ((rep.ToFlowSegment e).Segment.StartPoint)
-        let rec helper a e acc =
+        let rec helper a e acc s =
             if edgeHasDesignedValve ic e
             then None
             else
             let acc' = (e,reverseSeg(a,e)) :: acc
+            let s' = Set.add e s
             let ret() = Some (List.rev acc' : MultiplexerPath)
             let b = otherNode (a,e)
             let es = Set.remove e (rep.NodeEdges b)
@@ -108,10 +109,10 @@ let inferMultiplexer (ic : Instructions.InstructionChip) nodes =
             else
             let e' = Set.choose es
             let f,f' = rep.ToFlowSegment e, rep.ToFlowSegment e'
-            if withinMultiplexerPath f f'
-            then helper b e' acc'
+            if withinMultiplexerPath f f' && not (Set.mem e' s')
+            then helper b e' acc' s'
             else ret()
-        helper node edge []
+        helper node edge [] Set.empty
     let opaths = nodes |> Array.map calculatePath
     if Array.for_all Option.is_some opaths
     then Some ((opaths |> Array.map Option.get) : Multiplexer)
