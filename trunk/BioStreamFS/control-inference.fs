@@ -74,45 +74,48 @@ let createValves (ic : Instructions.InstructionChip) (ivs : inferredValve array)
 type MultiplexerPath = (int * bool) list
 type Multiplexer = MultiplexerPath array
 
-let withinMultiplexerPath f f' =
+let withinMultiplexerPath (f : FlowSegment) (f' : FlowSegment) =
     let maxDiff = 10
     let getAngle (f : FlowSegment) = Geometry.rad2deg f.Segment.Direction.Angle
     let d,d' = getAngle f, getAngle f'
     let diff = abs(d-d') % 180
     Geometry.angleWithin (-maxDiff) maxDiff diff    
   
-let inferMultiplexer (ic : Instructions.InstructionChip) nodes =
-    if Array.length nodes < 4
+let inferMultiplexer (ic : Instructions.InstructionChip) features =
+    if Array.length features < 4
     then None
     else
-    let calculatePath node =
+    let calculatePath (node,usedEdges) =
         let rep = ic.Representation
-        let edges = rep.NodeEdges node
-        if edges.Count <> 1
-        then None
-        else
-        let edge = Set.choose edges
+        let onlyUsedNodeEdges n = 
+            rep.NodeEdges n |> Set.filter (fun e -> Set.mem e usedEdges)
         let nodesOfEdge = FlowRepresentation.edge2nodes rep
         let otherNode (a,e) = FlowRepresentation.differentFrom a (nodesOfEdge e)
         let reverseSeg (a,e) = a <> rep.OfPoint ((rep.ToFlowSegment e).Segment.StartPoint)
-        let rec helper a e acc =
+        let rec helper a e acc beg =
             if edgeHasDesignedValve ic e
             then None
             else
             let acc' = (e,reverseSeg(a,e)) :: acc
             let ret() = Some (List.rev acc' : MultiplexerPath)
             let b = otherNode (a,e)
-            let es = Set.remove e (rep.NodeEdges b)
+            let es = Set.remove e (onlyUsedNodeEdges b)
             if es.Count <> 1
             then ret()
             else
             let e' = Set.choose es
             let f,f' = rep.ToFlowSegment e, rep.ToFlowSegment e'
-            if withinMultiplexerPath f f'
-            then helper b e' acc'
+            let beg' = beg && (f.Segment.Length < Settings.Current.PunchRadius)
+            if beg' || withinMultiplexerPath f f'
+            then helper b e' acc' beg'
             else ret()
-        helper node edge []
-    let opaths = nodes |> Array.map calculatePath
+        let edges = onlyUsedNodeEdges node
+        if edges.Count <> 1
+        then None
+        else
+        let edge = Set.choose edges
+        helper node edge [] true
+    let opaths = features |> Array.map calculatePath
     if Array.for_all Option.is_some opaths
     then Some ((opaths |> Array.map Option.get) : Multiplexer)
     else None
@@ -212,19 +215,21 @@ let createMultiplexer (ic : Instructions.InstructionChip) (multiplexer : Multipl
 let inferMultiplexerForBox (ic : Instructions.InstructionChip) box =
     match box with
     | Instructions.FlowBox.Or(_,boxes,_) ->
-        let extractNode box =
+        let extract box =
             match box with
-            | Instructions.FlowBox.Extended(_,_,Instructions.FlowBox.Primitive(a, _)) -> 
+            | Instructions.FlowBox.Extended(_,ue,Instructions.FlowBox.Primitive(a, up)) -> 
                 match a.Kind with
                 | Instructions.Attachments.Input node 
-                | Instructions.Attachments.Output node -> Some (node : int)
+                | Instructions.Attachments.Output node -> 
+                    let usedEdges = Set.union ue.Edges up.Edges
+                    Some (node, usedEdges)
                 | _ -> None
             | _ -> None
-        let nodes = boxes |> Array.choose extractNode
-        if nodes.Length < boxes.Length
+        let features = boxes |> Array.choose extract
+        if features.Length < boxes.Length
         then None
         else
-        inferMultiplexer ic nodes
+        inferMultiplexer ic features
     | _ -> None
 
 let generateAllMultiplexers (ic : Instructions.InstructionChip) boxes =
