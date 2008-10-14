@@ -1,0 +1,33 @@
+Research TODO
+-------------
+- work out math, systems side of getting as much precision as possible
+without overflowing the storage requirements of a given chip.  Or,
+without doing more than N mixes.
+
+- when you have leeway with a given precision, decide what is the best
+selection of integral ratios, perhaps to minimze mixes or storage
+cells.  also, can increasing the precision serve to decrease the
+number of storage cells (or mixes, for that matter)?
+
+- how do you integrate speculative execution / evaluation with the
+wait primitive?  not entirely clear how to see who should be live at a
+given wait point.
+
+- aha, how do you re-arrange wait commands so as to shrink the
+reaction time?
+
+Possible things to change:
+--------------------------
+- should vm be named fvm (fluid virtual machine) or lvm (lava virtual machine) instead?
+
+Things to fix in code
+---------------------
+- figure out where to put applications and arch. description files (toplevel dir or no?)
+- figure out right inheritance of VMLocation, VMOutputLocation, etc. (and put getStore method if needed)
+
+Current limitations / assumptions:
+----------------------------------
+- interface can only pass/return:
+   - object types.  Can deal with packing/unpacking later.
+   - immutable types.  Can deal with array copying later.
+
