@@ -93,15 +93,12 @@ let exportJavaData (ic : Instructions.InstructionChip)
     tw.WriteLine("// rectangle size: " ^ rect.Size.ToString())
     tw.WriteLine("// number of control lines: " ^ control.Lines.Length.ToString())
     tw.WriteLine("// number of instructions: " ^ instructions.Length.ToString())
-    (*tw.WriteLine("// Mapping: {" ^
-                 System.String.Join(",", 
-                                    Array.init control.LineNumbering.Length (control.LineNumbering.Item >> (fun i -> i.ToString()))) ^ 
-                 "}")*)
     tw.WriteLine("// BEGIN port locations")
+    let invLineNumbering = Permutation.inverse control.Lines.Length control.LineNumbering
     for ui = 0 to control.Lines.Length-1 do
         tw.WriteLine("// index " ^ (ui+1).ToString())
         tw.WriteLine("{")
-        let i = control.LineNumbering ui
+        let i =  invLineNumbering ui
         for valve in control.Lines.[i].Valves do
             tw.WriteLine(toPixelCoordinates(valve.Center))
         tw.WriteLine("},")
