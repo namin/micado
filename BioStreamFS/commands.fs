@@ -229,7 +229,7 @@ module Instructions = begin
         flowAnnProperties ce
      |> List.iter (fun prop -> Editor.writeLine (annPropDisplayName prop)))
 
-    let selectBoxesMessage (i : int) = "Box #" ^ i.ToString()
+    let selectBoxesMessage (i : int) = "Annotation #" ^ i.ToString()
     
     let arrayOfRevList = Routing.arrayOfRevList
     
@@ -285,7 +285,8 @@ module Instructions = begin
                     | FlowBox.Or (a,c,o) -> Store.orDispatcher names o
                     | FlowBox.And (a,c) -> Store.andDispatcher names
                     | FlowBox.Seq (a,c) -> Store.seqDispatcher names
-                    | FlowBox.Primitive _ | FlowBox.Extended _ -> failwith "Not a combination box"
+                    | FlowBox.Primitive _ | FlowBox.Extended _ | FlowBox.Pumping _ -> 
+                        failwith "Not a combination box"
                 let ann = Store.attachmentsDispatch ic dispatcher (FlowBox.attachment box)
                 markSaveClear ic (ann,box)
 
@@ -303,7 +304,32 @@ module Instructions = begin
     /// prompts the user to create a new seq box
     let micado_new_box_seq() = tryCommand (fun (ce) ->
         promptNewCombinationBox ce promptSelectAnnsForSeq Interactive.promptSeqBox)
-            
+    
+    [<CommandMethod("micado_new_box_pumping")>]    
+    /// prompts the user to create a new pumping box
+    let micado_new_box_pumping() = tryCommand (fun (ce) ->
+        let noPumpingFilter =
+            function
+            | Store.PumpingInput _ 
+            | Store.PumpingOutput _ 
+            | Store.PumpingIntermediary _ 
+            | Store.PumpingComplete _ ->
+                false
+            | _ ->
+                true
+        promptSelectAnnAndName ce allGood noPumpingFilter "Select an annotation to pump along"
+     |> Option.map (fun (ann,name) ->
+            let box = ce.Box name
+            let makeBox ic =
+                let pumpingAnn =
+                    Store.attachmentsDispatch ic (Store.pumpingDispatcher name) (FlowBox.attachment box)
+                let pumpingBox =
+                    FlowBox.Pumping box
+                Some (pumpingAnn, pumpingBox)
+            promptNewBox (ce.InstructionChip) makeBox
+        )
+     |> ignore)
+                
     [<CommandMethod("micado_new_instruction_set")>]
     /// prompts the user to select a box and builds an instruction set out of it
     let micado_new_instruction_set() = tryCommand (fun (ce) ->
