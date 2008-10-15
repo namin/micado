@@ -1,2 +1,4 @@
 TODO list
-* Support mixing / pumping instructions.
+* Review pumping design.
+  * Consider creating pumping / mixing shortcuts.
+  * Consider allowing input / output flow which doesn't start / end with punches.
