@@ -217,7 +217,7 @@ let inferMultiplexerForBox (ic : Instructions.InstructionChip) box =
     | Instructions.FlowBox.Or(_,boxes,_) ->
         let extract box =
             match box with
-            | Instructions.FlowBox.Extended(_,ue,Instructions.FlowBox.Primitive(a, up)) -> 
+            | Instructions.FlowBox.Extended(_,(ue,_),Instructions.FlowBox.Primitive(a, (up,_))) -> 
                 match a.Kind with
                 | Instructions.Attachments.Input node 
                 | Instructions.Attachments.Output node -> 

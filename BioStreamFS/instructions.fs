@@ -27,6 +27,8 @@ type Used =
 let used edges valves = {Edges = edges; Valves = valves}
 let usedEmpty = used Set.empty Set.empty
 
+type Pumps = int list
+
 module Attachments =
     type Kind =
         Complete 
@@ -62,8 +64,8 @@ module FlowBox =
     type Attachments = Attachments.Attachments
     
     type FlowBox =
-        Primitive of Attachments * Used
-      | Extended of Attachments * Used * FlowBox
+        Primitive of Attachments * (Used * Pumps)
+      | Extended of Attachments * (Used * (Pumps * Pumps)) * FlowBox
       | Or of Attachments * FlowBox array * Ordering
       | And of Attachments * FlowBox array
       | Seq of Attachments * FlowBox array
@@ -81,9 +83,9 @@ module FlowBox =
                 
     let rec mentionedEdgesLax flowBox =
         match flowBox with
-        | Primitive (_, u) -> 
+        | Primitive (_, (u,_)) -> 
             u.Edges
-        | Extended (_, u, f) -> 
+        | Extended (_, (u,_), f) -> 
             //Set.union u.Edges (mentionedEdges f)
             mentionedEdgesLax f
         | Or (_, fs, _) | And (_, fs) | Seq (_, fs) ->
@@ -93,9 +95,9 @@ module FlowBox =
 
     let rec mentionedUsed flowBox =
         match flowBox with
-        | Primitive (_, u) -> 
+        | Primitive (_, (u,_)) -> 
             u
-        | Extended (_, u, f) -> 
+        | Extended (_, (u,_), f) -> 
             u.append(mentionedUsed f)
         | Or (_, fs, _) | And (_, fs) | Seq (_, fs) ->
             fs 
@@ -104,33 +106,36 @@ module FlowBox =
         
 module InstructionBox =
 
+    let findPumps inputNode outputNode used =
+        []
+    
     type InstructionBox =
-        Single of Used
+        Single of Used * Pumps
       | Multi of Ordering * InstructionBox array
 
-    let rec appendUsed u instructionBox =
+    let rec join f u instructionBox =
         match instructionBox with
-        | Single u' -> 
-            Single (u'.append u)
+        | Single (u',p') -> 
+            Single ((u'.append u), f p')
         | Multi (o,bs) -> 
-            Multi (o, bs |> Array.map (appendUsed u))
+            Multi (o, bs |> Array.map (join f u))
 
     let rec wrapAround outer inner =
         match outer, inner with
-        | Single u, _ ->
-            appendUsed u inner
-        | _, Single u ->
-            appendUsed u outer
+        | Single (u,p), _ ->
+            join (fun p' -> List.append p p') u inner
+        | _, Single (u,p) ->
+            join (fun p' -> List.append p' p) u outer
         | Multi (out_o, out_bs), _ ->
             let bs = Array.map (fun outer -> wrapAround outer inner) out_bs
             Multi (out_o, bs)
                 
     let rec of_FlowBox flowBox =
         match flowBox with
-        | FlowBox.Primitive (_, u) -> 
-            Single u
-        | FlowBox.Extended (_, u, f) ->
-            appendUsed u (of_FlowBox f)
+        | FlowBox.Primitive (_, (u,p)) -> 
+            Single (u,p)
+        | FlowBox.Extended (_, (u,(p1,p2)), f) ->
+            join (fun p' -> List.append p1 (List.append p' p2)) u (of_FlowBox f)
         | FlowBox.Or (_, fs, o) ->
             Multi (o, (fs |> Array.map of_FlowBox))
         | FlowBox.And (_, fs) | FlowBox.Seq (_, fs) ->
@@ -156,7 +161,7 @@ let rectangle (ext : Extents2d) =
     polyline.Closed <- true
     polyline
                  
-type Instruction (partial : bool, root: string, indices : int array, entity : Entity option, used : Used) =
+type Instruction (partial : bool, root: string, indices : int array, entity : Entity option, used : Used, pumps : Pumps) =
     let prettyIndices =
         if indices.Length=0
         then ""
@@ -164,6 +169,7 @@ type Instruction (partial : bool, root: string, indices : int array, entity : En
         "_" ^ (System.String.Join("_", indices |> Array.map (fun i -> i.ToString())))
     let name = root ^ prettyIndices 
     member v.Used = used
+    member v.Pumps = pumps
     member v.Entity = entity
     member v.Name = name
     member v.Root = root
@@ -176,12 +182,13 @@ module Convert =
 
     let rec to_instructions partial root box (extents : Extents2d) indices =
         match box with
-        | InstructionBox.Single used ->
+        | InstructionBox.Single (used, pumps) ->
             seq {yield Instruction(partial, 
                                   root, 
                                   indices |> List.rev |> Array.of_list, 
                                   extents |> rectangle |> Database.writeEntityAndReturn |> Some, 
-                                  used)}
+                                  used,
+                                  pumps)}
         | InstructionBox.Multi (ordering, boxes) ->
             let n = boxes.Length
             let varC,fixC,varfix, actualIndex =
@@ -208,8 +215,8 @@ module Convert =
         
     let box2instructions partial root box entity =
         match box with
-        | InstructionBox.Single used ->
-            seq {yield Instruction(partial, root, [||], Some entity, used)} 
+        | InstructionBox.Single (used, pumps) ->
+            seq {yield Instruction(partial, root, [||], Some entity, used, pumps)} 
         | _ -> let extents = toExtents2d entity
                entity.Dispose()
                to_instructions partial root box extents []
@@ -266,17 +273,17 @@ module Augmentations =
         | ValveNode vi -> Some vi
         | _ -> None
         
-    let addIfValve (ic : InstructionChip) node set =
+    let addIfValve (ic : InstructionChip) node lst =
         match ic.ToNodeType node with
-        | ValveNode vi -> Set.add vi set
-        | _ -> set
+        | ValveNode vi -> vi::lst
+        | _ -> lst
     
     let isValve (ic : InstructionChip) =
         ifValve ic >> Option.is_some
         
     type InstructionChip with
         member ic.ifValve node = ifValve ic node
-        member ic.addIfValve node set = addIfValve ic node set
+        member ic.addIfValve node lst = addIfValve ic node lst
         member ic.isValve node = isValve ic node
 
     
@@ -286,7 +293,7 @@ module Search =
 
     let edgesNvalvesOfPath (ic : InstructionChip) (path : FlowRepresentation.Path.IPath) =
         let edges = path.Edges |> Set.of_list
-        let valves = path.Nodes |> List.choose ic.ifValve |> Set.of_list
+        let valves = path.Nodes |> List.choose ic.ifValve
         edges, valves
         
     let edgeToedge (ic : InstructionChip) inputEdge outputEdge =
@@ -304,10 +311,8 @@ module Search =
             let inputNode = FlowRepresentation.sameAs (path.StartNode) inputNodes
             let outputNode = FlowRepresentation.sameAs (List.hd path.Nodes) outputNodes
             let edges, valves = edgesNvalvesOfPath ic path 
-            // for the same reason, don't include the boundaryEdges:
-            // |> Set.union boundaryEdges
-            // already in path.Nodes, since using sameAs: 
-            // |> ic.addIfValve inputNode |> ic.addIfValve outputNode
+            // for the same reason, don't include the boundaryEdges
+            // inputNode and outputNode are already in path.Nodes, since using sameAs 
             Some (inputNode, outputNode, edges, valves)
 
     let nodeTonode (ic : InstructionChip) removedEdges inputNode outputNode =
@@ -327,14 +332,16 @@ module Build =
     let inputBox (ic : InstructionChip) pi =
         let punchNode = ic.OfNodeType (PunchNode pi)
         FlowBox.Primitive (Attachments.create None (Some punchNode), 
-                           usedEmpty)
+                           (usedEmpty, []))
     
     let outputBox (ic : InstructionChip) pi =
         let punchNode = ic.OfNodeType (PunchNode pi)
         FlowBox.Primitive (Attachments.create (Some punchNode) None, 
-                           usedEmpty)
+                           (usedEmpty, []))
     
     let pathBox (ic : InstructionChip) (inputClick, inputEdge) (outputClick, outputEdge) =
+        let usedNpumps edges valves =
+            used edges (Set.of_list valves), valves
         if inputEdge=outputEdge
         then let edge = inputEdge
              let f = ic.Representation.ToFlowSegment edge
@@ -343,14 +350,14 @@ module Build =
              let inputPoint,outputPoint = if ds<dt then s,t else t,s
              let inputNode,outputNode = ic.Representation.OfPoint inputPoint, ic.Representation.OfPoint outputPoint
              let edges = Set.singleton edge
-             let valves = Set.empty |> ic.addIfValve inputNode |> ic.addIfValve outputNode
+             let valves = List.empty |> ic.addIfValve outputNode |> ic.addIfValve inputNode
              FlowBox.Primitive (Attachments.create (Some inputNode) (Some outputNode), 
-                                used edges valves)
+                                usedNpumps edges valves)
         else
         match Search.edgeToedge ic inputEdge outputEdge with
         | Some (inputNode, outputNode, edges, valves) ->
             FlowBox.Primitive (Attachments.create (Some inputNode) (Some outputNode), 
-                               used edges valves)
+                               (usedNpumps edges valves))
         | None -> raise(NoPathFound("cannot find path between input flow with output flow"))     
     
     let SeqBox (ic : InstructionChip) (boxes : # (FlowBox.FlowBox seq)) =
@@ -369,7 +376,7 @@ module Build =
             match Search.nodeTonode ic removedEdges inputNode outputNode with
             | Some (inputNode, outputNode, edges, valves) ->
                 FlowBox.Extended (Attachments.create (Some inputNode) (currentAttachments.OutputAttachment), 
-                                  used edges valves, 
+                                  ((used edges (valves |> Set.of_list)),(valves,[])), 
                                   currentBox)
             | None -> raise(NoPathFound("cannod find path between intermediaries"))
         if not (Seq.nonempty boxes)
@@ -400,13 +407,18 @@ module Build =
             match Search.nodeTonode ic mentionedEdges inputNode outputNode with
             | Some (inputNode, outputNode, edges', valves') ->
               edges  := Set.union !edges edges'
-              valves := Set.union !valves valves'
+              valves := Set.union !valves (valves' |> Set.of_list)
+              valves'
             | None -> raise(NoPathFound("cannot find path to extend box"))
-        if Option.is_some a.InputAttachment
-        then addSearch (Option.get a.InputAttachment) (Option.get boxA.InputAttachment)
-        if Option.is_some a.OutputAttachment
-        then addSearch (Option.get boxA.OutputAttachment) (Option.get a.OutputAttachment)
-        FlowBox.Extended (a, used !edges !valves, box)
+        let p1 =
+            if Option.is_some a.InputAttachment
+            then addSearch (Option.get a.InputAttachment) (Option.get boxA.InputAttachment)
+            else []
+        let p2 =
+            if Option.is_some a.OutputAttachment
+            then addSearch (Option.get boxA.OutputAttachment) (Option.get a.OutputAttachment)
+            else []
+        FlowBox.Extended (a, (used !edges !valves, (p1,p2)), box)
     
     let extendBoxes ic (a : Attachments.Attachments) boxes =
         if a.Kind = Attachments.Complete
@@ -586,12 +598,13 @@ module Store =
             then None
             else entities.[i]
         match box with
-        | InstructionBox.Single used ->
+        | InstructionBox.Single (used, pumps) ->
             seq {yield Instruction(partial, 
                                   root, 
                                   indices |> List.rev |> Array.of_list, 
                                   getEntity (get_index totals indices), 
-                                  used)}
+                                  used, 
+                                  pumps)}
         | InstructionBox.Multi (ordering, boxes) ->
             let n = boxes.Length
             let totals' = n::totals
@@ -601,8 +614,8 @@ module Store =
         
     let box2instructions partial root box (entities : _ array) =
         match box with
-        | InstructionBox.Single used ->
-            seq {yield Instruction(partial, root, [||], entities.[0], used)} 
+        | InstructionBox.Single (used, pumps) ->
+            seq {yield Instruction(partial, root, [||], entities.[0], used, pumps)} 
         | _ -> to_instructions partial root box entities [] []
     
     let flowBox2instructions root flowBox entities =

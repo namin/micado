@@ -93,10 +93,10 @@ let rec drawFlowBox (ic : Instructions.InstructionChip) flowBox =
             Editor.resetColor()
         | None -> ())
     match flowBox with
-    | Instructions.FlowBox.Primitive (a, u) ->
+    | Instructions.FlowBox.Primitive (a, (u,_)) ->
         drawUsed u
         drawAttachments a
-    | Instructions.FlowBox.Extended (a, u, f) ->
+    | Instructions.FlowBox.Extended (a, (u,_), f) ->
         drawFlowBox ic f
         drawUsed u
         drawAttachments a
