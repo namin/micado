@@ -100,6 +100,8 @@ let rec drawFlowBox (ic : Instructions.InstructionChip) flowBox =
         drawFlowBox ic f
         drawUsed u
         drawAttachments a
+    | Instructions.FlowBox.Pumping f ->
+        drawFlowBox ic f
     | Instructions.FlowBox.Seq (a, fs) | Instructions.FlowBox.And (a, fs) ->
         Seq.iter (drawFlowBox ic) fs
         drawAttachments a

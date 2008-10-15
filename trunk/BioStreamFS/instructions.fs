@@ -69,8 +69,9 @@ module FlowBox =
       | Or of Attachments * FlowBox array * Ordering
       | And of Attachments * FlowBox array
       | Seq of Attachments * FlowBox array
+      | Pumping of FlowBox
       
-    let attachment flowBox =
+    let rec attachment flowBox =
         match flowBox with
         | Primitive (a, _)
         | Extended (a, _, _)
@@ -78,6 +79,8 @@ module FlowBox =
         | And (a, _)
         | Seq (a, _) ->
             a
+        | Pumping f ->
+            attachment f
 
     let attachmentKind flowBox = (attachment flowBox).Kind
                 
@@ -85,8 +88,7 @@ module FlowBox =
         match flowBox with
         | Primitive (_, (u,_)) -> 
             u.Edges
-        | Extended (_, (u,_), f) -> 
-            //Set.union u.Edges (mentionedEdges f)
+        | Extended (_, _, f) | Pumping f -> 
             mentionedEdgesLax f
         | Or (_, fs, _) | And (_, fs) | Seq (_, fs) ->
             fs 
@@ -99,6 +101,8 @@ module FlowBox =
             u
         | Extended (_, (u,_), f) -> 
             u.append(mentionedUsed f)
+        | Pumping f ->
+            mentionedUsed f
         | Or (_, fs, _) | And (_, fs) | Seq (_, fs) ->
             fs 
          |> Seq.map mentionedUsed
@@ -130,16 +134,25 @@ module InstructionBox =
             let bs = Array.map (fun outer -> wrapAround outer inner) out_bs
             Multi (out_o, bs)
                 
-    let rec of_FlowBox flowBox =
-        match flowBox with
-        | FlowBox.Primitive (_, (u,p)) -> 
-            Single (u,p)
-        | FlowBox.Extended (_, (u,(p1,p2)), f) ->
-            join (fun p' -> List.append p1 (List.append p' p2)) u (of_FlowBox f)
-        | FlowBox.Or (_, fs, o) ->
-            Multi (o, (fs |> Array.map of_FlowBox))
-        | FlowBox.And (_, fs) | FlowBox.Seq (_, fs) ->
-            fs |> Array.map of_FlowBox |> Array.reduce_right wrapAround
+    let of_FlowBox =
+        let rec helper pumping flowBox =
+            let of_FlowBox = helper pumping
+            match flowBox with
+            | FlowBox.Primitive (_, (u,p)) -> 
+                Single (u,if pumping then p else [])
+            | FlowBox.Extended (_, (u,(p1,p2)), f) ->
+                (join (if pumping 
+                       then (fun p' -> List.append p1 (List.append p' p2)) 
+                       else (fun p' -> p')) 
+                      u 
+                      (of_FlowBox f))
+            | FlowBox.Or (_, fs, o) ->
+                Multi (o, (fs |> Array.map of_FlowBox))
+            | FlowBox.And (_, fs) | FlowBox.Seq (_, fs) ->
+                fs |> Array.map of_FlowBox |> Array.reduce_right wrapAround
+            | FlowBox.Pumping f ->
+                helper true f
+        helper false
 
 let toExtents2d (entity : Entity) =
     let ext3d = entity.GeometricExtents
@@ -293,7 +306,7 @@ module Search =
 
     let edgesNvalvesOfPath (ic : InstructionChip) (path : FlowRepresentation.Path.IPath) =
         let edges = path.Edges |> Set.of_list
-        let valves = path.Nodes |> List.choose ic.ifValve
+        let valves = path.Nodes |> List.choose ic.ifValve |> List.rev
         edges, valves
         
     let edgeToedge (ic : InstructionChip) inputEdge outputEdge =
@@ -457,6 +470,11 @@ module Store =
       | SeqOutput of string array
       | SeqIntermediary of string array
       | SeqComplete of string array
+      | PumpingInput of string
+      | PumpingOutput of string
+      | PumpingIntermediary of string
+      | PumpingComplete of string
+      
       
     let flowAnnotationKind = 
         let intermediary() = Attachments.Intermediary (0,0)
@@ -464,10 +482,10 @@ module Store =
         let output() = Attachments.Output 0
         let complete() = Attachments.Complete
         function
-        | Path _ | OrIntermediary _ | AndIntermediary _ | SeqIntermediary _ -> intermediary()
-        | InputPunch _ | InputOr _ | OrInput _ | AndInput _ | SeqInput _ -> input()
-        | OutputPunch _ | OutputOr _ | OrOutput _ | AndOutput _ | SeqOutput _ -> output()
-        | OrComplete _ | AndComplete _ | SeqComplete _ -> complete()
+        | Path _ | OrIntermediary _ | AndIntermediary _ | SeqIntermediary _ | PumpingIntermediary _ -> intermediary()
+        | InputPunch _ | InputOr _ | OrInput _ | AndInput _ | SeqInput _ | PumpingInput _ -> input()
+        | OutputPunch _ | OutputOr _ | OrOutput _ | AndOutput _ | SeqOutput _ | PumpingOutput _ -> output()
+        | OrComplete _ | AndComplete _ | SeqComplete _ | PumpingComplete _ -> complete()
     
     let containedFlowAnnotations =
         function
@@ -476,6 +494,10 @@ module Store =
         | OutputPunch _
         | InputOr _
         | OutputOr _ -> [||]
+        | PumpingInput n
+        | PumpingOutput n
+        | PumpingIntermediary n
+        | PumpingComplete n -> [|n|]
         | OrInput (_,_,ns) 
         | OrOutput (_,_,ns)
         | OrIntermediary (_,_,ns)
@@ -547,6 +569,13 @@ module Store =
         let intermediary cfs = SeqIntermediary names
         let complete() = SeqComplete names
         (input, output, intermediary, complete)
+    
+    let pumpingDispatcher name =
+        let input cf = PumpingInput name
+        let output cf = PumpingOutput name
+        let intermediary cfs = PumpingIntermediary name
+        let complete() = PumpingComplete name
+        (input, output, intermediary, complete)
         
     let flowAnnotationToBox (ic : InstructionChip) findBoxByName ann =
         let f2e f = clickedFlowToPromptedEdge ic f
@@ -567,6 +596,8 @@ module Store =
         let seqBox names =
             let boxes = Array.map findBoxByName names
             Build.SeqBox ic boxes
+        let pumpBox name =
+            FlowBox.Pumping (findBoxByName name)
         match ann with
         | Path (f1,f2) -> Build.pathBox ic (f2e f1) (f2e f2)
         | InputPunch p -> punchBox Build.inputBox p
@@ -585,6 +616,10 @@ module Store =
         | SeqOutput (ns)
         | SeqIntermediary (ns)
         | SeqComplete (ns) -> seqBox ns
+        | PumpingInput n
+        | PumpingOutput n
+        | PumpingIntermediary n
+        | PumpingComplete n -> pumpBox n
 
     let rec to_instructions partial root box (entities : _ array) totals indices =
         let rec get_index totals indices =
@@ -664,6 +699,10 @@ module Store =
             | SeqOutput (ns) -> wStr "seqOutput"; wArray wStr ns
             | SeqIntermediary (ns) -> wStr "seqIntermediary"; wArray wStr ns
             | SeqComplete (ns) -> wStr "seqComplete"; wArray wStr ns
+            | PumpingInput (n) -> wStr "pumpingInput"; wStr n
+            | PumpingOutput (n) -> wStr "pumpingOutput"; wStr n
+            | PumpingIntermediary (n) -> wStr "pumpingIntermediary"; wStr n
+            | PumpingComplete (n) -> wStr "pumpingComplete"; wStr n
             rb
         Database.writeDictionaryEntry dictId key rb
     
@@ -864,6 +903,10 @@ module Store =
                 if values.Length < 3 
                 then None 
                 else iReadClickedFlow 1 |> c iReadNames 3 |> Option.map (fun (cf,ns) -> makeStore (cf,ns))
+            let readPumping makeStore =
+                match values with
+                | [|_;n|] -> n |> readStr |> Option.map makeStore
+                | _ -> None
             if values.Length=0
             then None
             else
@@ -897,6 +940,10 @@ module Store =
                 | "seqOutput" -> readSeq SeqOutput
                 | "seqIntermediary" -> readSeq SeqIntermediary
                 | "seqComplete" -> readSeq SeqComplete
+                | "pumpingInput" -> readPumping PumpingInput
+                | "pumpingOutput" -> readPumping PumpingOutput
+                | "pumpingIntermediary" -> readPumping PumpingIntermediary
+                | "pumpingComplete" -> readPumping PumpingComplete
                 | _ -> None
             | _ -> None
         match Database.getNamedObjectsDictionaryId false flowApp with
@@ -1005,7 +1052,7 @@ module Interactive =
             | NoPathFound(msg) ->
                 Editor.writeLine("Error: " ^ msg ^ ".")
                 None
-    
+        
     let promptOneAttachment (ic : InstructionChip) message =
         match ic.Representation.promptEdge message with
         | None -> None

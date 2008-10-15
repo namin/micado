@@ -261,6 +261,17 @@ To access the Customize User Interface dialog box, click the Tools menu > Custom
           <LargeImage Name="C:\micado\Icons\ControlLogic.BMP" />
         </Macro>
       </MenuMacro>
+      <MenuMacro UID="MMU_0023">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+          <Name xlate="true" UID="XLS_6499">NewPumpingBox</Name>
+          <Command>^C^C_micado_new_box_pumping</Command>
+          <HelpString xlate="true" UID="XLS_6500">Pump a flow</HelpString>
+          <SmallImage Name="C:\micado\Icons\NewBoxPumping.BMP" />
+          <LargeImage Name="C:\micado\Icons\NewBoxPumping.BMP" />
+        </Macro>
+      </MenuMacro>
     </MacroGroup>
     <MenuRoot>
       <AcceleratorRoot />
@@ -510,6 +521,13 @@ To access the Customize User Interface dialog box, click the Tools menu > Custom
               <MacroRef MenuMacroID="MMU_0007" />
             </MenuItem>
           </PopMenuItem>
+          <PopMenuItem IsSeparator="false" hasDiesel="false" UID="PMIU_0010">
+            <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+            <NameRef UID="XLS_6485" xlate="true">Compose in sequence</NameRef>
+            <MenuItem>
+              <MacroRef MenuMacroID="MMU_0008" />
+            </MenuItem>
+          </PopMenuItem>
           <PopMenuItem IsSeparator="false" hasDiesel="false" UID="PMIU_0011">
             <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
             <NameRef UID="XLS_6486" xlate="true">Compose in parallel (OR)</NameRef>
@@ -524,11 +542,11 @@ To access the Customize User Interface dialog box, click the Tools menu > Custom
               <MacroRef MenuMacroID="MMU_0010" />
             </MenuItem>
           </PopMenuItem>
-          <PopMenuItem IsSeparator="false" hasDiesel="false" UID="PMIU_0010">
+          <PopMenuItem IsSeparator="false" hasDiesel="false" UID="PMIU_0025">
             <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
-            <NameRef UID="XLS_6485" xlate="true">Compose in sequence</NameRef>
+            <NameRef UID="XLS_6502" xlate="true">Pump a flow</NameRef>
             <MenuItem>
-              <MacroRef MenuMacroID="MMU_0008" />
+              <MacroRef MenuMacroID="MMU_0023" />
             </MenuItem>
           </PopMenuItem>
           <PopMenuItem IsSeparator="false" hasDiesel="false" UID="PMIU_0013">
@@ -690,6 +708,13 @@ To access the Customize User Interface dialog box, click the Tools menu > Custom
             <Name xlate="true" UID="XLS_6441">Compose flows in parallel (AND)</Name>
             <MenuItem>
               <MacroRef MenuMacroID="MMU_0010" />
+            </MenuItem>
+          </ToolbarButton>
+          <ToolbarButton IsSeparator="false" UID="TBBU_0031">
+            <ModifiedRev MajorVersion="17" MinorVersion="1" UserVersion="1" />
+            <Name xlate="true" UID="XLS_6501">Pump a flow</Name>
+            <MenuItem>
+              <MacroRef MenuMacroID="MMU_0023" />
             </MenuItem>
           </ToolbarButton>
           <ToolbarButton IsSeparator="false" UID="TBBU_0014">

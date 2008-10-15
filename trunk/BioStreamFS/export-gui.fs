@@ -133,7 +133,7 @@ let exportJavaData (ic : Instructions.InstructionChip)
             tw.Write("{")
             let stringPumps = 
                 pumps 
-             |> Seq.map (fun i -> (control.LineNumbering (control.Valve2Line.[i])).ToString()) 
+             |> Seq.map (fun i -> ((invLineNumbering (control.Valve2Line.[i]))+1).ToString()) 
              |> Array.of_seq
             tw.Write(System.String.Join(",", stringPumps))
             tw.Write("}")     
