@@ -125,7 +125,19 @@ let exportJavaData (ic : Instructions.InstructionChip)
         tw.WriteLine("},")
     tw.WriteLine("// END instructions")
     tw.WriteLine("// BEGIN instruction pumps")
-    instructions |> Array.iteri (fun i _ -> tw.WriteLine("// instruction " ^ i.ToString()); tw.WriteLine("null,"))
+    for i = 0 to instructions.Length-1 do
+        tw.WriteLine("// instruction " ^ i.ToString())
+        match instructions.[i].Pumps with
+        | [] -> tw.Write("null")
+        | pumps ->
+            tw.Write("{")
+            let stringPumps = 
+                pumps 
+             |> Seq.map (fun i -> (control.LineNumbering (control.Valve2Line.[i])).ToString()) 
+             |> Array.of_seq
+            tw.Write(System.String.Join(",", stringPumps))
+            tw.Write("}")     
+        tw.WriteLine(",")
     tw.WriteLine("// END instruction pumps")
     tw.Close()
     Editor.writeLine("Java data saved to " ^ dataFilename ^ ".")
