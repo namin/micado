@@ -390,6 +390,7 @@ module Instructions = begin
     //                or (v)
     //                  _input (v)
     //                  _output (v)
+    //                pumping (v)
     //            instruction_set (v)
     //        mark_
     //             box (print out kind and name) (v)
