@@ -160,14 +160,22 @@ In addition, you can explicitly export and import Micado settings, in order to s
 You simply specify the set of instructions to export to the GUI by annotating the flow.
 </p>
 
-<p>The flow annotations can either be simple, representing an input/output flow punch or a flow path, or composed, hierarchically representing flow in sequence or in parallel. 
+<p>The flow annotations can be
+<ul>
+<li><strong>Simple</strong>: representing an input/output flow punch or a flow path.</li>
+<li><strong>Composed</strong>: hierarchically representing flow in sequence or in parallel. 
 In parallel, <code>AND</code> specifies that the flow will
 split into many branches and be active in all channels at once.  <code>OR</code>
 specifies that the flow will remain unsplit and will progress down
 only one channel, depending on which option the user has selected.
 Note that if many <code>OR</code> blocks are composed sequentially, then there is a
 combinatorial explosion of the number of options presented to the
-user.</p>
+user.</li>
+<li><strong>Pumping</strong>: indicating that the flow should be actively pumped instead of passively let through.
+Thanks to hierarchical composition, it is perfectly possible to annotate a composed flow with both pumping and non-pumping parts.
+</li>
+</ul>
+</p>
 
 <p>Once the flow is annotated with names, you create an instruction set by specifying a named flow and an entity on the drawing. The drawing entity becomes the button or set of buttons to run the instruction set.
 </p>
@@ -220,13 +228,16 @@ user.</p>
  
  <h2><a name="ControlInference"></a><img src="doc/images/icons/ControlLogic.png"></img> Inference and Generation of Control Logic</h2>
  
-<p>Micado can infer the control logic (multiplexers and single valves) needed for the flow annotations to lead to valid flow manipulations.</p>
+<p>Micado can infer the control logic (multiplexers and single valves) needed for the flow annotations to lead to valid flow manipulations.
+</p>
 
  <ul>
    <li><a name="ControlLogic"></a><img src="doc/images/icons/ControlLogic.png"></img> Control Logic<br><i>For each <code>OR</code> annotation of inputs or outputs, generates a multiplexer if there are at least 4 punches, and if there is enough space for one, and if there aren't any designed valves in that space. Generates all valves necessary to independetly trigger each complete flow manipulation, when they are not redundant with respect to the multiplexers or designed valves.</i></li>   
 </ul>
 
 <p>As with the other commands, the generation of control logic supports iterative design by taking into consideration valves that are already on the chip.</p>
+
+<p>Note that, in the current release, pumping is ignored during control inference. Thus, the user should check whether there are enough pumping valves and place some manually if necessary.</p>
 
 <script type="text/javascript">
 var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
