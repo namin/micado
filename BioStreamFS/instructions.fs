@@ -969,7 +969,7 @@ module Store =
         for kv in store do
             try
                 flowAnnotationToBox ic findBoxByName (kv.Value) |> ignore
-            with :? NoPathFoundException | :? System.ArgumentException ->
+            with :? NoPathFoundException  | :? KeyNotFoundException | :? System.ArgumentException ->
                 toDelete := (kv.Key) :: !toDelete      
         toDelete := List.sort compare !toDelete
         for key in !toDelete do
@@ -977,8 +977,12 @@ module Store =
         let n = (!toDelete).Length
         let doDelete = n>0 && Editor.promptYesOrNo false ("Are you sure you want to delete " ^ n.ToString() ^ " flow annotations?")
         if doDelete
-        then Database.deleteDictionaryEntries (Database.getNamedObjectsDictionaryId false flowApp |> Option.get) !toDelete
-             Database.deleteDictionaryEntries (Database.getNamedObjectsDictionaryId false instrApp |> Option.get) !toDelete
+        then let deleteEntries dict =
+                Database.deleteDictionaryEntries dict !toDelete
+             let deleteEntriesFromDictionary app =
+                app |> Database.getNamedObjectsDictionaryId false |> Option.iter deleteEntries
+             deleteEntriesFromDictionary flowApp
+             deleteEntriesFromDictionary instrApp
              Editor.writeLine (n.ToString() ^ " flow annotations deleted.")
         else Editor.writeLine "Purge cancelled -- no flow annotations were deleted."
                                                          
