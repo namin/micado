@@ -359,8 +359,8 @@ module Build =
         then let edge = inputEdge
              let f = ic.Representation.ToFlowSegment edge
              let s,t = f.Segment.StartPoint, f.Segment.EndPoint
-             let ds,dt = s.GetDistanceTo(inputClick), t.GetDistanceTo(outputClick)
-             let inputPoint,outputPoint = if ds<dt then s,t else t,s
+             let inputPoint,outputPoint = 
+                if s.GetDistanceTo(inputClick)<s.GetDistanceTo(outputClick) then s,t else t,s
              let inputNode,outputNode = ic.Representation.OfPoint inputPoint, ic.Representation.OfPoint outputPoint
              let edges = Set.singleton edge
              let valves = List.empty |> ic.addIfValve outputNode |> ic.addIfValve inputNode
