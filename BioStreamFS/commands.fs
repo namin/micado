@@ -110,7 +110,9 @@ module Instructions = begin
             | Some (key,i) ->
                 let entities = Store.readInstructionSetInDatabase key |> Option.get
                 let instructions = Store.flowBox2instructions key (v.Box key) entities |> Array.of_seq
-                Some instructions.[i]
+                if i < instructions.Length
+                then  Some instructions.[i]
+                else Editor.writeLine "The instruction associated with this entity is out-of-date."; None
         member v.Instructions with get() = Store.readAllInstructionSetsInDatabase() |> Map.to_seq |> Seq.map_concat (fun (name,entities) -> Store.flowBox2instructions name (v.Box name) entities) |> Array.of_seq                  
         interface System.IDisposable with
             member v.Dispose() = cleanup()
