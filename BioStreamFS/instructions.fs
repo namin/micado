@@ -369,8 +369,18 @@ module Build =
         else
         match Search.edgeToedge ic inputEdge outputEdge with
         | Some (inputNode, outputNode, edges, valves) ->
-            FlowBox.Primitive (Attachments.create (Some inputNode) (Some outputNode), 
-                               (usedNpumps edges valves))
+            let inputNode',outputNode',edges',valves' =
+                if inputNode<>outputNode
+                then inputNode, outputNode,edges,valves
+                else let otherNode node edge = 
+                        FlowRepresentation.edge2nodes ic.Representation edge
+                     |> FlowRepresentation.differentFrom node 
+                     (otherNode inputNode inputEdge),
+                     (otherNode outputNode outputEdge),
+                     edges.Add(inputEdge).Add(outputEdge),
+                     valves |> ic.addIfValve inputNode |> ic.addIfValve outputNode
+            FlowBox.Primitive (Attachments.create (Some inputNode') (Some outputNode'), 
+                               (usedNpumps edges' valves'))
         | None -> raise(NoPathFound("cannot find path between input flow with output flow"))     
     
     let SeqBox (ic : InstructionChip) (boxes : # (FlowBox.FlowBox seq)) =
