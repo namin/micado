@@ -260,6 +260,7 @@ let deleteDictionaryEntries dictId keys =
     use tr = db.TransactionManager.StartTransaction()
     let dict = tr.GetObject(dictId, OpenMode.ForWrite) :?> DBDictionary
     for key in keys do
-        let obj = tr.GetObject(dict.GetAt(key),OpenMode.ForWrite)
-        obj.Erase();
+        if dict.Contains(key : string)
+        then let obj = tr.GetObject(dict.GetAt(key),OpenMode.ForWrite)
+             obj.Erase();
     tr.Commit()
