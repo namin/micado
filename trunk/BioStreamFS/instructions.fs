@@ -319,13 +319,13 @@ module Search =
         match maybePath with
         | None -> None
         | Some path ->
-            // use sameAs instead of differentFrom
+            // don't use differentFrom
             // to avoid including valves or turns that weren't consciously on path
-            let inputNode = FlowRepresentation.sameAs (path.StartNode) inputNodes
-            let outputNode = FlowRepresentation.sameAs (List.hd path.Nodes) outputNodes
+            let inputNode = path.StartNode
+            let outputNode = List.hd path.Nodes
             let edges, valves = edgesNvalvesOfPath ic path 
             // for the same reason, don't include the boundaryEdges
-            // inputNode and outputNode are already in path.Nodes, since using sameAs 
+            // inputNode and outputNode are already in path.Nodes, since not using differentFrom 
             Some (inputNode, outputNode, edges, valves)
 
     let nodeTonode (ic : InstructionChip) removedEdges inputNode outputNode =
@@ -371,14 +371,16 @@ module Build =
         | Some (inputNode, outputNode, edges, valves) ->
             let inputNode',outputNode',edges',valves' =
                 if inputNode<>outputNode
-                then inputNode, outputNode,edges,valves
+                then inputNode,outputNode,edges,valves
                 else let otherNode node edge = 
                         FlowRepresentation.edge2nodes ic.Representation edge
-                     |> FlowRepresentation.differentFrom node 
-                     (otherNode inputNode inputEdge),
-                     (otherNode outputNode outputEdge),
+                     |> FlowRepresentation.differentFrom node
+                     let inputNode' = otherNode inputNode inputEdge
+                     let outputNode' = otherNode outputNode outputEdge 
+                     inputNode',
+                     outputNode',
                      edges.Add(inputEdge).Add(outputEdge),
-                     valves |> ic.addIfValve inputNode |> ic.addIfValve outputNode
+                     valves |> ic.addIfValve inputNode' |> ic.addIfValve outputNode'
             FlowBox.Primitive (Attachments.create (Some inputNode') (Some outputNode'), 
                                (usedNpumps edges' valves'))
         | None -> raise(NoPathFound("cannot find path between input flow with output flow"))     

@@ -18,16 +18,6 @@ open System.Collections.Generic
 let differentFrom s (a,b) =
     if a=s then b else a    
 
-/// returns an element of the tuple (a,b) that the same as s
-let sameAs s (a,b) =
-    if a=s 
-    then s 
-    else 
-    if b=s
-    then b
-    else failwith "sameAs: no element of (a,b) is the same as s"
-
-
 /// Various utilities related to transforming collections
 module Utils =
     /// given a sequence of key,value pairs
