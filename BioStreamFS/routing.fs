@@ -295,8 +295,6 @@ type ChipGrid ( chip : Chip ) =
     let g = new SimpleGrid (Settings.Current.Resolution, chip.BoundingBox)
     let ig = g :> IGrid
     let c = new CalculatorGrid (g)
-    //let lines = chip.ControlLayer.UnconnectedLines
-    //let punches = chip.ControlLayer.UnconnectedPunches
     let addEdge fromIndex toIndex edges =
         match Map.tryfind fromIndex edges with
         | None -> Map.add fromIndex (Set.singleton toIndex) edges
