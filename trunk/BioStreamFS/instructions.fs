@@ -633,6 +633,11 @@ module Store =
         | PumpingIntermediary n
         | PumpingComplete n -> pumpBox n
 
+    let getEntityOrNone (entities : _ array) i =
+        if entities.Length <= i
+        then None
+        else entities.[i]
+                
     let rec to_instructions partial root box (entities : _ array) totals indices =
         let rec get_index totals indices =
             match totals,indices with
@@ -640,10 +645,7 @@ module Store =
             | t::t',i::i' -> 
                 i + t*(get_index t' i')
             | _ -> failwith "totals and indices are not the same length!"
-        let getEntity i =
-            if entities.Length <= i
-            then None
-            else entities.[i]
+        let getEntity = getEntityOrNone entities
         match box with
         | InstructionBox.Single (used, pumps) ->
             seq {yield Instruction(partial, 
@@ -662,7 +664,7 @@ module Store =
     let box2instructions partial root box (entities : _ array) =
         match box with
         | InstructionBox.Single (used, pumps) ->
-            seq {yield Instruction(partial, root, [||], entities.[0], used, pumps)} 
+            seq {yield Instruction(partial, root, [||], getEntityOrNone entities 0, used, pumps)} 
         | _ -> to_instructions partial root box entities [] []
     
     let flowBox2instructions root flowBox entities =
