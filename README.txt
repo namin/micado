@@ -44,6 +44,8 @@ For the latest repository version of Micado,  see http://micado.googlecode.com.
 Credits
 =======
 
-Nada Amin develops Micado as part of her Master of Engineering thesis at MIT. 
-Bill Thies and Saman Amarasinghe supervise the project at CSAIL. 
-J.P. Urbanski, David Craig and Todd Thorsen, provide essential feedback from the Hatsopoulos Microfluidics Lab at MIT.
+Nada Amin has developed Micado as part of her Master of Engineering
+thesis at MIT.  Bill Thies and Saman Amarasinghe have supervised the
+project at CSAIL. David Craig, Todd Thorsen and J.P. Urbanski, have
+provided essential feedback from the Hatsopoulos Microfluidics Lab at
+MIT.
