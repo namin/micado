@@ -24,6 +24,20 @@ type Used =
     member u1.append (u2 : Used) = 
         {Edges = Set.union u1.Edges u2.Edges;
          Valves = Set.union u1.Valves u2.Valves}
+    override x.Equals(oy:obj) =
+        match oy with
+        | :? Used as y ->
+            x.Edges.Equals(y.Edges) && x.Valves.Equals(y.Valves)
+        | _ -> false
+    interface System.IComparable with 
+       member x.CompareTo(oy:obj) =
+        match oy with
+        | :? Used as y ->
+            match compare x.Edges y.Edges with
+            | 0 -> compare x.Valves y.Valves
+            | c -> c
+        | _ -> compare x (oy :?> Used)
+    
 let used edges valves = {Edges = edges; Valves = valves}
 let usedEmpty = used Set.empty Set.empty
 
@@ -48,7 +62,17 @@ module Attachments =
         member v.InputAttachment = inputAttachment
         member v.OutputAttachment = outputAttachment
         member v.Kind = kind
-    
+
+        override x.Equals(oy:obj) =
+            match oy with
+            | :? Attachments as y -> x.Kind.Equals(y.Kind)
+            | _ -> false
+        interface System.IComparable with 
+            member x.CompareTo(oy:obj) =
+                match oy with
+                | :? Attachments as y -> compare x.Kind y.Kind
+                | _ -> compare x (oy :?> Attachments)
+            
     let create inputAttachment outputAttachment =
         Attachments (inputAttachment, outputAttachment)
         
