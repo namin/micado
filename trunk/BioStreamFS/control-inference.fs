@@ -237,6 +237,7 @@ let generateAllMultiplexers (ic : Instructions.InstructionChip) boxes =
     let lines = ref Seq.empty
     let edge2valves = ref Map.empty
     let valvesLength = ref 0
+    let orBoxes = ref Set.empty
     let processMultiplexer (valves1, lines1, edge2valves1) =
         let edgesAllNew =
             let e2vs = !edge2valves
@@ -245,19 +246,21 @@ let generateAllMultiplexers (ic : Instructions.InstructionChip) boxes =
         if not edgesAllNew
         then disposeAll valves1
              disposeAll lines1
+             false
         else
         let baseVi = !valvesLength
         edge2valves1 |> Map.iter (fun e s -> edge2valves := (!edge2valves).Add(e, s |> Set.map (fun subVi -> baseVi + subVi)))
         valvesLength := !valvesLength + (Array.length valves1)
         valves := Seq.append (!valves) valves1
         lines := Seq.append (!lines) lines1
+        true
     for box in boxes do
         box 
      |> inferMultiplexerForBox ic
      |> Option.bind (createMultiplexer ic)
      |> Option.map processMultiplexer
-     |> ignore
-    !valves |> Array.of_seq, !lines |> Array.of_seq, !edge2valves
+     |> Option.iter (fun ok -> if ok then orBoxes := Set.add box (!orBoxes)) 
+    !valves |> Array.of_seq, !lines |> Array.of_seq, !edge2valves, !orBoxes
 
 let inferNeededValves (ic : Instructions.InstructionChip) (instructions : Instructions.Instruction array) inferredValves (stateTable : valveState array array) (edge2valves : Map<_,_>) =
     // A valve is filtered out (not needed) _only_ if it's redundant with respect to the multiplexers.
@@ -337,18 +340,42 @@ module Plugin =
                   |> Array.map (Database.writeEntityAndReturn >> (fun entity -> entity :?> Valve))
         let others = others |> Database.writeEntitiesAndReturn
         Editor.writeLine "Control generation succeeded."        
-                
-    let generate withMultiplexers (ic : Instructions.InstructionChip) (instructions : Instructions.Instruction array) boxes =
+    
+    let replaceMultiplexedOrBoxesWithAndBoxes orBoxes boxes =
+        let rec replaceBox box =
+            match box with
+            | Instructions.FlowBox.Or(a,bs,_) when Set.mem box orBoxes-> 
+                Instructions.FlowBox.And(a, Array.map replaceBox bs)
+            | Instructions.FlowBox.Or(a,bs,o) -> 
+                Instructions.FlowBox.Or(a, Array.map replaceBox bs, o)
+            | Instructions.FlowBox.And(a,bs) ->
+                Instructions.FlowBox.And(a, Array.map replaceBox bs)
+            | Instructions.FlowBox.Seq(a, bs) ->
+                Instructions.FlowBox.Seq(a, Array.map replaceBox bs)
+            | Instructions.FlowBox.Extended(a, u, b) ->
+                Instructions.FlowBox.Extended(a, u, replaceBox b)
+            | Instructions.FlowBox.Pumping(b) ->
+                Instructions.FlowBox.Pumping(b)
+            | Instructions.FlowBox.Primitive(_) -> 
+                box                
+        boxes |> Seq.map replaceBox
+                        
+    let generate withMultiplexers (ic : Instructions.InstructionChip) boxes =
         if not (currentLayerOK())
         then ()
         else
-        let mValves, mLines, edge2valves = 
+        let mValves, mLines, edge2valves, orBoxes = 
             match withMultiplexers with
             | true -> generateAllMultiplexers ic boxes
-            | false -> (Array.empty, Array.empty, Map.empty)
+            | false -> (Array.empty, Array.empty, Map.empty, Set.empty)
+        let instructions = 
+            boxes 
+         |> replaceMultiplexedOrBoxesWithAndBoxes orBoxes 
+         |> flowBoxes2instructions 
+         |> Array.of_seq
         let iValves, stateTable = calculate ic instructions
         let baseNeeded = mValves.Length
-        let iNeeded = inferNeededValves ic instructions iValves stateTable edge2valves
+        let iNeeded = inferNeededValves ic instructions iValves stateTable Map.empty
         let neededIndices = [|0..iNeeded.Length-1|] |> Array.filter (fun i -> iNeeded.[i])
         let o2n = Array.create iNeeded.Length None
         neededIndices |> Array.iteri (fun n o -> o2n.[o] <- Some n)
@@ -390,5 +417,4 @@ module Plugin =
                 Database.writeEntities polylines |> ignore
                 
     let generateFromBoxes withMultiplexers ic boxes =
-        let instructions = flowBoxes2instructions boxes |> Array.of_seq
-        generate withMultiplexers ic instructions boxes
+        generate withMultiplexers ic boxes
