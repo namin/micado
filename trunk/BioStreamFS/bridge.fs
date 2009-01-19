@@ -2,6 +2,7 @@
 
 /// Bridge for core functionalities to access plug-in specific operations
 /// enabling alternative implementations (notably for unit testing)
+/// !Planned but not used!
 module BioStream.Micado.Bridge
 
 open Autodesk.AutoCAD.Geometry

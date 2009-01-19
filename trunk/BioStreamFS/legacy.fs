@@ -1,5 +1,7 @@
 #light
 
+/// Conversion from old prototype to Micado
+/// !Not interesting! 
 module BioStream.Micado.Legacy
 
 open BioStream

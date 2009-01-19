@@ -1,5 +1,6 @@
 #light
 
+/// Export to BioStream GUI
 module BioStream.Micado.Plugin.Export.GUI
 
 open Autodesk.AutoCAD.ApplicationServices

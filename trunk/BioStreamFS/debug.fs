@@ -1,6 +1,6 @@
 #light
 
-// debugging routines
+/// Debugging routines
 module BioStream.Micado.Core.Debug
 
 open BioStream.Micado.Common.Datatypes
