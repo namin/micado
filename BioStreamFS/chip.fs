@@ -1,6 +1,6 @@
 #light
 
-/// chip representation
+/// Conversion from drawing to chip
 module BioStream.Micado.Core.Chip
 
 open BioStream

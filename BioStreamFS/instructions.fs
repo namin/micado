@@ -1,5 +1,6 @@
 #light
 
+/// Flow annotations
 module BioStream.Micado.Core.Instructions
 
 open BioStream.Micado.Core

@@ -1,5 +1,6 @@
 #light
 
+/// Conversion from polylines to flows
 module BioStream.Micado.Core.Flow
 
 open BioStream.Micado.Common.Datatypes

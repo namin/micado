@@ -1,5 +1,6 @@
 #light
 
+/// Representation of the flow layer as a graph
 module BioStream.Micado.Core.FlowRepresentation
 
 open BioStream.Micado.Core

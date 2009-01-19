@@ -1,6 +1,6 @@
 #light
 
-/// automatic routing of valves (as control lines) to punches
+/// Automatic routing of valves (as control lines) to punches
 module BioStream.Micado.Core.Routing
 
 open BioStream.Micado.Core

@@ -1,5 +1,6 @@
 #light
 
+/// Automatic inference of control layer from flow annotations
 module BioStream.Micado.Core.ControlInference
 
 open BioStream.Micado.Core
